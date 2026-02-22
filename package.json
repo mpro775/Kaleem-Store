@@ -1,0 +1,38 @@
+{
+  "name": "kaleem-store-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Kaleem Store SaaS monorepo",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspace @kaleem/shared-types && npm run build --workspace @kaleem/api && npm run build --workspace @kaleem/admin && npm run build --workspace @kaleem/storefront",
+    "format": "prettier --check .",
+    "format:write": "prettier --write .",
+    "openapi:generate": "npm run openapi:generate --workspace @kaleem/api",
+    "migrate:up": "node ./scripts/migrate.mjs up",
+    "migrate:down": "node ./scripts/migrate.mjs down",
+    "seed:run": "node ./scripts/seed.mjs",
+    "dev:infra": "docker compose --env-file infra/docker/.env -f infra/docker/docker-compose.yml up -d",
+    "dev:infra:down": "docker compose --env-file infra/docker/.env -f infra/docker/docker-compose.yml down -v",
+    "queue:health": "node ./scripts/queue-health.mjs",
+    "sast": "npm audit --omit=dev --audit-level=high"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.19.0",
+    "@types/node": "^22.13.0",
+    "eslint": "^9.19.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-import": "^2.31.0",
+    "prettier": "^3.5.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.22.0"
+  },
+  "engines": {
+    "node": ">=20.11.0"
+  }
+}

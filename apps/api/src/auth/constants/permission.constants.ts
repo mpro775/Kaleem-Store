@@ -1,0 +1,23 @@
+export const PERMISSIONS = {
+  storeRead: 'store:read',
+  storeWrite: 'store:write',
+  usersRead: 'users:read',
+  usersWrite: 'users:write',
+  categoriesRead: 'categories:read',
+  categoriesWrite: 'categories:write',
+  productsRead: 'products:read',
+  productsWrite: 'products:write',
+  inventoryRead: 'inventory:read',
+  inventoryWrite: 'inventory:write',
+  attributesRead: 'attributes:read',
+  attributesWrite: 'attributes:write',
+  mediaWrite: 'media:write',
+  ordersRead: 'orders:read',
+  ordersWrite: 'orders:write',
+  themesRead: 'themes:read',
+  themesWrite: 'themes:write',
+  domainsRead: 'domains:read',
+  domainsWrite: 'domains:write',
+} as const;
+
+export const OWNER_PERMISSIONS = ['*'];

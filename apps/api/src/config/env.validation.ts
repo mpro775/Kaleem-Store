@@ -1,0 +1,54 @@
+import Joi from 'joi';
+
+export const envValidationSchema = Joi.object({
+  NODE_ENV: Joi.string().valid('development', 'test', 'production').default('development'),
+  PORT: Joi.number().default(3000),
+  DATABASE_URL: Joi.string()
+    .uri({ scheme: ['postgres', 'postgresql'] })
+    .default('postgres://kaleem:kaleem123@localhost:5432/kaleem_store'),
+  REDIS_URL: Joi.string()
+    .uri({ scheme: ['redis'] })
+    .default('redis://localhost:6379'),
+  RABBITMQ_URL: Joi.string()
+    .uri({ scheme: ['amqp', 'amqps'] })
+    .default('amqp://guest:guest@localhost:5672'),
+  RABBITMQ_EXCHANGE: Joi.string().default('kaleem.events'),
+  NOTIFICATIONS_MAIN_QUEUE: Joi.string().default('notifications.order-events'),
+  NOTIFICATIONS_DLQ_QUEUE: Joi.string().default('notifications.order-events.dlq'),
+  NOTIFICATIONS_RETRY_CREATED_QUEUE: Joi.string().default('notifications.order-created.retry'),
+  NOTIFICATIONS_RETRY_STATUS_QUEUE: Joi.string().default('notifications.order-status.retry'),
+  NOTIFICATIONS_RETRY_INVENTORY_QUEUE: Joi.string().default('notifications.inventory.retry'),
+  NOTIFICATIONS_MAX_RETRIES: Joi.number().integer().min(0).max(20).default(3),
+  NOTIFICATIONS_RETRY_DELAY_MS: Joi.number().integer().min(100).max(300_000).default(10_000),
+  INVENTORY_RESERVATION_TTL_MINUTES: Joi.number().integer().min(1).max(120).default(15),
+  THEME_PREVIEW_TOKEN_TTL_MINUTES: Joi.number().integer().min(1).max(240).default(30),
+  DOMAIN_VERIFY_TXT_PREFIX: Joi.string().default('_kaleem-verify'),
+  DOMAIN_CNAME_TARGET: Joi.string().default('stores.example.com'),
+  DOMAIN_SSL_MODE: Joi.string().valid('full', 'full_strict').default('full_strict'),
+  PLATFORM_ADMIN_SECRET: Joi.string().min(16).default('kaleem-local-platform-secret'),
+  JWT_ACCESS_SECRET: Joi.string().min(24).default('kaleem-local-access-secret-change-me'),
+  JWT_ACCESS_EXPIRES_IN: Joi.string().default('15m'),
+  REFRESH_TOKEN_TTL_DAYS: Joi.number().integer().min(1).max(90).default(30),
+  S3_ENDPOINT: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .default('http://localhost:9000'),
+  S3_REGION: Joi.string().default('us-east-1'),
+  S3_BUCKET: Joi.string().default('kaleem-media'),
+  S3_ACCESS_KEY: Joi.string().default('minio'),
+  S3_SECRET_KEY: Joi.string().default('minio123'),
+  S3_FORCE_PATH_STYLE: Joi.boolean().default(true),
+  S3_PUBLIC_BASE_URL: Joi.string().allow('').default('http://localhost:9000/kaleem-media'),
+  S3_PRESIGNED_PUT_TTL_SECONDS: Joi.number().integer().min(60).max(3600).default(900),
+  S3_PRESIGNED_GET_TTL_SECONDS: Joi.number().integer().min(60).max(3600).default(600),
+  ALLOWED_ORIGINS: Joi.string().allow('').default(''),
+  CSRF_ENABLED: Joi.boolean().default(false),
+  SENTRY_DSN: Joi.string().allow('').default(''),
+  SENTRY_RELEASE: Joi.string().default('0.1.0'),
+  METRICS_PREFIX: Joi.string().default('kaleem_'),
+  CORS_CACHE_TTL_MS: Joi.number().integer().min(1000).max(600_000).default(60_000),
+  CORS_CACHE_REFRESH_INTERVAL_MS: Joi.number().integer().min(1000).max(300_000).default(30_000),
+  AUTH_MAX_ATTEMPTS: Joi.number().integer().min(3).max(20).default(5),
+  AUTH_LOCKOUT_DURATION_MS: Joi.number().integer().min(60_000).max(3600_000).default(900_000),
+  AUTH_WINDOW_MS: Joi.number().integer().min(60_000).max(3600_000).default(900_000),
+  WEBHOOK_SECRET: Joi.string().min(16).default('kaleem-local-webhook-secret'),
+});

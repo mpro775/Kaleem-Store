@@ -1,0 +1,293 @@
+:root {
+  color: #1e2a2c;
+  font-family: 'Lora', 'Cambria', serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(198, 111, 49, 0.2), transparent 40%),
+    radial-gradient(circle at 90% 100%, rgba(20, 79, 83, 0.2), transparent 40%), #f7efe2;
+}
+
+.admin-shell {
+  min-height: 100vh;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.shell-header {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid #e3d6c4;
+  border-radius: 14px;
+  padding: 1rem 1.2rem;
+}
+
+.shell-header h1 {
+  margin: 0;
+}
+
+.shell-header p {
+  margin: 0.45rem 0 0;
+  color: #4d5a5f;
+}
+
+.route-hint {
+  font-size: 0.88rem;
+  color: #1c4f4f;
+  font-weight: 700;
+}
+
+.mode-switcher {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.mode-switcher button {
+  border: 1px solid #bea98b;
+  background: #f8f2e8;
+  border-radius: 999px;
+  color: #263338;
+  padding: 0.45rem 0.95rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.mode-switcher button.selected {
+  border-color: #1c4f4f;
+  background: #1c4f4f;
+  color: #fff;
+}
+
+.panel {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid #e3d6c4;
+  border-radius: 14px;
+  padding: 1rem;
+}
+
+.panel-header h2 {
+  margin: 0;
+}
+
+.panel-header p {
+  margin: 0.4rem 0 0.85rem;
+  color: #48555b;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.8rem;
+}
+
+.card {
+  border: 1px solid #e2d2bc;
+  background: #fffdf9;
+  border-radius: 12px;
+  padding: 0.8rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.card h3 {
+  margin: 0;
+}
+
+label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.93rem;
+  font-weight: 600;
+}
+
+input,
+textarea,
+select {
+  border: 1px solid #cbb89c;
+  border-radius: 10px;
+  padding: 0.5rem 0.65rem;
+  font-family: inherit;
+  background: #fff;
+}
+
+textarea {
+  min-height: 180px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.actions {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+button {
+  border: 1px solid #c1ab8b;
+  background: #f7f1e7;
+  border-radius: 10px;
+  padding: 0.45rem 0.8rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+button.primary {
+  border-color: #215653;
+  background: #215653;
+  color: #fff;
+}
+
+button.danger {
+  border-color: #8a3333;
+  background: #fff1f1;
+  color: #8a3333;
+}
+
+.list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.list-item {
+  border: 1px solid #deccb3;
+  border-radius: 10px;
+  padding: 0.6rem;
+  background: #fffefb;
+}
+
+.list-item h4,
+.list-item p {
+  margin: 0.25rem 0;
+}
+
+.tables {
+  margin-top: 0.9rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.8rem;
+}
+
+.table-card {
+  border: 1px solid #e2d2bc;
+  border-radius: 12px;
+  padding: 0.75rem;
+  background: #fffdf9;
+}
+
+.table-card h3 {
+  margin: 0;
+}
+
+.table-card ul {
+  margin: 0.6rem 0 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.87rem;
+  color: #405259;
+}
+
+.status-message {
+  margin: 0.9rem 0 0;
+  color: #1f4f4b;
+  font-weight: 700;
+}
+
+.inline-check {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.panel-platform {
+  border-left: 4px solid #214f68;
+}
+
+.panel-merchant {
+  border-left: 4px solid #965e2f;
+}
+
+.merchant-dashboard {
+  display: grid;
+  gap: 1rem;
+}
+
+.dashboard-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tab-nav {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.4rem;
+}
+
+.tab-content {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.tab-nav button {
+  border-radius: 8px;
+}
+
+.tab-nav button.selected {
+  border-color: #965e2f;
+  background: #965e2f;
+  color: #fff;
+}
+
+.compact-list .list-item {
+  padding: 0.45rem;
+}
+
+.stack-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.auth-panel {
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.error-text {
+  color: #8a3333;
+}
+
+.inline-check-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.4rem;
+}
+
+.list-item code {
+  font-size: 0.86rem;
+}
+
+@media (max-width: 640px) {
+  .admin-shell {
+    padding: 0.8rem;
+  }
+
+  .shell-header,
+  .panel {
+    padding: 0.8rem;
+  }
+}

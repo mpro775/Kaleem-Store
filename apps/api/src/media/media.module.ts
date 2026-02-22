@@ -1,0 +1,23 @@
+import { Module } from '@nestjs/common';
+import { SaasModule } from '../saas/saas.module';
+import { SecurityModule } from '../security/security.module';
+import { MediaController } from './media.controller';
+import { MediaRepository } from './media.repository';
+import { S3StorageAdapter } from './s3-storage.adapter';
+import { MediaService } from './media.service';
+import { STORAGE_ADAPTER } from './storage.adapter';
+
+@Module({
+  imports: [SecurityModule, SaasModule],
+  controllers: [MediaController],
+  providers: [
+    MediaService,
+    MediaRepository,
+    {
+      provide: STORAGE_ADAPTER,
+      useClass: S3StorageAdapter,
+    },
+  ],
+  exports: [MediaService, MediaRepository],
+})
+export class MediaModule {}
