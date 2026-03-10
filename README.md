@@ -25,6 +25,13 @@ npm run dev --workspace @kaleem/storefront
 - Outbox publisher: `npm run worker:outbox --workspace @kaleem/api`
 - Notifications consumer: `npm run worker:notifications --workspace @kaleem/api`
 
+## Build Verification
+
+- Typecheck all workspaces: `npm run typecheck`
+- Build all apps/packages: `npm run build`
+- Run API smoke e2e suite: `npm run smoke:e2e`
+- Full runbook: `docs/runbooks/build-verification.md`
+
 ## API and Runbooks
 
 - OpenAPI: `docs/api/openapi.json`
@@ -40,6 +47,7 @@ npm run dev --workspace @kaleem/storefront
 - Sprint 8 contract review: `docs/api/sprint8-contract-review.md`
 - Sprint 8 endpoint examples: `docs/api/sprint8-endpoint-examples.md`
 - Local setup: `docs/runbooks/local-setup.md`
+- Build verification: `docs/runbooks/build-verification.md`
 - Storage and media: `docs/storage-media.md`
 - Storefront implementation: `docs/storefront-implementation.md`
 - Custom domains and SSL: `docs/custom-domains-ssl.md`

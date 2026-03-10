@@ -15,6 +15,7 @@ const { DomainsRepository } = require('../dist/domains/domains.repository');
 const { DomainsService } = require('../dist/domains/domains.service');
 const { OutboxService } = require('../dist/messaging/outbox.service');
 const { PermissionsGuard } = require('../dist/rbac/guards/permissions.guard');
+const { SaasService } = require('../dist/saas/saas.service');
 const { TenantGuard } = require('../dist/tenancy/guards/tenant.guard');
 const { ThemesController } = require('../dist/themes/themes.controller');
 const { ThemesRepository } = require('../dist/themes/themes.repository');
@@ -180,6 +181,15 @@ const auditServiceMock = {
   },
 };
 
+const saasServiceMock = {
+  async assertMetricCanGrow() {
+    return;
+  },
+  async recordUsageEvent() {
+    return;
+  },
+};
+
 describe('Sprint 5 themes/domains e2e', () => {
   let app;
   let baseUrl = '';
@@ -195,6 +205,7 @@ describe('Sprint 5 themes/domains e2e', () => {
         { provide: DnsResolverService, useValue: dnsResolverServiceMock },
         { provide: OutboxService, useValue: outboxServiceMock },
         { provide: AuditService, useValue: auditServiceMock },
+        { provide: SaasService, useValue: saasServiceMock },
         {
           provide: ConfigService,
           useValue: {

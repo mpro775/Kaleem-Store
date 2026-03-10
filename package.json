@@ -10,7 +10,9 @@
   "scripts": {
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
     "build": "npm run build --workspace @kaleem/shared-types && npm run build --workspace @kaleem/api && npm run build --workspace @kaleem/admin && npm run build --workspace @kaleem/storefront",
+    "smoke:e2e": "npm run test:e2e:smoke --workspace @kaleem/api",
     "format": "prettier --check .",
     "format:write": "prettier --write .",
     "openapi:generate": "npm run openapi:generate --workspace @kaleem/api",

@@ -11,6 +11,7 @@ const { AuditService } = require('../dist/audit/audit.service');
 const { InventoryController } = require('../dist/inventory/inventory.controller');
 const { InventoryRepository } = require('../dist/inventory/inventory.repository');
 const { InventoryService } = require('../dist/inventory/inventory.service');
+const { IdempotencyService } = require('../dist/idempotency/idempotency.service');
 const { OutboxService } = require('../dist/messaging/outbox.service');
 const { OrdersController } = require('../dist/orders/orders.controller');
 const { OrdersRepository } = require('../dist/orders/orders.repository');
@@ -473,6 +474,10 @@ const ordersRepositoryMock = {
     return state.orderStatusHistoryByOrderId.get(orderId) ?? [];
   },
 
+  async findPaymentByOrderId() {
+    return null;
+  },
+
   async updateOrderStatus(_db, input) {
     const order = state.orders.get(input.orderId);
     if (!order || order.store_id !== input.storeId) {
@@ -526,6 +531,15 @@ const noopServices = {
   },
 };
 
+const idempotencyServiceMock = {
+  async checkOrPrepare() {
+    return { isCached: false, record: null };
+  },
+  async storeResponse() {
+    return;
+  },
+};
+
 describe('Sprint 8 inventory reservations e2e', () => {
   let app;
   let baseUrl = '';
@@ -540,6 +554,7 @@ describe('Sprint 8 inventory reservations e2e', () => {
         { provide: InventoryRepository, useValue: inventoryRepositoryMock },
         { provide: OrdersRepository, useValue: ordersRepositoryMock },
         { provide: StoreResolverService, useValue: storeResolverMock },
+        { provide: IdempotencyService, useValue: idempotencyServiceMock },
         {
           provide: CategoriesRepository,
           useValue: { listActive: async () => [], findBySlug: async () => null },

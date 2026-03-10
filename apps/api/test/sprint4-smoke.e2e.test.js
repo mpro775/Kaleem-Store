@@ -10,6 +10,7 @@ const { AccessTokenGuard } = require('../dist/auth/guards/access-token.guard');
 const { AttributesService } = require('../dist/attributes/attributes.service');
 const { AuditService } = require('../dist/audit/audit.service');
 const { InventoryService } = require('../dist/inventory/inventory.service');
+const { IdempotencyService } = require('../dist/idempotency/idempotency.service');
 const { OutboxService } = require('../dist/messaging/outbox.service');
 const { OrdersRepository } = require('../dist/orders/orders.repository');
 const { PermissionsGuard } = require('../dist/rbac/guards/permissions.guard');
@@ -367,6 +368,15 @@ const saasServiceMock = {
   },
 };
 
+const idempotencyServiceMock = {
+  async checkOrPrepare() {
+    return { isCached: false, record: null };
+  },
+  async storeResponse() {
+    return;
+  },
+};
+
 const auditServiceMock = {
   async log() {
     return;
@@ -392,6 +402,7 @@ describe('Sprint 4 API smoke e2e', () => {
         { provide: InventoryService, useValue: inventoryServiceMock },
         { provide: ProductsRepository, useValue: {} },
         { provide: StoreResolverService, useValue: storeResolverMock },
+        { provide: IdempotencyService, useValue: idempotencyServiceMock },
         { provide: SaasService, useValue: saasServiceMock },
         { provide: ThemesService, useValue: themesServiceMock },
         { provide: OutboxService, useValue: outboxServiceMock },

@@ -62,6 +62,19 @@ npm run worker:notifications --workspace @kaleem/api
 npm run openapi:generate
 ```
 
+## Build Verification Gate
+
+From repository root:
+
+```bash
+npm ci
+npm run typecheck
+npm run build
+npm run smoke:e2e
+```
+
+- Detailed runbook: `docs/runbooks/build-verification.md`
+
 ## Platform Admin Secret
 
 - Set `PLATFORM_ADMIN_SECRET` in `apps/api/.env` for `/platform/*` APIs.

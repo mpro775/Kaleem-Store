@@ -13,6 +13,7 @@ const { AttributesService } = require('../dist/attributes/attributes.service');
 const { AuditService } = require('../dist/audit/audit.service');
 const { CategoriesRepository } = require('../dist/categories/categories.repository');
 const { InventoryService } = require('../dist/inventory/inventory.service');
+const { IdempotencyService } = require('../dist/idempotency/idempotency.service');
 const { OutboxService } = require('../dist/messaging/outbox.service');
 const { OrdersRepository } = require('../dist/orders/orders.repository');
 const { PermissionsGuard } = require('../dist/rbac/guards/permissions.guard');
@@ -322,6 +323,15 @@ const noopObject = {
   },
 };
 
+const idempotencyServiceMock = {
+  async checkOrPrepare() {
+    return { isCached: false, record: null };
+  },
+  async storeResponse() {
+    return;
+  },
+};
+
 const inventoryServiceMock = {
   async releaseExpiredReservations() {
     return 0;
@@ -350,6 +360,7 @@ describe('Sprint 7 attributes and filters e2e', () => {
         { provide: AttributesRepository, useValue: attributesRepositoryMock },
         { provide: CategoriesRepository, useValue: categoriesRepositoryMock },
         { provide: StoreResolverService, useValue: storeResolverMock },
+        { provide: IdempotencyService, useValue: idempotencyServiceMock },
         { provide: InventoryService, useValue: inventoryServiceMock },
         { provide: ProductsRepository, useValue: productsRepositoryMock },
         { provide: OrdersRepository, useValue: {} },

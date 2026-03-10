@@ -15,33 +15,33 @@ import { ADVANCED_OFFER_TYPES } from '../constants/advanced-offer.constants';
 export class BxgyConfigDto {
   @ApiProperty({ description: 'Quantity to buy' })
   @IsNumber()
-  buyQuantity: number;
+  buyQuantity!: number;
 
   @ApiProperty({ description: 'Product IDs to buy', type: [String] })
   @IsString({ each: true })
-  buyProductIds: string[];
+  buyProductIds!: string[];
 
   @ApiProperty({ description: 'Quantity to get free' })
   @IsNumber()
-  getXQuantity: number;
+  getXQuantity!: number;
 
   @ApiProperty({ description: 'Product IDs to get free', type: [String] })
   @IsString({ each: true })
-  getXProductIds: string[];
+  getXProductIds!: string[];
 
   @ApiProperty({ description: 'Discount percentage on get items' })
   @IsNumber()
-  discountPercent: number;
+  discountPercent!: number;
 }
 
 export class BundleConfigDto {
   @ApiProperty({ description: 'Product IDs in bundle', type: [String] })
   @IsString({ each: true })
-  productIds: string[];
+  productIds!: string[];
 
   @ApiProperty({ description: 'Discount percentage' })
   @IsNumber()
-  discountPercent: number;
+  discountPercent!: number;
 
   @ApiPropertyOptional({ description: 'Fixed bundle price' })
   @IsOptional()
@@ -52,18 +52,18 @@ export class BundleConfigDto {
 export class TierDto {
   @ApiProperty({ description: 'Minimum quantity for this tier' })
   @IsNumber()
-  minQuantity: number;
+  minQuantity!: number;
 
   @ApiProperty({ description: 'Discount percentage for this tier' })
   @IsNumber()
-  discountPercent: number;
+  discountPercent!: number;
 }
 
 export class TieredDiscountConfigDto {
   @ApiProperty({ description: 'Discount tiers', type: [TierDto] })
   @ValidateNested({ each: true })
   @Type(() => TierDto)
-  tiers: TierDto[];
+  tiers!: TierDto[];
 }
 
 export class AdvancedOfferConfigDto {
@@ -89,7 +89,7 @@ export class AdvancedOfferConfigDto {
 export class CreateAdvancedOfferDto {
   @ApiProperty({ description: 'Offer name' })
   @IsString()
-  name: string;
+  name!: string;
 
   @ApiPropertyOptional({ description: 'Offer description' })
   @IsOptional()
@@ -98,13 +98,13 @@ export class CreateAdvancedOfferDto {
 
   @ApiProperty({ description: 'Offer type', enum: ADVANCED_OFFER_TYPES })
   @IsEnum(ADVANCED_OFFER_TYPES)
-  offerType: string;
+  offerType!: string;
 
   @ApiProperty({ description: 'Offer configuration' })
   @IsObject()
   @ValidateNested()
   @Type(() => AdvancedOfferConfigDto)
-  config: AdvancedOfferConfigDto;
+  config!: AdvancedOfferConfigDto;
 
   @ApiPropertyOptional({ description: 'Start date' })
   @IsOptional()
