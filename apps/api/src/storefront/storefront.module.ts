@@ -10,6 +10,7 @@ import { SaasModule } from '../saas/saas.module';
 import { ShippingModule } from '../shipping/shipping.module';
 import { StoresModule } from '../stores/stores.module';
 import { ThemesModule } from '../themes/themes.module';
+import { WebhooksModule } from '../webhooks/webhooks.module';
 import { PublicStoreController } from './public-store.controller';
 import { StoreResolverService } from './store-resolver.service';
 import { StorefrontController } from './storefront.controller';
@@ -26,6 +27,7 @@ import { StorefrontService } from './storefront.service';
     ShippingModule,
     PromotionsModule,
     ThemesModule,
+    WebhooksModule,
     SaasModule,
     IdempotencyModule,
   ],

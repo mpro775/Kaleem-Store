@@ -31,4 +31,24 @@ export class UpdateStoreSettingsDto {
   @IsString()
   @MaxLength(250)
   address?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20000)
+  shippingPolicy?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20000)
+  returnPolicy?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20000)
+  privacyPolicy?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20000)
+  termsAndConditions?: string;
 }

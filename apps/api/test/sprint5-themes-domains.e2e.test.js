@@ -13,6 +13,7 @@ const { DnsResolverService } = require('../dist/domains/dns-resolver.service');
 const { DomainsController } = require('../dist/domains/domains.controller');
 const { DomainsRepository } = require('../dist/domains/domains.repository');
 const { DomainsService } = require('../dist/domains/domains.service');
+const { CloudflareDomainsService } = require('../dist/domains/cloudflare-domains.service');
 const { OutboxService } = require('../dist/messaging/outbox.service');
 const { PermissionsGuard } = require('../dist/rbac/guards/permissions.guard');
 const { SaasService } = require('../dist/saas/saas.service');
@@ -117,6 +118,12 @@ const domainsRepositoryMock = {
       verification_token: input.verificationToken,
       status: 'pending',
       ssl_status: 'pending',
+      ssl_provider: input.sslProvider ?? 'manual',
+      ssl_mode: input.sslMode ?? 'full_strict',
+      cloudflare_zone_id: input.cloudflareZoneId ?? null,
+      cloudflare_hostname_id: null,
+      ssl_last_checked_at: null,
+      ssl_error: null,
       verified_at: null,
       activated_at: null,
     };
@@ -141,15 +148,31 @@ const domainsRepositoryMock = {
     state.domainsById.set(row.id, row);
     return row;
   },
-  async markActive(storeId, domainId) {
-    const row = state.domainsById.get(domainId);
-    if (!row || row.store_id !== storeId) {
+  async markActive(input) {
+    const row = state.domainsById.get(input.domainId);
+    if (!row || row.store_id !== input.storeId) {
       return null;
     }
 
     row.status = 'active';
-    row.ssl_status = 'issued';
+    row.ssl_status = input.sslStatus;
+    row.cloudflare_hostname_id = input.cloudflareHostnameId ?? row.cloudflare_hostname_id;
+    row.ssl_last_checked_at = new Date();
+    row.ssl_error = input.sslError;
     row.activated_at = row.activated_at ?? new Date();
+    state.domainsById.set(row.id, row);
+    return row;
+  },
+  async updateSslState(input) {
+    const row = state.domainsById.get(input.domainId);
+    if (!row || row.store_id !== input.storeId) {
+      return null;
+    }
+
+    row.ssl_status = input.sslStatus;
+    row.cloudflare_hostname_id = input.cloudflareHostnameId ?? row.cloudflare_hostname_id;
+    row.ssl_last_checked_at = new Date();
+    row.ssl_error = input.sslError;
     state.domainsById.set(row.id, row);
     return row;
   },
@@ -166,6 +189,24 @@ const domainsRepositoryMock = {
 const dnsResolverServiceMock = {
   async hasVerificationRecord(hostname, token, prefix) {
     return state.dnsPairs.has(`${prefix}.${hostname}:${token}`);
+  },
+  async hasRoutingCname() {
+    return true;
+  },
+};
+
+const cloudflareDomainsServiceMock = {
+  isEnabled() {
+    return false;
+  },
+  async createCustomHostname() {
+    return { cloudflareHostnameId: 'cf-hostname-id', sslStatus: 'requested' };
+  },
+  async getCustomHostname() {
+    return { sslStatus: 'issued' };
+  },
+  async deleteCustomHostname() {
+    return;
   },
 };
 
@@ -206,6 +247,7 @@ describe('Sprint 5 themes/domains e2e', () => {
         { provide: OutboxService, useValue: outboxServiceMock },
         { provide: AuditService, useValue: auditServiceMock },
         { provide: SaasService, useValue: saasServiceMock },
+        { provide: CloudflareDomainsService, useValue: cloudflareDomainsServiceMock },
         {
           provide: ConfigService,
           useValue: {
@@ -215,6 +257,9 @@ describe('Sprint 5 themes/domains e2e', () => {
               }
               if (key === 'THEME_PREVIEW_TOKEN_TTL_MINUTES') {
                 return 30;
+              }
+              if (key === 'DOMAIN_SSL_PROVIDER') {
+                return 'manual';
               }
               return fallback;
             },
@@ -352,7 +397,7 @@ describe('Sprint 5 themes/domains e2e', () => {
     assert.equal(activated.sslStatus, 'issued');
     assert.equal(activated.routingType, 'cname');
     assert.equal(activated.routingHost, 'shop.example.com');
-    assert.equal(activated.sslProvider, 'cloudflare');
+    assert.equal(activated.sslProvider, 'manual');
     assert.equal(typeof activated.routingTarget, 'string');
     assert.equal(activated.routingTarget.length > 0, true);
 

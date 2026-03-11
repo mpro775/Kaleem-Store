@@ -79,6 +79,18 @@ export class DomainsController {
     return this.domainsService.activate(currentUser, domainId, getRequestContext(request));
   }
 
+  @Post(':domainId/sync-ssl')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions(PERMISSIONS.domainsWrite)
+  @ApiOkResponse({ description: 'Sync SSL state from provider (Cloudflare)' })
+  async syncSsl(
+    @CurrentUser() currentUser: AuthUser,
+    @Param('domainId', ParseUUIDPipe) domainId: string,
+    @Req() request: Request,
+  ): Promise<StoreDomainResponse> {
+    return this.domainsService.syncSslStatus(currentUser, domainId, getRequestContext(request));
+  }
+
   @Delete(':domainId')
   @HttpCode(HttpStatus.NO_CONTENT)
   @RequirePermissions(PERMISSIONS.domainsWrite)

@@ -10,6 +10,10 @@ export interface StoreSettingsRecord {
   address: string | null;
   currency_code: string;
   timezone: string;
+  shipping_policy: string | null;
+  return_policy: string | null;
+  privacy_policy: string | null;
+  terms_of_service: string | null;
 }
 
 export interface StorePublicRecord {
@@ -29,6 +33,7 @@ export class StoresRepository {
     const result = await this.databaseService.db.query<StoreSettingsRecord>(
       `
         SELECT id, name, slug, logo_url, phone, address, currency_code, timezone
+               , shipping_policy, return_policy, privacy_policy, terms_of_service
         FROM stores
         WHERE id = $1
         LIMIT 1
@@ -92,6 +97,10 @@ export class StoresRepository {
     logoUrl: string | null;
     phone: string | null;
     address: string | null;
+    shippingPolicy: string | null;
+    returnPolicy: string | null;
+    privacyPolicy: string | null;
+    termsOfService: string | null;
   }): Promise<StoreSettingsRecord> {
     const result = await this.databaseService.db.query<StoreSettingsRecord>(
       `
@@ -102,9 +111,14 @@ export class StoresRepository {
             logo_url = $5,
             phone = $6,
             address = $7,
+            shipping_policy = $8,
+            return_policy = $9,
+            privacy_policy = $10,
+            terms_of_service = $11,
             updated_at = NOW()
         WHERE id = $1
-        RETURNING id, name, slug, logo_url, phone, address, currency_code, timezone
+        RETURNING id, name, slug, logo_url, phone, address, currency_code, timezone,
+                  shipping_policy, return_policy, privacy_policy, terms_of_service
       `,
       [
         input.storeId,
@@ -114,6 +128,10 @@ export class StoresRepository {
         input.logoUrl,
         input.phone,
         input.address,
+        input.shippingPolicy,
+        input.returnPolicy,
+        input.privacyPolicy,
+        input.termsOfService,
       ],
     );
 

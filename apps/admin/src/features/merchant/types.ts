@@ -32,6 +32,10 @@ export interface StoreSettings {
   address: string | null;
   currencyCode: string;
   timezone: string;
+  shippingPolicy: string | null;
+  returnPolicy: string | null;
+  privacyPolicy: string | null;
+  termsAndConditions: string | null;
 }
 
 export interface Category {
@@ -299,6 +303,21 @@ export interface Offer {
   isActive: boolean;
 }
 
+export type AdvancedOfferType = 'bxgy' | 'bundle' | 'tiered_discount';
+
+export interface AdvancedOffer {
+  id: string;
+  storeId: string;
+  name: string;
+  description: string | null;
+  offerType: AdvancedOfferType;
+  config: Record<string, unknown>;
+  startsAt: string | null;
+  endsAt: string | null;
+  isActive: boolean;
+  priority: number;
+}
+
 export interface ThemeState {
   storeId: string;
   version: number;
@@ -323,8 +342,10 @@ export interface Domain {
   routingTarget?: string;
   status: DomainStatus;
   sslStatus: DomainSslStatus;
-  sslProvider?: 'cloudflare';
+  sslProvider?: 'manual' | 'cloudflare';
   sslMode?: 'full' | 'full_strict';
+  sslLastCheckedAt?: string | null;
+  sslError?: string | null;
   verificationToken: string;
   verificationDnsHost: string;
   verifiedAt: string | null;
@@ -376,4 +397,32 @@ export interface Attribute {
 export interface CategoryAttributes {
   categoryId: string;
   attributeIds: string[];
+}
+
+export interface WebhookEndpoint {
+  id: string;
+  storeId: string;
+  name: string;
+  url: string;
+  events: string[];
+  isActive: boolean;
+  lastTriggeredAt: string | null;
+  failureCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WebhookDelivery {
+  id: string;
+  storeId: string;
+  endpointId: string;
+  eventType: string;
+  payload: Record<string, unknown>;
+  responseStatus: number | null;
+  responseBody: string | null;
+  attemptNumber: number;
+  deliveredAt: string | null;
+  nextRetryAt: string | null;
+  errorMessage: string | null;
+  createdAt: string;
 }

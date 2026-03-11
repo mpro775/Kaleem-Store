@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import type { MerchantRequester } from '../merchant-dashboard';
-import type { Coupon, DiscountType, Offer, OfferTargetType } from '../types';
+import type {
+  AdvancedOffer,
+  AdvancedOfferType,
+  Coupon,
+  DiscountType,
+  Offer,
+  OfferTargetType,
+} from '../types';
 
 interface PromotionsPanelProps {
   request: MerchantRequester;
@@ -29,25 +36,53 @@ const offerFormDefault = {
   isActive: true,
 };
 
+const advancedOfferFormDefault = {
+  name: '',
+  description: '',
+  offerType: 'bxgy' as AdvancedOfferType,
+  config: JSON.stringify(
+    {
+      bxgy: {
+        buyQuantity: 2,
+        buyProductIds: ['product-id-1'],
+        getXQuantity: 1,
+        getXProductIds: ['product-id-2'],
+        discountPercent: 100,
+      },
+    },
+    null,
+    2,
+  ),
+  startsAt: '',
+  endsAt: '',
+  isActive: true,
+  priority: '0',
+};
+
 export function PromotionsPanel({ request }: PromotionsPanelProps) {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [selectedCouponId, setSelectedCouponId] = useState('');
   const [selectedOfferId, setSelectedOfferId] = useState('');
+  const [advancedOffers, setAdvancedOffers] = useState<AdvancedOffer[]>([]);
+  const [selectedAdvancedOfferId, setSelectedAdvancedOfferId] = useState('');
   const [couponForm, setCouponForm] = useState(couponFormDefault);
   const [offerForm, setOfferForm] = useState(offerFormDefault);
+  const [advancedOfferForm, setAdvancedOfferForm] = useState(advancedOfferFormDefault);
   const [message, setMessage] = useState('');
 
   async function loadAll(): Promise<void> {
     setMessage('');
     try {
-      const [couponData, offerData] = await Promise.all([
+      const [couponData, offerData, advancedOfferData] = await Promise.all([
         request<Coupon[]>('/promotions/coupons', { method: 'GET' }),
         request<Offer[]>('/promotions/offers', { method: 'GET' }),
+        request<AdvancedOffer[]>('/advanced-offers', { method: 'GET' }),
       ]);
 
       setCoupons(couponData ?? []);
       setOffers(offerData ?? []);
+      setAdvancedOffers(advancedOfferData ?? []);
       setMessage('Promotions loaded');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Failed to load promotions');
@@ -122,6 +157,40 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
     }
   }
 
+  async function createAdvancedOffer(): Promise<void> {
+    setMessage('');
+    try {
+      await request('/advanced-offers', {
+        method: 'POST',
+        body: JSON.stringify(buildAdvancedOfferCreatePayload(advancedOfferForm)),
+      });
+      setAdvancedOfferForm(advancedOfferFormDefault);
+      await loadAll();
+      setMessage('Advanced offer created');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Failed to create advanced offer');
+    }
+  }
+
+  async function updateAdvancedOffer(): Promise<void> {
+    if (!selectedAdvancedOfferId) {
+      setMessage('Select an advanced offer to update');
+      return;
+    }
+
+    setMessage('');
+    try {
+      await request(`/advanced-offers/${selectedAdvancedOfferId}`, {
+        method: 'PUT',
+        body: JSON.stringify(buildAdvancedOfferUpdatePayload(advancedOfferForm)),
+      });
+      await loadAll();
+      setMessage('Advanced offer updated');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Failed to update advanced offer');
+    }
+  }
+
   function selectCoupon(coupon: Coupon): void {
     setSelectedCouponId(coupon.id);
     setCouponForm({
@@ -148,6 +217,20 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
       startsAt: offer.startsAt ? offer.startsAt.slice(0, 16) : '',
       endsAt: offer.endsAt ? offer.endsAt.slice(0, 16) : '',
       isActive: offer.isActive,
+    });
+  }
+
+  function selectAdvancedOffer(offer: AdvancedOffer): void {
+    setSelectedAdvancedOfferId(offer.id);
+    setAdvancedOfferForm({
+      name: offer.name,
+      description: offer.description ?? '',
+      offerType: offer.offerType,
+      config: JSON.stringify(offer.config, null, 2),
+      startsAt: offer.startsAt ? offer.startsAt.slice(0, 16) : '',
+      endsAt: offer.endsAt ? offer.endsAt.slice(0, 16) : '',
+      isActive: offer.isActive,
+      priority: String(offer.priority),
     });
   }
 
@@ -382,6 +465,113 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
         </div>
       </article>
 
+      <article className="card">
+        <h3>Advanced Offers</h3>
+        <div className="actions">
+          <button onClick={() => loadAll().catch(() => undefined)}>Load</button>
+          <button className="primary" onClick={() => createAdvancedOffer().catch(() => undefined)}>
+            Create
+          </button>
+          <button onClick={() => updateAdvancedOffer().catch(() => undefined)}>Update</button>
+        </div>
+
+        <label>
+          Name
+          <input
+            value={advancedOfferForm.name}
+            onChange={(event) =>
+              setAdvancedOfferForm((prev) => ({ ...prev, name: event.target.value }))
+            }
+          />
+        </label>
+        <label>
+          Description
+          <input
+            value={advancedOfferForm.description}
+            onChange={(event) =>
+              setAdvancedOfferForm((prev) => ({ ...prev, description: event.target.value }))
+            }
+          />
+        </label>
+        <label>
+          Offer Type
+          <select
+            value={advancedOfferForm.offerType}
+            onChange={(event) =>
+              setAdvancedOfferForm((prev) => ({
+                ...prev,
+                offerType: event.target.value as AdvancedOfferType,
+              }))
+            }
+          >
+            <option value="bxgy">bxgy</option>
+            <option value="bundle">bundle</option>
+            <option value="tiered_discount">tiered_discount</option>
+          </select>
+        </label>
+        <label>
+          Priority
+          <input
+            type="number"
+            value={advancedOfferForm.priority}
+            onChange={(event) =>
+              setAdvancedOfferForm((prev) => ({ ...prev, priority: event.target.value }))
+            }
+          />
+        </label>
+        <label>
+          Config (JSON)
+          <textarea
+            value={advancedOfferForm.config}
+            onChange={(event) =>
+              setAdvancedOfferForm((prev) => ({ ...prev, config: event.target.value }))
+            }
+          />
+        </label>
+        <label>
+          Starts At
+          <input
+            type="datetime-local"
+            value={advancedOfferForm.startsAt}
+            onChange={(event) =>
+              setAdvancedOfferForm((prev) => ({ ...prev, startsAt: event.target.value }))
+            }
+          />
+        </label>
+        <label>
+          Ends At
+          <input
+            type="datetime-local"
+            value={advancedOfferForm.endsAt}
+            onChange={(event) =>
+              setAdvancedOfferForm((prev) => ({ ...prev, endsAt: event.target.value }))
+            }
+          />
+        </label>
+        <label className="inline-check">
+          <input
+            type="checkbox"
+            checked={advancedOfferForm.isActive}
+            onChange={(event) =>
+              setAdvancedOfferForm((prev) => ({ ...prev, isActive: event.target.checked }))
+            }
+          />
+          Active
+        </label>
+
+        <div className="list">
+          {advancedOffers.map((offer) => (
+            <article key={offer.id} className="list-item">
+              <h4>{offer.name}</h4>
+              <p>
+                {offer.offerType} - priority {offer.priority} - active {String(offer.isActive)}
+              </p>
+              <button onClick={() => selectAdvancedOffer(offer)}>Edit</button>
+            </article>
+          ))}
+        </div>
+      </article>
+
       {message ? <p className="status-message">{message}</p> : null}
     </section>
   );
@@ -466,6 +656,53 @@ function buildOfferUpdatePayload(form: typeof offerFormDefault) {
   };
   payload.isActive = form.isActive;
   return payload;
+}
+
+function buildAdvancedOfferCreatePayload(form: typeof advancedOfferFormDefault) {
+  const payload: {
+    name: string;
+    description?: string;
+    offerType: AdvancedOfferType;
+    config: Record<string, unknown>;
+    startsAt?: string;
+    endsAt?: string;
+    isActive: boolean;
+    priority: number;
+  } = {
+    name: form.name.trim(),
+    offerType: form.offerType,
+    config: parseJsonConfig(form.config),
+    isActive: form.isActive,
+    priority: Number(form.priority || '0'),
+  };
+
+  if (form.description.trim()) {
+    payload.description = form.description.trim();
+  }
+  if (form.startsAt) {
+    payload.startsAt = toIso(form.startsAt);
+  }
+  if (form.endsAt) {
+    payload.endsAt = toIso(form.endsAt);
+  }
+
+  return payload;
+}
+
+function buildAdvancedOfferUpdatePayload(form: typeof advancedOfferFormDefault) {
+  return buildAdvancedOfferCreatePayload(form);
+}
+
+function parseJsonConfig(value: string): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+    return {};
+  } catch {
+    return {};
+  }
 }
 
 function toIso(localDateTime: string): string {

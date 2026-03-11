@@ -108,7 +108,7 @@ export class SaasService {
   ): Promise<void> {
     const now = new Date();
     const subscription = await this.requireCurrentSubscriptionWithDefaults(storeId);
-    this.assertSubscriptionStatusAllowsUsage(subscription.status);
+    await this.assertSubscriptionStatusAllowsUsage(storeId, subscription.status, subscription.trial_ends_at, now);
 
     const limits = await this.saasRepository.listPlanLimits(subscription.plan_id);
     const limit = limits.find((entry) => entry.metric_key === metricKey);
@@ -600,8 +600,23 @@ export class SaasService {
     return 0;
   }
 
-  private assertSubscriptionStatusAllowsUsage(status: string): void {
-    if (status === 'canceled' || status === 'suspended') {
+  private async assertSubscriptionStatusAllowsUsage(
+    storeId: string,
+    status: string,
+    trialEndsAt: Date | null,
+    now: Date,
+  ): Promise<void> {
+    if (status === 'trialing' && trialEndsAt && trialEndsAt.getTime() < now.getTime()) {
+      await this.saasRepository.updateSubscriptionStatus(storeId, 'past_due');
+      await this.saasRepository.setStoreSuspension({
+        storeId,
+        isSuspended: true,
+        reason: 'Trial expired',
+      });
+      throw new UnprocessableEntityException('Trial period has expired. Upgrade plan to continue.');
+    }
+
+    if (status === 'canceled' || status === 'suspended' || status === 'past_due') {
       throw new UnprocessableEntityException(
         `Subscription status ${status} does not allow this operation`,
       );

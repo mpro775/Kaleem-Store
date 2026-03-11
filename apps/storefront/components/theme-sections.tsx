@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import type { StorefrontCategory, StorefrontProduct } from '../lib/types';
 
 interface ThemeSectionsProps {
@@ -46,22 +47,45 @@ function renderSection(
     featuredProducts: StorefrontProduct[];
   },
 ) {
-  switch (section.type) {
-    case 'header':
-      return <HeaderSection storeName={context.storeName} />;
-    case 'hero':
-      return <HeroSection storeName={context.storeName} settings={section.settings} />;
-    case 'categories_grid':
-      return <CategoriesSection categories={context.categories} />;
-    case 'featured_products':
-      return <FeaturedProductsSection products={context.featuredProducts} />;
-    case 'offers_banner':
-      return <OffersBannerSection />;
-    case 'footer':
-      return <FooterSection storeName={context.storeName} />;
-    default:
-      return <SectionFallback type={section.type} />;
+  const renderer = sectionRenderers[section.type];
+  if (!renderer) {
+    return <SectionFallback type={section.type} />;
   }
+
+  return renderer(section, context);
+}
+
+const sectionRenderers: Record<
+  string,
+  (
+    section: ThemeSection,
+    context: {
+      storeName: string;
+      categories: StorefrontCategory[];
+      featuredProducts: StorefrontProduct[];
+    },
+  ) => ReactNode
+> = {
+  announcement_bar: (section) => <AnnouncementBarSection settings={section.settings} />,
+  header: (_section, context) => <HeaderSection storeName={context.storeName} />,
+  hero: (section, context) => <HeroSection storeName={context.storeName} settings={section.settings} />,
+  categories_grid: (_section, context) => <CategoriesSection categories={context.categories} />,
+  featured_products: (_section, context) => (
+    <FeaturedProductsSection products={context.featuredProducts} />
+  ),
+  rich_text: (section) => <RichTextSection settings={section.settings} />,
+  testimonials: (section) => <TestimonialsSection settings={section.settings} />,
+  newsletter_signup: (section) => <NewsletterSignupSection settings={section.settings} />,
+  offers_banner: () => <OffersBannerSection />,
+  footer: (_section, context) => <FooterSection storeName={context.storeName} />,
+};
+
+function AnnouncementBarSection({ settings }: { settings: Record<string, unknown> }) {
+  const message =
+    typeof settings.message === 'string' && settings.message.trim().length > 0
+      ? settings.message
+      : 'Welcome to our store';
+  return <div className="offers-banner">{message}</div>;
 }
 
 function HeaderSection({ storeName }: { storeName: string }) {
@@ -73,6 +97,7 @@ function HeaderSection({ storeName }: { storeName: string }) {
         <Link href="/categories">Categories</Link>
         <Link href="/cart">Cart</Link>
         <Link href="/track-order">Track order</Link>
+        <Link href="/policies/privacy">Policies</Link>
       </nav>
     </header>
   );
@@ -158,6 +183,81 @@ function FeaturedProductsSection({ products }: { products: StorefrontProduct[] }
   );
 }
 
+function RichTextSection({ settings }: { settings: Record<string, unknown> }) {
+  const title =
+    typeof settings.title === 'string' && settings.title.trim().length > 0
+      ? settings.title
+      : 'About our store';
+  const body =
+    typeof settings.body === 'string' && settings.body.trim().length > 0
+      ? settings.body
+      : 'Curated products with reliable delivery and transparent support.';
+  return (
+    <div className="hero-panel">
+      <h3>{title}</h3>
+      <p>{body}</p>
+    </div>
+  );
+}
+
+function TestimonialsSection({ settings }: { settings: Record<string, unknown> }) {
+  const title =
+    typeof settings.title === 'string' && settings.title.trim().length > 0
+      ? settings.title
+      : 'Customer stories';
+
+  const items = Array.isArray(settings.items)
+    ? settings.items
+        .map((item) => (isRecord(item) ? item : null))
+        .filter((item): item is Record<string, unknown> => item !== null)
+        .slice(0, 4)
+    : [];
+
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <div>
+      <h3>{title}</h3>
+      <div className="category-grid">
+        {items.map((item, index) => {
+          const quote = typeof item.quote === 'string' ? item.quote : 'Great shopping experience.';
+          const author = typeof item.author === 'string' ? item.author : 'Customer';
+          return (
+            <article key={`${author}-${index}`} className="category-card">
+              <strong>{author}</strong>
+              <span>{quote}</span>
+            </article>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function NewsletterSignupSection({ settings }: { settings: Record<string, unknown> }) {
+  const title =
+    typeof settings.title === 'string' && settings.title.trim().length > 0
+      ? settings.title
+      : 'Get updates';
+  const ctaLabel =
+    typeof settings.ctaLabel === 'string' && settings.ctaLabel.trim().length > 0
+      ? settings.ctaLabel
+      : 'Join';
+  return (
+    <div className="hero-panel">
+      <h3>{title}</h3>
+      <p>Subscribe for new arrivals and limited offers.</p>
+      <div className="actions">
+        <button className="primary" type="button">
+          {ctaLabel}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function OffersBannerSection() {
   return (
     <div className="offers-banner">
@@ -169,7 +269,17 @@ function OffersBannerSection() {
 }
 
 function FooterSection({ storeName }: { storeName: string }) {
-  return <footer className="footer-panel">{storeName} - Built with Kaleem Storefront</footer>;
+  return (
+    <footer className="footer-panel">
+      <p>{storeName} - Built with Kaleem Storefront</p>
+      <p>
+        <Link href="/policies/shipping">Shipping policy</Link> |{' '}
+        <Link href="/policies/return">Return policy</Link> |{' '}
+        <Link href="/policies/privacy">Privacy policy</Link> |{' '}
+        <Link href="/policies/terms">Terms</Link>
+      </p>
+    </footer>
+  );
 }
 
 function SectionFallback({ type }: { type: string }) {

@@ -40,7 +40,10 @@ npm run dev --workspace @kaleem/storefront
 - API env settings:
   - `DOMAIN_VERIFY_TXT_PREFIX=_kaleem-verify`
   - `DOMAIN_CNAME_TARGET=stores.example.com`
+  - `DOMAIN_SSL_PROVIDER=manual|cloudflare`
   - `DOMAIN_SSL_MODE=full_strict`
+  - `CLOUDFLARE_API_TOKEN=<token>` (required for cloudflare mode)
+  - `CLOUDFLARE_ZONE_ID=<zone-id>` (required for cloudflare mode)
 - Full production guide:
   - `docs/custom-domains-ssl.md`
 

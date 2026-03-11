@@ -11,6 +11,7 @@ import type { AuthUser } from '../auth/interfaces/auth-user.interface';
 import type { RequestContextData } from '../common/utils/request-context.util';
 import { OutboxService } from '../messaging/outbox.service';
 import { SaasService } from '../saas/saas.service';
+import { CloudflareDomainsService } from './cloudflare-domains.service';
 import type { CreateDomainDto } from './dto/create-domain.dto';
 import { DnsResolverService } from './dns-resolver.service';
 import { DomainsRepository, type StoreDomainRecord } from './domains.repository';
@@ -24,8 +25,10 @@ export interface StoreDomainResponse {
   routingTarget: string;
   status: 'pending' | 'verified' | 'active';
   sslStatus: 'pending' | 'requested' | 'issued' | 'error';
-  sslProvider: 'cloudflare';
+  sslProvider: 'manual' | 'cloudflare';
   sslMode: 'full' | 'full_strict';
+  sslLastCheckedAt: Date | null;
+  sslError: string | null;
   verificationToken: string;
   verificationDnsHost: string;
   verifiedAt: Date | null;
@@ -41,6 +44,7 @@ export class DomainsService {
     private readonly auditService: AuditService,
     private readonly configService: ConfigService,
     private readonly saasService: SaasService,
+    private readonly cloudflareDomainsService: CloudflareDomainsService,
   ) {}
 
   async create(
@@ -57,6 +61,9 @@ export class DomainsService {
         storeId: currentUser.storeId,
         hostname: input.hostname,
         verificationToken,
+        sslProvider: this.sslProvider,
+        sslMode: this.sslMode,
+        cloudflareZoneId: this.cloudflareZoneId,
       });
 
       await this.log('domains.created', currentUser, created.id, context, {
@@ -131,7 +138,55 @@ export class DomainsService {
       throw new BadRequestException('Domain must be verified before activation');
     }
 
-    const activated = await this.domainsRepository.markActive(currentUser.storeId, domain.id);
+    const hasRoutingCname = await this.dnsResolverService.hasRoutingCname(
+      domain.hostname,
+      this.routingTarget,
+    );
+
+    if (!hasRoutingCname) {
+      throw new BadRequestException(
+        `Domain routing CNAME is missing. Expected ${domain.hostname} -> ${this.routingTarget}`,
+      );
+    }
+
+    let nextSslStatus: 'requested' | 'issued' | 'error' = 'issued';
+    let cloudflareHostnameId: string | null = domain.cloudflare_hostname_id;
+    let sslError: string | null = null;
+
+    if (domain.ssl_provider === 'cloudflare') {
+      if (!this.cloudflareDomainsService.isEnabled()) {
+        throw new BadRequestException(
+          'Cloudflare integration is not configured. Set CLOUDFLARE_ZONE_ID and CLOUDFLARE_API_TOKEN.',
+        );
+      }
+
+      try {
+        if (domain.cloudflare_hostname_id) {
+          const status = await this.cloudflareDomainsService.getCustomHostname(
+            domain.cloudflare_hostname_id,
+          );
+          nextSslStatus = status.sslStatus;
+        } else {
+          const created = await this.cloudflareDomainsService.createCustomHostname(
+            domain.hostname,
+            domain.ssl_mode,
+          );
+          cloudflareHostnameId = created.cloudflareHostnameId;
+          nextSslStatus = created.sslStatus;
+        }
+      } catch (error) {
+        nextSslStatus = 'error';
+        sslError = error instanceof Error ? error.message : 'Cloudflare SSL provisioning failed';
+      }
+    }
+
+    const activated = await this.domainsRepository.markActive({
+      storeId: currentUser.storeId,
+      domainId: domain.id,
+      sslStatus: nextSslStatus,
+      cloudflareHostnameId,
+      sslError,
+    });
     if (!activated) {
       throw new NotFoundException('Domain not found');
     }
@@ -145,12 +200,14 @@ export class DomainsService {
         domainId: activated.id,
         hostname: activated.hostname,
         sslStatus: activated.ssl_status,
+        sslError: activated.ssl_error,
       },
     });
 
     await this.log('domains.activated', currentUser, activated.id, context, {
       hostname: activated.hostname,
       sslStatus: activated.ssl_status,
+      sslError: activated.ssl_error,
     });
 
     return this.toResponse(activated);
@@ -161,12 +218,81 @@ export class DomainsService {
     domainId: string,
     context: RequestContextData,
   ): Promise<void> {
+    const domain = await this.requireDomain(currentUser.storeId, domainId);
+
+    if (
+      domain.ssl_provider === 'cloudflare' &&
+      domain.cloudflare_hostname_id &&
+      this.cloudflareDomainsService.isEnabled()
+    ) {
+      await this.cloudflareDomainsService.deleteCustomHostname(domain.cloudflare_hostname_id);
+    }
+
     const deleted = await this.domainsRepository.delete(currentUser.storeId, domainId);
     if (!deleted) {
       throw new NotFoundException('Domain not found');
     }
 
     await this.log('domains.deleted', currentUser, domainId, context, {});
+  }
+
+  async syncSslStatus(
+    currentUser: AuthUser,
+    domainId: string,
+    context: RequestContextData,
+  ): Promise<StoreDomainResponse> {
+    const domain = await this.requireDomain(currentUser.storeId, domainId);
+
+    if (domain.ssl_provider !== 'cloudflare') {
+      return this.toResponse(domain);
+    }
+
+    if (!this.cloudflareDomainsService.isEnabled()) {
+      throw new BadRequestException(
+        'Cloudflare integration is not configured. Set CLOUDFLARE_ZONE_ID and CLOUDFLARE_API_TOKEN.',
+      );
+    }
+
+    if (!domain.cloudflare_hostname_id) {
+      throw new BadRequestException('Cloudflare custom hostname id is not set for this domain');
+    }
+
+    let sslStatus: 'requested' | 'issued' | 'error' =
+      domain.ssl_status === 'issued'
+        ? 'issued'
+        : domain.ssl_status === 'requested'
+          ? 'requested'
+          : 'error';
+    let sslError: string | null = null;
+
+    try {
+      const cloudflareState = await this.cloudflareDomainsService.getCustomHostname(
+        domain.cloudflare_hostname_id,
+      );
+      sslStatus = cloudflareState.sslStatus;
+    } catch (error) {
+      sslStatus = 'error';
+      sslError = error instanceof Error ? error.message : 'Cloudflare SSL sync failed';
+    }
+
+    const updated = await this.domainsRepository.updateSslState({
+      storeId: currentUser.storeId,
+      domainId,
+      sslStatus,
+      sslError,
+    });
+
+    if (!updated) {
+      throw new NotFoundException('Domain not found');
+    }
+
+    await this.log('domains.ssl_synced', currentUser, domainId, context, {
+      hostname: updated.hostname,
+      sslStatus: updated.ssl_status,
+      sslError: updated.ssl_error,
+    });
+
+    return this.toResponse(updated);
   }
 
   private async requireDomain(storeId: string, domainId: string): Promise<StoreDomainRecord> {
@@ -209,8 +335,10 @@ export class DomainsService {
       routingTarget: this.routingTarget,
       status: domain.status,
       sslStatus: domain.ssl_status,
-      sslProvider: 'cloudflare',
-      sslMode: this.sslMode,
+      sslProvider: domain.ssl_provider,
+      sslMode: domain.ssl_mode,
+      sslLastCheckedAt: domain.ssl_last_checked_at,
+      sslError: domain.ssl_error,
       verificationToken: domain.verification_token,
       verificationDnsHost: `${this.verificationPrefix}.${domain.hostname}`,
       verifiedAt: domain.verified_at,
@@ -234,6 +362,16 @@ export class DomainsService {
   private get sslMode(): 'full' | 'full_strict' {
     const configured = this.configService.get<string>('DOMAIN_SSL_MODE', 'full_strict');
     return configured === 'full' ? 'full' : 'full_strict';
+  }
+
+  private get sslProvider(): 'manual' | 'cloudflare' {
+    const configured = this.configService.get<string>('DOMAIN_SSL_PROVIDER', 'manual').trim();
+    return configured === 'cloudflare' ? 'cloudflare' : 'manual';
+  }
+
+  private get cloudflareZoneId(): string | null {
+    const value = this.configService.get<string>('CLOUDFLARE_ZONE_ID', '').trim();
+    return value.length > 0 ? value : null;
   }
 
   private generateVerificationToken(): string {

@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { HealthStatus } from '@kaleem/shared-types';
 import { DatabaseService } from '../database/database.service';
+import { STORAGE_ADAPTER, type StorageAdapter } from '../media/storage.adapter';
 import { MESSAGE_PUBLISHER, type MessagePublisher } from '../messaging/publisher.interface';
 
 export interface DetailedHealthResponse {
@@ -32,6 +33,7 @@ export class HealthService {
   constructor(
     private readonly databaseService: DatabaseService,
     @Inject(MESSAGE_PUBLISHER) private readonly publisher: MessagePublisher,
+    @Inject(STORAGE_ADAPTER) private readonly storageAdapter: StorageAdapter,
   ) {}
 
   getLive(): { status: HealthStatus; timestamp: string } {
@@ -50,6 +52,7 @@ export class HealthService {
       postgres: 'down',
       redis: 'down',
       rabbitmq: 'down',
+      storage: 'down',
     };
 
     try {
@@ -67,6 +70,9 @@ export class HealthService {
     }
 
     checks.rabbitmq = (await this.publisher.ping()) ? 'ok' : 'down';
+
+    const storageHealth = await this.checkStorage();
+    checks.storage = storageHealth.status;
 
     const status: HealthStatus = Object.values(checks).every((value) => value === 'ok')
       ? 'ok'
@@ -91,7 +97,8 @@ export class HealthService {
     const rabbitmqHealth = await this.checkRabbitMQ();
     checks.rabbitmq = rabbitmqHealth.status;
 
-    checks.storage = 'ok';
+    const storageHealth = await this.checkStorage();
+    checks.storage = storageHealth.status;
 
     const allStatuses = Object.values(checks);
     let overallStatus: HealthStatus = 'ok';
@@ -118,9 +125,32 @@ export class HealthService {
       case 'rabbitmq':
         return this.checkRabbitMQ();
       case 'storage':
-        return { status: 'ok', message: 'Storage health check not implemented' };
+        return this.checkStorage();
       default:
         return { status: 'down', message: `Unknown component: ${component}` };
+    }
+  }
+
+  private async checkStorage(): Promise<ComponentHealth> {
+    const start = Date.now();
+    const probeKey = `__health__/probe-${Date.now()}`;
+
+    try {
+      await this.storageAdapter.headObject(probeKey);
+      return {
+        status: 'ok',
+        latency: Date.now() - start,
+        details: {
+          bucketName: this.storageAdapter.getBucketName(),
+          probeKey,
+        },
+      };
+    } catch (error) {
+      return {
+        status: 'down',
+        latency: Date.now() - start,
+        message: error instanceof Error ? error.message : 'Storage health check failed',
+      };
     }
   }
 

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { resolveTxt } from 'node:dns/promises';
+import { resolveCname, resolveTxt } from 'node:dns/promises';
 
 @Injectable()
 export class DnsResolverService {
@@ -16,6 +16,24 @@ export class DnsResolverService {
       }
       throw error;
     }
+  }
+
+  async hasRoutingCname(hostname: string, expectedTarget: string): Promise<boolean> {
+    const normalizedExpected = this.normalizeHost(expectedTarget);
+
+    try {
+      const records = await resolveCname(hostname);
+      return records.some((record) => this.normalizeHost(record) === normalizedExpected);
+    } catch (error) {
+      if (this.isDnsNotFound(error)) {
+        return false;
+      }
+      throw error;
+    }
+  }
+
+  private normalizeHost(value: string): string {
+    return value.trim().toLowerCase().replace(/\.$/, '');
   }
 
   private isDnsNotFound(error: unknown): boolean {

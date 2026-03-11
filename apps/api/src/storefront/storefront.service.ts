@@ -35,6 +35,8 @@ import {
 import { SaasService } from '../saas/saas.service';
 import { ShippingRepository, type ShippingZoneRecord } from '../shipping/shipping.repository';
 import { ThemesService } from '../themes/themes.service';
+import { StoresRepository } from '../stores/stores.repository';
+import { WebhooksService } from '../webhooks/webhooks.service';
 import { StoreResolverService } from './store-resolver.service';
 import type { AddCartItemDto } from './dto/add-cart-item.dto';
 import type { CheckoutDto } from './dto/checkout.dto';
@@ -79,6 +81,13 @@ export interface PublicStoreResolveResponse {
     version: number;
     sections: Array<{ id: string; type: string; enabled: boolean }>;
   };
+}
+
+export interface StorefrontPoliciesResponse {
+  shippingPolicy: string | null;
+  returnPolicy: string | null;
+  privacyPolicy: string | null;
+  termsAndConditions: string | null;
 }
 
 export interface StorefrontCartResponse {
@@ -150,6 +159,8 @@ export class StorefrontService {
     private readonly saasService: SaasService,
     private readonly themesService: ThemesService,
     private readonly outboxService: OutboxService,
+    private readonly storesRepository: StoresRepository,
+    private readonly webhooksService: WebhooksService,
   ) {}
 
   async getStore(request: Request) {
@@ -285,6 +296,21 @@ export class StorefrontService {
     };
   }
 
+  async getPolicies(request: Request): Promise<StorefrontPoliciesResponse> {
+    const store = await this.storeResolverService.resolve(request);
+    const storeSettings = await this.storesRepository.findById(store.id);
+    if (!storeSettings) {
+      throw new NotFoundException('Store not found');
+    }
+
+    return {
+      shippingPolicy: storeSettings.shipping_policy,
+      returnPolicy: storeSettings.return_policy,
+      privacyPolicy: storeSettings.privacy_policy,
+      termsAndConditions: storeSettings.terms_of_service,
+    };
+  }
+
   async addCartItem(request: Request, input: AddCartItemDto): Promise<StorefrontCartResponse> {
     const store = await this.storeResolverService.resolve(request);
     await this.inventoryService.releaseExpiredReservations(store.id);
@@ -409,6 +435,13 @@ export class StorefrontService {
     );
 
     await this.publishOrderCreated(order, store.id);
+    await this.webhooksService.dispatchEvent(store.id, 'order.created', {
+      orderId: order.id,
+      orderCode: order.order_code,
+      status: order.status,
+      total: Number(order.total),
+      currencyCode: order.currency_code,
+    });
     await this.saasService.recordUsageEvent(store.id, 'orders.monthly', 1, {
       orderId: order.id,
       orderCode: order.order_code,

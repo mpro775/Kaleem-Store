@@ -7,6 +7,7 @@ const { ValidationPipe } = require('@nestjs/common');
 const { Test } = require('@nestjs/testing');
 
 const { AccessTokenGuard } = require('../dist/auth/guards/access-token.guard');
+const { AdvancedOffersService } = require('../dist/advanced-offers/advanced-offers.service');
 const { AttributesService } = require('../dist/attributes/attributes.service');
 const { AuditService } = require('../dist/audit/audit.service');
 const { InventoryService } = require('../dist/inventory/inventory.service');
@@ -25,9 +26,11 @@ const { ShippingService } = require('../dist/shipping/shipping.service');
 const { StoreResolverService } = require('../dist/storefront/store-resolver.service');
 const { StorefrontController } = require('../dist/storefront/storefront.controller');
 const { StorefrontService } = require('../dist/storefront/storefront.service');
+const { StoresRepository } = require('../dist/stores/stores.repository');
 const { TenantGuard } = require('../dist/tenancy/guards/tenant.guard');
 const { SaasService } = require('../dist/saas/saas.service');
 const { ThemesService } = require('../dist/themes/themes.service');
+const { WebhooksService } = require('../dist/webhooks/webhooks.service');
 
 const STORE_ID = '11111111-1111-4111-8111-111111111111';
 const OPEN_CART_ID = '0b2cc32f-b97f-4d84-8b53-0a162f17c0fc';
@@ -377,6 +380,18 @@ const idempotencyServiceMock = {
   },
 };
 
+const webhooksServiceMock = {
+  async dispatchEvent() {
+    return 0;
+  },
+};
+
+const advancedOffersServiceMock = {
+  async computeBestDiscount() {
+    return { offerId: null, discount: 0 };
+  },
+};
+
 const auditServiceMock = {
   async log() {
     return;
@@ -402,9 +417,30 @@ describe('Sprint 4 API smoke e2e', () => {
         { provide: InventoryService, useValue: inventoryServiceMock },
         { provide: ProductsRepository, useValue: {} },
         { provide: StoreResolverService, useValue: storeResolverMock },
+        {
+          provide: StoresRepository,
+          useValue: {
+            findById: async () => ({
+              id: STORE_ID,
+              name: 'Demo Store',
+              slug: 'demo-store',
+              logo_url: null,
+              phone: null,
+              address: null,
+              currency_code: 'SAR',
+              timezone: 'Asia/Riyadh',
+              shipping_policy: null,
+              return_policy: null,
+              privacy_policy: null,
+              terms_of_service: null,
+            }),
+          },
+        },
         { provide: IdempotencyService, useValue: idempotencyServiceMock },
         { provide: SaasService, useValue: saasServiceMock },
         { provide: ThemesService, useValue: themesServiceMock },
+        { provide: WebhooksService, useValue: webhooksServiceMock },
+        { provide: AdvancedOffersService, useValue: advancedOffersServiceMock },
         { provide: OutboxService, useValue: outboxServiceMock },
         { provide: AuditService, useValue: auditServiceMock },
       ],

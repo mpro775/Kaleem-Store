@@ -103,11 +103,12 @@ export class ThemesService {
   async getStorefrontTheme(storeId: string, previewToken?: string): Promise<StorefrontThemeResponse> {
     const theme = await this.getOrCreateTheme(storeId);
     if (!previewToken) {
+      const publishedConfig = this.safeConfig(theme.published_config);
       return {
         storeId,
         mode: 'published',
         version: theme.version,
-        config: theme.published_config,
+        config: publishedConfig,
       };
     }
 
@@ -116,12 +117,23 @@ export class ThemesService {
       throw new NotFoundException('Preview token is invalid or expired');
     }
 
+    const draftConfig = this.safeConfig(theme.draft_config);
+
     return {
       storeId,
       mode: 'preview',
       version: theme.version,
-      config: theme.draft_config,
+      config: draftConfig,
     };
+  }
+
+  private safeConfig(config: Record<string, unknown>): Record<string, unknown> {
+    try {
+      validateThemeConfig(config);
+      return config;
+    } catch {
+      return this.buildDefaultThemeConfig();
+    }
   }
 
   private async getOrCreateTheme(storeId: string): Promise<StoreThemeRecord> {
@@ -151,10 +163,40 @@ export class ThemesService {
         fontFamily: 'Lora, serif',
       },
       sections: [
+        {
+          id: 'announcement-main',
+          type: 'announcement_bar',
+          enabled: true,
+          settings: { message: 'Free shipping for orders above 300 SAR' },
+        },
         { id: 'header-main', type: 'header', enabled: true, settings: { sticky: true } },
         { id: 'hero-main', type: 'hero', enabled: true, settings: { headline: 'Welcome to Kaleem Store' } },
         { id: 'categories-main', type: 'categories_grid', enabled: true, settings: {} },
         { id: 'featured-main', type: 'featured_products', enabled: true, settings: { limit: 8 } },
+        {
+          id: 'rich-text-main',
+          type: 'rich_text',
+          enabled: true,
+          settings: { title: 'Why customers trust us', body: 'Fast delivery, curated products, and secure checkout.' },
+        },
+        {
+          id: 'testimonials-main',
+          type: 'testimonials',
+          enabled: true,
+          settings: {
+            title: 'Loved by shoppers',
+            items: [
+              { quote: 'Great quality and fast support.', author: 'Reem' },
+              { quote: 'Checkout was smooth on mobile.', author: 'Faisal' },
+            ],
+          },
+        },
+        {
+          id: 'newsletter-main',
+          type: 'newsletter_signup',
+          enabled: true,
+          settings: { title: 'Get weekly deals', ctaLabel: 'Subscribe' },
+        },
         { id: 'offers-main', type: 'offers_banner', enabled: true, settings: {} },
         { id: 'footer-main', type: 'footer', enabled: true, settings: {} },
       ],

@@ -14,6 +14,10 @@ export interface StoreSettingsResponse {
   address: string | null;
   currencyCode: string;
   timezone: string;
+  shippingPolicy: string | null;
+  returnPolicy: string | null;
+  privacyPolicy: string | null;
+  termsAndConditions: string | null;
 }
 
 @Injectable()
@@ -57,6 +61,10 @@ export class StoresService {
       logoUrl: input.logoUrl ?? current.logo_url,
       phone: input.phone ?? current.phone,
       address: input.address ?? current.address,
+      shippingPolicy: input.shippingPolicy ?? current.shipping_policy,
+      returnPolicy: input.returnPolicy ?? current.return_policy,
+      privacyPolicy: input.privacyPolicy ?? current.privacy_policy,
+      termsOfService: input.termsAndConditions ?? current.terms_of_service,
     };
   }
 
@@ -86,6 +94,10 @@ export class StoresService {
       address: store.address,
       currencyCode: store.currency_code,
       timezone: store.timezone,
+      shippingPolicy: store.shipping_policy,
+      returnPolicy: store.return_policy,
+      privacyPolicy: store.privacy_policy,
+      termsAndConditions: store.terms_of_service,
     };
   }
 }

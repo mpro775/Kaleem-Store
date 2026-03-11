@@ -30,6 +30,7 @@ npm run dev --workspace @kaleem/storefront
 - Typecheck all workspaces: `npm run typecheck`
 - Build all apps/packages: `npm run build`
 - Run API smoke e2e suite: `npm run smoke:e2e`
+- Full release gate: `npm run release:verify`
 - Full runbook: `docs/runbooks/build-verification.md`
 
 ## API and Runbooks
@@ -54,3 +55,6 @@ npm run dev --workspace @kaleem/storefront
 - Messaging: `docs/runbooks/messaging.md`
 - Themes and domains: `docs/runbooks/themes-domains.md`
 - SaaS controls: `docs/runbooks/saas-controls.md`
+- Go-live checklist: `docs/runbooks/go-live-checklist.md`
+- Rollback plan: `docs/runbooks/rollback-plan.md`
+- Incident response: `docs/runbooks/incident-response.md`

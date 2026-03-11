@@ -1,8 +1,12 @@
 export const THEME_SECTION_TYPES = [
+  'announcement_bar',
   'header',
   'hero',
   'categories_grid',
   'featured_products',
+  'rich_text',
+  'testimonials',
+  'newsletter_signup',
   'offers_banner',
   'footer',
 ] as const;

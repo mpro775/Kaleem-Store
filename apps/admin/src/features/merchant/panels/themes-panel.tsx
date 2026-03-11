@@ -8,10 +8,14 @@ interface ThemesPanelProps {
 }
 
 const sectionKeys = [
+  'announcement_bar',
   'header',
   'hero',
   'categories_grid',
   'featured_products',
+  'rich_text',
+  'testimonials',
+  'newsletter_signup',
   'offers_banner',
   'footer',
 ] as const;
@@ -34,10 +38,14 @@ const defaultForm: ThemeEditorForm = {
   fontFamily: 'Lora, serif',
   heroHeadline: 'Welcome to Kaleem Store',
   sectionEnabled: {
+    announcement_bar: true,
     header: true,
     hero: true,
     categories_grid: true,
     featured_products: true,
+    rich_text: true,
+    testimonials: true,
+    newsletter_signup: true,
     offers_banner: true,
     footer: true,
   },
@@ -229,6 +237,12 @@ function formToThemeConfig(form: ThemeEditorForm): Record<string, unknown> {
     },
     sections: [
       {
+        id: 'announcement-main',
+        type: 'announcement_bar',
+        enabled: form.sectionEnabled.announcement_bar,
+        settings: { message: 'Free shipping for orders above 300 SAR' },
+      },
+      {
         id: 'header-main',
         type: 'header',
         enabled: form.sectionEnabled.header,
@@ -251,6 +265,33 @@ function formToThemeConfig(form: ThemeEditorForm): Record<string, unknown> {
         type: 'featured_products',
         enabled: form.sectionEnabled.featured_products,
         settings: { limit: 8 },
+      },
+      {
+        id: 'rich-text-main',
+        type: 'rich_text',
+        enabled: form.sectionEnabled.rich_text,
+        settings: {
+          title: 'Why customers trust us',
+          body: 'Fast delivery, curated products, and secure checkout.',
+        },
+      },
+      {
+        id: 'testimonials-main',
+        type: 'testimonials',
+        enabled: form.sectionEnabled.testimonials,
+        settings: {
+          title: 'Loved by shoppers',
+          items: [
+            { quote: 'Great quality and fast support.', author: 'Reem' },
+            { quote: 'Checkout was smooth on mobile.', author: 'Faisal' },
+          ],
+        },
+      },
+      {
+        id: 'newsletter-main',
+        type: 'newsletter_signup',
+        enabled: form.sectionEnabled.newsletter_signup,
+        settings: { title: 'Get weekly deals', ctaLabel: 'Subscribe' },
       },
       {
         id: 'offers-main',

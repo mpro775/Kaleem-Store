@@ -12,6 +12,7 @@ import { ShippingPanel } from './panels/shipping-panel';
 import { StaffPanel } from './panels/staff-panel';
 import { StoreSettingsPanel } from './panels/store-settings-panel';
 import { ThemesPanel } from './panels/themes-panel';
+import { WebhooksPanel } from './panels/webhooks-panel';
 import type { MerchantSession } from './types';
 
 type MerchantTabKey =
@@ -27,7 +28,8 @@ type MerchantTabKey =
   | 'promotions'
   | 'themes'
   | 'domains'
-  | 'staff';
+  | 'staff'
+  | 'webhooks';
 
 export type MerchantRequester = <T>(
   path: string,
@@ -82,6 +84,7 @@ export function MerchantDashboard({
         { key: 'promotions', label: 'Promotions' },
         { key: 'themes', label: 'Themes' },
         { key: 'domains', label: 'Domains' },
+        { key: 'webhooks', label: 'Webhooks' },
         { key: 'staff', label: 'Staff' },
       ] as Array<{ key: MerchantTabKey; label: string }>,
     [],
@@ -153,6 +156,7 @@ const panelRenderers: Record<MerchantTabKey, (props: MerchantPanelProps) => JSX.
   promotions: (props) => <PromotionsPanel request={props.request} />,
   themes: (props) => <ThemesPanel request={props.request} apiBaseUrl={props.session.apiBaseUrl} />,
   domains: (props) => <DomainsPanel request={props.request} />,
+  webhooks: (props) => <WebhooksPanel request={props.request} />,
   staff: (props) => <StaffPanel request={props.request} />,
 };
 

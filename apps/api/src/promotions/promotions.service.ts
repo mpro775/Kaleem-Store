@@ -8,6 +8,8 @@ import { AuditService } from '../audit/audit.service';
 import type { AuthUser } from '../auth/interfaces/auth-user.interface';
 import type { RequestContextData } from '../common/utils/request-context.util';
 import type { CartItemSnapshot } from '../orders/orders.repository';
+import { WebhooksService } from '../webhooks/webhooks.service';
+import { AdvancedOffersService } from '../advanced-offers/advanced-offers.service';
 import { DISCOUNT_TYPES, type DiscountType } from './constants/discount.constants';
 import { OFFER_TARGET_TYPES, type OfferTargetType } from './constants/offer.constants';
 import type { ApplyCouponDto } from './dto/apply-coupon.dto';
@@ -74,6 +76,8 @@ export class PromotionsService {
   constructor(
     private readonly promotionsRepository: PromotionsRepository,
     private readonly auditService: AuditService,
+    private readonly webhooksService: WebhooksService,
+    private readonly advancedOffersService: AdvancedOffersService,
   ) {}
 
   async createCoupon(
@@ -145,6 +149,13 @@ export class PromotionsService {
     }
 
     await this.log('promotions.coupon_updated', currentUser, couponId, context);
+    await this.webhooksService.dispatchEvent(currentUser.storeId, 'coupon.updated', {
+      couponId: updated.id,
+      code: updated.code,
+      isActive: updated.is_active,
+      discountType: updated.discount_type,
+      discountValue: Number(updated.discount_value),
+    });
     return this.mapCoupon(updated);
   }
 
@@ -230,11 +241,21 @@ export class PromotionsService {
     input: PromotionComputationInput,
   ): Promise<PromotionComputationResult> {
     const offers = await this.promotionsRepository.listActiveOffers(storeId, input.at);
-    const bestOffer = this.promotionsRepository.calculateBestOfferDiscount(
+    const basicOffer = this.promotionsRepository.calculateBestOfferDiscount(
       offers,
       input.subtotal,
       input.items,
     );
+    const advancedOffer = await this.advancedOffersService.computeBestDiscount(
+      storeId,
+      input.items,
+      input.subtotal,
+      input.at,
+    );
+    const bestOffer =
+      advancedOffer.discount > basicOffer.discount
+        ? advancedOffer
+        : { offerId: basicOffer.offerId, discount: basicOffer.discount };
 
     const normalizedCouponCode = input.couponCode?.trim();
 

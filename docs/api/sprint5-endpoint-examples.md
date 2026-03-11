@@ -90,7 +90,7 @@ curl -X POST "http://localhost:3000/domains/<domainId>/verify" \
   -H "x-store-id: ${STORE_ID}"
 ```
 
-## 8) Activate Domain (Cloudflare SSL Issued)
+## 8) Activate Domain (Operational SSL)
 
 ```bash
 curl -X POST "http://localhost:3000/domains/<domainId>/activate" \
@@ -101,9 +101,19 @@ curl -X POST "http://localhost:3000/domains/<domainId>/activate" \
 Expected status fields after activation:
 
 - `status: "active"`
-- `sslStatus: "issued"`
+- `sslStatus: "requested" | "issued" | "error"`
 
-## 9) Error Example: Activate Before Verify
+## 9) Sync SSL State From Provider
+
+```bash
+curl -X POST "http://localhost:3000/domains/<domainId>/sync-ssl" \
+  -H "Authorization: Bearer ${ADMIN_TOKEN}" \
+  -H "x-store-id: ${STORE_ID}"
+```
+
+Use this endpoint after activation to refresh SSL status when provider issuance is still pending.
+
+## 10) Error Example: Activate Before Verify
 
 Expected response (`400`):
 

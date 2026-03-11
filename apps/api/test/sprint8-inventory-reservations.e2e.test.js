@@ -26,8 +26,10 @@ const { ShippingRepository } = require('../dist/shipping/shipping.repository');
 const { StoreResolverService } = require('../dist/storefront/store-resolver.service');
 const { StorefrontController } = require('../dist/storefront/storefront.controller');
 const { StorefrontService } = require('../dist/storefront/storefront.service');
+const { StoresRepository } = require('../dist/stores/stores.repository');
 const { TenantGuard } = require('../dist/tenancy/guards/tenant.guard');
 const { ThemesService } = require('../dist/themes/themes.service');
+const { WebhooksService } = require('../dist/webhooks/webhooks.service');
 
 const STORE_ID = '11111111-1111-4111-8111-111111111111';
 const PRODUCT_ID = '22222222-2222-4222-8222-222222222222';
@@ -540,6 +542,12 @@ const idempotencyServiceMock = {
   },
 };
 
+const webhooksServiceMock = {
+  async dispatchEvent() {
+    return 0;
+  },
+};
+
 describe('Sprint 8 inventory reservations e2e', () => {
   let app;
   let baseUrl = '';
@@ -554,6 +562,25 @@ describe('Sprint 8 inventory reservations e2e', () => {
         { provide: InventoryRepository, useValue: inventoryRepositoryMock },
         { provide: OrdersRepository, useValue: ordersRepositoryMock },
         { provide: StoreResolverService, useValue: storeResolverMock },
+        {
+          provide: StoresRepository,
+          useValue: {
+            findById: async () => ({
+              id: STORE_ID,
+              name: 'Demo Store',
+              slug: 'demo-store',
+              logo_url: null,
+              phone: null,
+              address: null,
+              currency_code: 'SAR',
+              timezone: 'Asia/Riyadh',
+              shipping_policy: null,
+              return_policy: null,
+              privacy_policy: null,
+              terms_of_service: null,
+            }),
+          },
+        },
         { provide: IdempotencyService, useValue: idempotencyServiceMock },
         {
           provide: CategoriesRepository,
@@ -578,6 +605,7 @@ describe('Sprint 8 inventory reservations e2e', () => {
         },
         { provide: PromotionsService, useValue: noopServices },
         { provide: SaasService, useValue: noopServices },
+        { provide: WebhooksService, useValue: webhooksServiceMock },
         {
           provide: ThemesService,
           useValue: {

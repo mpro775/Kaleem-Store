@@ -24,8 +24,10 @@ const { ShippingRepository } = require('../dist/shipping/shipping.repository');
 const { StoreResolverService } = require('../dist/storefront/store-resolver.service');
 const { StorefrontController } = require('../dist/storefront/storefront.controller');
 const { StorefrontService } = require('../dist/storefront/storefront.service');
+const { StoresRepository } = require('../dist/stores/stores.repository');
 const { TenantGuard } = require('../dist/tenancy/guards/tenant.guard');
 const { ThemesService } = require('../dist/themes/themes.service');
+const { WebhooksService } = require('../dist/webhooks/webhooks.service');
 
 const STORE_ID = '11111111-1111-4111-8111-111111111111';
 const CATEGORY_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -332,6 +334,12 @@ const idempotencyServiceMock = {
   },
 };
 
+const webhooksServiceMock = {
+  async dispatchEvent() {
+    return 0;
+  },
+};
+
 const inventoryServiceMock = {
   async releaseExpiredReservations() {
     return 0;
@@ -360,6 +368,25 @@ describe('Sprint 7 attributes and filters e2e', () => {
         { provide: AttributesRepository, useValue: attributesRepositoryMock },
         { provide: CategoriesRepository, useValue: categoriesRepositoryMock },
         { provide: StoreResolverService, useValue: storeResolverMock },
+        {
+          provide: StoresRepository,
+          useValue: {
+            findById: async () => ({
+              id: STORE_ID,
+              name: 'Demo Store',
+              slug: 'demo-store',
+              logo_url: null,
+              phone: null,
+              address: null,
+              currency_code: 'SAR',
+              timezone: 'Asia/Riyadh',
+              shipping_policy: null,
+              return_policy: null,
+              privacy_policy: null,
+              terms_of_service: null,
+            }),
+          },
+        },
         { provide: IdempotencyService, useValue: idempotencyServiceMock },
         { provide: InventoryService, useValue: inventoryServiceMock },
         { provide: ProductsRepository, useValue: productsRepositoryMock },
@@ -367,6 +394,7 @@ describe('Sprint 7 attributes and filters e2e', () => {
         { provide: ShippingRepository, useValue: {} },
         { provide: PromotionsService, useValue: noopObject },
         { provide: SaasService, useValue: noopObject },
+        { provide: WebhooksService, useValue: webhooksServiceMock },
         {
           provide: ThemesService,
           useValue: {

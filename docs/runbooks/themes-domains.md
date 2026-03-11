@@ -17,7 +17,7 @@
 - Token expiry is controlled by:
   - `THEME_PREVIEW_TOKEN_TTL_MINUTES`
 
-## Domain Workflow (MVP)
+## Domain Workflow (Operational)
 
 - Add domain via `POST /domains`.
 - Status transitions:
@@ -29,8 +29,9 @@
 ## SSL Path (Cloudflare Option A)
 
 - On activation (`POST /domains/:domainId/activate`):
+  - API validates CNAME routing to `DOMAIN_CNAME_TARGET`.
   - Domain status becomes `active`.
-  - `ssl_status` becomes `issued`.
+  - `ssl_status` becomes `requested` or `issued` (or `error` on provider failure).
 - API response includes routing metadata for DNS setup:
   - `routingType` (`cname`)
   - `routingHost` (custom hostname)
@@ -38,6 +39,9 @@
   - `sslProvider` (`cloudflare`)
   - `sslMode` (`full` or `full_strict`)
 - Certificate lifecycle is handled by Cloudflare edge.
+- Manual sync endpoint is available:
+  - `POST /domains/:domainId/sync-ssl`
+  - Pulls current SSL state from provider and updates `ssl_status`.
 - API still emits `domain.activated` for downstream auditing/integrations.
 
 ## Events

@@ -126,3 +126,10 @@ export interface TrackOrderResponse {
   }>;
   updatedAt: string;
 }
+
+export interface StorefrontPolicies {
+  shippingPolicy: string | null;
+  returnPolicy: string | null;
+  privacyPolicy: string | null;
+  termsAndConditions: string | null;
+}

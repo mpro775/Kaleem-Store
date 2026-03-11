@@ -35,6 +35,22 @@ npm run smoke:e2e
     - sprint6-saas-platform
     - sprint7-attributes-filters
     - sprint8-inventory-reservations
+    - sprint9-release-readiness
+
+## Full Release Gate
+
+Run a single command from root:
+
+```bash
+npm run release:verify
+```
+
+This command runs:
+
+- typecheck
+- build
+- smoke:e2e
+- full test suites
 
 ## Pass Criteria
 

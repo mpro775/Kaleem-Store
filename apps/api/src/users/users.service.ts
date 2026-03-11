@@ -13,6 +13,7 @@ import { AuditService } from '../audit/audit.service';
 import { AuthRepository } from '../auth/auth.repository';
 import type { RequestContextData } from '../common/utils/request-context.util';
 import type { AuthUser, StoreRole } from '../auth/interfaces/auth-user.interface';
+import { SaasService } from '../saas/saas.service';
 import type { InviteStaffDto } from './dto/invite-staff.dto';
 import type { AcceptInviteDto, ValidateInviteDto } from './dto/accept-invite.dto';
 import type { RequestPasswordResetDto, ResetPasswordDto } from './dto/reset-password.dto';
@@ -57,6 +58,7 @@ export class UsersService {
     private readonly authRepository: AuthRepository,
     private readonly auditService: AuditService,
     private readonly configService: ConfigService,
+    private readonly saasService: SaasService,
   ) {}
 
   async getSelf(currentUser: AuthUser): Promise<UserProfileResponse> {
@@ -222,6 +224,8 @@ export class UsersService {
     if (existingUser) {
       throw new ConflictException('User with this email already exists');
     }
+
+    await this.saasService.assertMetricCanGrow(invite.store_id, 'staff.total', 1);
 
     const userId = uuidv4();
     const passwordHash = await this.hashValue(input.password);

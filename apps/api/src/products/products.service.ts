@@ -15,6 +15,7 @@ import { CategoriesRepository } from '../categories/categories.repository';
 import type { RequestContextData } from '../common/utils/request-context.util';
 import { slugify } from '../common/utils/slug.util';
 import { SaasService } from '../saas/saas.service';
+import { WebhooksService } from '../webhooks/webhooks.service';
 import type { AttachProductImageDto } from './dto/attach-product-image.dto';
 import type { CreateProductDto } from './dto/create-product.dto';
 import type { CreateVariantDto } from './dto/create-variant.dto';
@@ -80,6 +81,7 @@ export class ProductsService {
     private readonly attributesService: AttributesService,
     private readonly auditService: AuditService,
     private readonly saasService: SaasService,
+    private readonly webhooksService: WebhooksService,
   ) {}
 
   async create(
@@ -104,6 +106,12 @@ export class ProductsService {
     });
 
     await this.logProductAction('products.created', currentUser, product.id, context);
+    await this.webhooksService.dispatchEvent(currentUser.storeId, 'product.created', {
+      productId: product.id,
+      title: product.title,
+      slug: product.slug,
+      status: product.status,
+    });
     return this.toProductResponse(product);
   }
 
@@ -179,6 +187,12 @@ export class ProductsService {
     }
 
     await this.logProductAction('products.updated', currentUser, productId, context);
+    await this.webhooksService.dispatchEvent(currentUser.storeId, 'product.updated', {
+      productId: updated.id,
+      title: updated.title,
+      slug: updated.slug,
+      status: updated.status,
+    });
     return this.toProductResponse(updated);
   }
 

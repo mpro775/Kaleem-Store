@@ -24,7 +24,16 @@ export const envValidationSchema = Joi.object({
   THEME_PREVIEW_TOKEN_TTL_MINUTES: Joi.number().integer().min(1).max(240).default(30),
   DOMAIN_VERIFY_TXT_PREFIX: Joi.string().default('_kaleem-verify'),
   DOMAIN_CNAME_TARGET: Joi.string().default('stores.example.com'),
+  DOMAIN_SSL_PROVIDER: Joi.string().valid('manual', 'cloudflare').default('manual'),
   DOMAIN_SSL_MODE: Joi.string().valid('full', 'full_strict').default('full_strict'),
+  CLOUDFLARE_API_BASE_URL: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .default('https://api.cloudflare.com/client/v4'),
+  CLOUDFLARE_API_TOKEN: Joi.string().allow('').default(''),
+  CLOUDFLARE_ZONE_ID: Joi.string().allow('').default(''),
+  CLOUDFLARE_SSL_VALIDATION_METHOD: Joi.string().valid('txt', 'http').default('txt'),
+  CLOUDFLARE_MIN_TLS_VERSION: Joi.string().valid('1.2', '1.3').default('1.2'),
+  CLOUDFLARE_TLS_CIPHERS: Joi.string().allow('').default(''),
   PLATFORM_ADMIN_SECRET: Joi.string().min(16).default('kaleem-local-platform-secret'),
   JWT_ACCESS_SECRET: Joi.string().min(24).default('kaleem-local-access-secret-change-me'),
   JWT_ACCESS_EXPIRES_IN: Joi.string().default('15m'),

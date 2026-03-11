@@ -18,6 +18,6 @@ import { STORAGE_ADAPTER } from './storage.adapter';
       useClass: S3StorageAdapter,
     },
   ],
-  exports: [MediaService, MediaRepository],
+  exports: [MediaService, MediaRepository, STORAGE_ADAPTER],
 })
 export class MediaModule {}

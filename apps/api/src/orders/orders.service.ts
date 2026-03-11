@@ -5,6 +5,7 @@ import type { RequestContextData } from '../common/utils/request-context.util';
 import { InventoryService, type LowStockSignal } from '../inventory/inventory.service';
 import type { Queryable } from '../inventory/inventory.repository';
 import { OutboxService } from '../messaging/outbox.service';
+import { WebhooksService } from '../webhooks/webhooks.service';
 import { canTransitionOrderStatus, type OrderStatus } from './constants/order-status.constants';
 import type { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import type { UpdateOrderStatusDto } from './dto/update-order-status.dto';
@@ -60,6 +61,7 @@ export class OrdersService {
     private readonly inventoryService: InventoryService,
     private readonly auditService: AuditService,
     private readonly outboxService: OutboxService,
+    private readonly webhooksService: WebhooksService,
   ) {}
 
   async list(currentUser: AuthUser, query: ListOrdersQueryDto) {
@@ -147,6 +149,13 @@ export class OrdersService {
 
     await this.inventoryService.publishLowStockAlerts(lowStockSignals);
     await this.logAndPublishStatusChange(currentUser, order, input.status, input.note, context);
+    await this.webhooksService.dispatchEvent(currentUser.storeId, 'order.updated', {
+      orderId,
+      orderCode: order.order_code,
+      previousStatus: order.status,
+      status: input.status,
+      note: input.note?.trim() ?? null,
+    });
     return this.getById(currentUser, orderId);
   }
 

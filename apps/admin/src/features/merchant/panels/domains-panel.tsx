@@ -56,7 +56,17 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
   async function activateDomain(domainId: string): Promise<void> {
     await callDomainAction(
       `/domains/${domainId}/activate`,
-      'Domain activated and Cloudflare SSL issued',
+      'Domain activated and SSL provisioning started',
+      request,
+      setMessage,
+      loadDomains,
+    );
+  }
+
+  async function syncSsl(domainId: string): Promise<void> {
+    await callDomainAction(
+      `/domains/${domainId}/sync-ssl`,
+      'SSL status synced from provider',
       request,
       setMessage,
       loadDomains,
@@ -107,6 +117,8 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
             <p>
               SSL Provider: {domain.sslProvider ?? 'cloudflare'} ({formatSslMode(domain.sslMode)})
             </p>
+            {domain.sslLastCheckedAt ? <p>Last SSL check: {domain.sslLastCheckedAt}</p> : null}
+            {domain.sslError ? <p>SSL error: {domain.sslError}</p> : null}
             <div className="actions">
               <button onClick={() => verifyDomain(domain.id).catch(() => undefined)}>Verify</button>
               <button
@@ -115,6 +127,7 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
               >
                 Activate
               </button>
+              <button onClick={() => syncSsl(domain.id).catch(() => undefined)}>Sync SSL</button>
               <button
                 className="danger"
                 onClick={() => deleteDomain(domain.id).catch(() => undefined)}

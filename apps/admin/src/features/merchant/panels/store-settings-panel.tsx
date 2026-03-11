@@ -14,6 +14,10 @@ export function StoreSettingsPanel({ request }: StoreSettingsPanelProps) {
     logoUrl: '',
     phone: '',
     address: '',
+    shippingPolicy: '',
+    returnPolicy: '',
+    privacyPolicy: '',
+    termsAndConditions: '',
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -39,6 +43,10 @@ export function StoreSettingsPanel({ request }: StoreSettingsPanelProps) {
         logoUrl: data.logoUrl ?? '',
         phone: data.phone ?? '',
         address: data.address ?? '',
+        shippingPolicy: data.shippingPolicy ?? '',
+        returnPolicy: data.returnPolicy ?? '',
+        privacyPolicy: data.privacyPolicy ?? '',
+        termsAndConditions: data.termsAndConditions ?? '',
       });
       setMessage('Store settings loaded');
     } catch (error) {
@@ -113,6 +121,38 @@ export function StoreSettingsPanel({ request }: StoreSettingsPanelProps) {
           onChange={(event) => setForm((prev) => ({ ...prev, address: event.target.value }))}
         />
       </label>
+      <label>
+        Shipping Policy
+        <textarea
+          value={form.shippingPolicy}
+          onChange={(event) =>
+            setForm((prev) => ({ ...prev, shippingPolicy: event.target.value }))
+          }
+        />
+      </label>
+      <label>
+        Return Policy
+        <textarea
+          value={form.returnPolicy}
+          onChange={(event) => setForm((prev) => ({ ...prev, returnPolicy: event.target.value }))}
+        />
+      </label>
+      <label>
+        Privacy Policy
+        <textarea
+          value={form.privacyPolicy}
+          onChange={(event) => setForm((prev) => ({ ...prev, privacyPolicy: event.target.value }))}
+        />
+      </label>
+      <label>
+        Terms and Conditions
+        <textarea
+          value={form.termsAndConditions}
+          onChange={(event) =>
+            setForm((prev) => ({ ...prev, termsAndConditions: event.target.value }))
+          }
+        />
+      </label>
 
       <div className="actions">
         <button onClick={() => loadSettings().catch(() => undefined)} disabled={loading}>
@@ -139,6 +179,10 @@ function buildPayload(form: {
   logoUrl: string;
   phone: string;
   address: string;
+  shippingPolicy: string;
+  returnPolicy: string;
+  privacyPolicy: string;
+  termsAndConditions: string;
 }) {
   const payload: {
     name: string;
@@ -147,6 +191,10 @@ function buildPayload(form: {
     logoUrl?: string;
     phone?: string;
     address?: string;
+    shippingPolicy?: string;
+    returnPolicy?: string;
+    privacyPolicy?: string;
+    termsAndConditions?: string;
   } = {
     name: form.name.trim(),
     currencyCode: form.currencyCode.trim().toUpperCase(),
@@ -156,6 +204,10 @@ function buildPayload(form: {
   const logo = form.logoUrl.trim();
   const phone = form.phone.trim();
   const address = form.address.trim();
+  const shippingPolicy = form.shippingPolicy.trim();
+  const returnPolicy = form.returnPolicy.trim();
+  const privacyPolicy = form.privacyPolicy.trim();
+  const termsAndConditions = form.termsAndConditions.trim();
 
   if (logo) {
     payload.logoUrl = logo;
@@ -166,6 +218,10 @@ function buildPayload(form: {
   if (address) {
     payload.address = address;
   }
+  payload.shippingPolicy = shippingPolicy;
+  payload.returnPolicy = returnPolicy;
+  payload.privacyPolicy = privacyPolicy;
+  payload.termsAndConditions = termsAndConditions;
 
   return payload;
 }

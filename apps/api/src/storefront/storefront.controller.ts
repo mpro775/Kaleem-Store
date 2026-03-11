@@ -65,6 +65,12 @@ export class StorefrontController {
     return this.storefrontService.getTheme(request, query);
   }
 
+  @Get('policies')
+  @ApiOkResponse({ description: 'Get storefront public policies' })
+  async getPolicies(@Req() request: Request) {
+    return this.storefrontService.getPolicies(request);
+  }
+
   @Post('cart/items')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ description: 'Add product variant to cart' })

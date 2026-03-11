@@ -1,6 +1,7 @@
 import { headers } from 'next/headers';
 import type {
   PublicStoreResolveResponse,
+  StorefrontPolicies,
   StorefrontCategory,
   StorefrontFilterAttribute,
   StorefrontProductDetail,
@@ -70,6 +71,10 @@ export async function listFilterAttributes(input: {
 
 export async function getProduct(slug: string): Promise<StorefrontProductDetail> {
   return serverGet(`/sf/products/${encodeURIComponent(slug)}`, { revalidate: 60 });
+}
+
+export async function getPolicies(): Promise<StorefrontPolicies> {
+  return serverGet('/sf/policies', { revalidate: 60 });
 }
 
 async function serverGet<T>(path: string, cacheOptions: { revalidate: number }): Promise<T> {

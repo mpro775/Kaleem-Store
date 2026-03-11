@@ -26,6 +26,8 @@ import { StorefrontModule } from './storefront/storefront.module';
 import { ThemesModule } from './themes/themes.module';
 import { UsersModule } from './users/users.module';
 import { ObservabilityModule } from './observability/observability.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
+import { AdvancedOffersModule } from './advanced-offers/advanced-offers.module';
 
 @Module({
   imports: [
@@ -58,6 +60,8 @@ import { ObservabilityModule } from './observability/observability.module';
     PromotionsModule,
     ThemesModule,
     DomainsModule,
+    WebhooksModule,
+    AdvancedOffersModule,
     InventoryModule,
     OrdersModule,
     PaymentsModule,

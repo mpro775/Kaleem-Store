@@ -8,6 +8,7 @@ import { AuditService } from '../audit/audit.service';
 import type { AuthUser } from '../auth/interfaces/auth-user.interface';
 import type { RequestContextData } from '../common/utils/request-context.util';
 import { OutboxService } from '../messaging/outbox.service';
+import { WebhooksService } from '../webhooks/webhooks.service';
 import type {
   InventoryMovementType,
   InventoryReservationStatus,
@@ -85,6 +86,7 @@ export class InventoryService {
     private readonly inventoryRepository: InventoryRepository,
     private readonly outboxService: OutboxService,
     private readonly auditService: AuditService,
+    private readonly webhooksService: WebhooksService,
   ) {}
 
   async releaseExpiredReservations(storeId: string): Promise<number> {
@@ -261,6 +263,16 @@ export class InventoryService {
     }
 
     await this.logInventoryAdjustment(currentUser, variantId, quantityDelta, input.note, context);
+    await this.webhooksService.dispatchEvent(currentUser.storeId, 'inventory.updated', {
+      variantId: result.snapshot.variant_id,
+      productId: result.snapshot.product_id,
+      sku: result.snapshot.sku,
+      stockQuantity: result.snapshot.stock_quantity,
+      reservedQuantity: result.snapshot.reserved_quantity,
+      availableQuantity: result.snapshot.available_quantity,
+      lowStockThreshold: result.snapshot.low_stock_threshold,
+      reason: 'inventory.adjusted',
+    });
 
     return this.mapVariantSnapshot(result.snapshot);
   }
@@ -314,6 +326,17 @@ export class InventoryService {
         },
       ]);
     }
+
+    await this.webhooksService.dispatchEvent(currentUser.storeId, 'inventory.updated', {
+      variantId: snapshot.variant_id,
+      productId: snapshot.product_id,
+      sku: snapshot.sku,
+      stockQuantity: snapshot.stock_quantity,
+      reservedQuantity: snapshot.reserved_quantity,
+      availableQuantity: snapshot.available_quantity,
+      lowStockThreshold: snapshot.low_stock_threshold,
+      reason: 'inventory.low_stock_threshold_updated',
+    });
 
     return this.mapVariantSnapshot(snapshot);
   }

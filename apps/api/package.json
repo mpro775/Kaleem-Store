@@ -10,7 +10,7 @@
     "build": "tsc -p tsconfig.build.json",
     "lint": "eslint src",
     "test": "npm run build && node --test \"test/**/*.test.js\"",
-    "test:e2e:smoke": "npm run build && node --test \"test/sprint4-smoke.e2e.test.js\" \"test/sprint5-themes-domains.e2e.test.js\" \"test/sprint6-saas-platform.e2e.test.js\" \"test/sprint7-attributes-filters.e2e.test.js\" \"test/sprint8-inventory-reservations.e2e.test.js\"",
+    "test:e2e:smoke": "npm run build && node --test \"test/sprint4-smoke.e2e.test.js\" \"test/sprint5-themes-domains.e2e.test.js\" \"test/sprint6-saas-platform.e2e.test.js\" \"test/sprint7-attributes-filters.e2e.test.js\" \"test/sprint8-inventory-reservations.e2e.test.js\" \"test/sprint9-release-readiness.test.js\"",
     "openapi:generate": "tsc -p tsconfig.build.json && node dist/scripts/generate-openapi.js"
   },
   "dependencies": {

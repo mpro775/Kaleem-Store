@@ -70,6 +70,52 @@ function validateSection(section: unknown): void {
   if (settings !== undefined && !isPlainObject(settings)) {
     throw new BadRequestException('Theme section settings must be an object');
   }
+
+  validateSectionSettings(type, settings);
+}
+
+function validateSectionSettings(type: string, settings: unknown): void {
+  if (!settings) {
+    return;
+  }
+
+  const record = settings as Record<string, unknown>;
+
+  if (type === 'hero' && record.headline !== undefined && !isValidText(record.headline, 180)) {
+    throw new BadRequestException('Hero headline must be a non-empty string up to 180 chars');
+  }
+
+  if (type === 'announcement_bar' && record.message !== undefined && !isValidText(record.message, 240)) {
+    throw new BadRequestException('Announcement message must be a non-empty string up to 240 chars');
+  }
+
+  if (type === 'rich_text') {
+    if (record.title !== undefined && !isValidText(record.title, 140)) {
+      throw new BadRequestException('Rich text title must be a non-empty string up to 140 chars');
+    }
+    if (record.body !== undefined && !isValidText(record.body, 500)) {
+      throw new BadRequestException('Rich text body must be a non-empty string up to 500 chars');
+    }
+  }
+
+  if (type === 'newsletter_signup') {
+    if (record.title !== undefined && !isValidText(record.title, 120)) {
+      throw new BadRequestException('Newsletter title must be a non-empty string up to 120 chars');
+    }
+    if (record.ctaLabel !== undefined && !isValidText(record.ctaLabel, 40)) {
+      throw new BadRequestException('Newsletter CTA label must be a non-empty string up to 40 chars');
+    }
+  }
+
+  if (type === 'testimonials' && record.items !== undefined) {
+    if (!Array.isArray(record.items) || record.items.length > 6) {
+      throw new BadRequestException('Testimonials items must be an array up to 6 entries');
+    }
+  }
+}
+
+function isValidText(value: unknown, maxLength: number): boolean {
+  return typeof value === 'string' && value.trim().length > 0 && value.trim().length <= maxLength;
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
