@@ -70,7 +70,7 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO plan_limits (id, plan_id, metric_key, metric_limit, reset_period)
 SELECT
-  values_table.limit_id,
+  values_table.limit_id::uuid,
   p.id,
   values_table.metric_key,
   values_table.metric_limit,
