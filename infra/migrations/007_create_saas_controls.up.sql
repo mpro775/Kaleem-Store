@@ -69,7 +69,12 @@ VALUES
 ON CONFLICT DO NOTHING;
 
 INSERT INTO plan_limits (id, plan_id, metric_key, metric_limit, reset_period)
-SELECT *
+SELECT
+  values_table.limit_id,
+  p.id,
+  values_table.metric_key,
+  values_table.metric_limit,
+  values_table.reset_period
 FROM (
   VALUES
     ('8df6fbc0-94a9-4d23-b122-54af3770f45a', 'free', 'products.total', 100, 'lifetime'),
