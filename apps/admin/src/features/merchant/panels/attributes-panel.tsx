@@ -41,9 +41,9 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
 
       setAttributes(attributesData ?? []);
       setCategories(categoriesData ?? []);
-      setMessage('Attributes and categories loaded');
+      setMessage('تم تحميل الخصائص والتصنيفات');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to load attributes');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحميل الخصائص');
     }
   }
 
@@ -56,15 +56,15 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
       });
       setAttributeForm(attributeFormDefault);
       await loadBaseData();
-      setMessage('Attribute created');
+      setMessage('تم إنشاء الخاصية');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to create attribute');
+      setMessage(error instanceof Error ? error.message : 'تعذر إنشاء الخاصية');
     }
   }
 
   async function updateAttribute(): Promise<void> {
     if (!selectedAttributeId) {
-      setMessage('Select an attribute first');
+      setMessage('اختر خاصية أولاً');
       return;
     }
 
@@ -75,15 +75,15 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
         body: JSON.stringify(buildAttributePayload(attributeForm)),
       });
       await loadBaseData();
-      setMessage('Attribute updated');
+      setMessage('تم تحديث الخاصية');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to update attribute');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحديث الخاصية');
     }
   }
 
   async function deleteAttribute(): Promise<void> {
     if (!selectedAttributeId) {
-      setMessage('Select an attribute first');
+      setMessage('اختر خاصية أولاً');
       return;
     }
 
@@ -97,15 +97,15 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
       setAttributeForm(attributeFormDefault);
       setValueForm(valueFormDefault);
       await loadBaseData();
-      setMessage('Attribute deleted');
+      setMessage('تم حذف الخاصية');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to delete attribute');
+      setMessage(error instanceof Error ? error.message : 'تعذر حذف الخاصية');
     }
   }
 
   async function createValue(): Promise<void> {
     if (!selectedAttributeId) {
-      setMessage('Select an attribute first');
+      setMessage('اختر خاصية أولاً');
       return;
     }
 
@@ -118,15 +118,15 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
       setValueForm(valueFormDefault);
       setSelectedValueId('');
       await loadBaseData();
-      setMessage('Attribute value created');
+      setMessage('تم إنشاء قيمة الخاصية');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to create value');
+      setMessage(error instanceof Error ? error.message : 'تعذر إنشاء القيمة');
     }
   }
 
   async function updateValue(): Promise<void> {
     if (!selectedAttributeId || !selectedValueId) {
-      setMessage('Select a value first');
+      setMessage('اختر قيمة أولاً');
       return;
     }
 
@@ -137,15 +137,15 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
         body: JSON.stringify(buildValuePayload(valueForm)),
       });
       await loadBaseData();
-      setMessage('Attribute value updated');
+      setMessage('تم تحديث قيمة الخاصية');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to update value');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحديث القيمة');
     }
   }
 
   async function deleteValue(): Promise<void> {
     if (!selectedAttributeId || !selectedValueId) {
-      setMessage('Select a value first');
+      setMessage('اختر قيمة أولاً');
       return;
     }
 
@@ -157,9 +157,9 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
       setValueForm(valueFormDefault);
       setSelectedValueId('');
       await loadBaseData();
-      setMessage('Attribute value deleted');
+      setMessage('تم حذف قيمة الخاصية');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to delete value');
+      setMessage(error instanceof Error ? error.message : 'تعذر حذف القيمة');
     }
   }
 
@@ -178,15 +178,15 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
         { method: 'GET' },
       );
       setSelectedCategoryAttributeIds(data?.attributeIds ?? []);
-      setMessage('Category attribute assignments loaded');
+      setMessage('تم تحميل ربط الخصائص بالتصنيف');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to load category attributes');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحميل خصائص التصنيف');
     }
   }
 
   async function saveCategoryAttributes(): Promise<void> {
     if (!selectedCategoryId) {
-      setMessage('Choose a category first');
+      setMessage('اختر تصنيفاً أولاً');
       return;
     }
 
@@ -196,9 +196,9 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
         method: 'PUT',
         body: JSON.stringify({ attributeIds: selectedCategoryAttributeIds }),
       });
-      setMessage('Category attributes updated');
+      setMessage('تم تحديث خصائص التصنيف');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to update category attributes');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحديث خصائص التصنيف');
     }
   }
 
@@ -238,20 +238,20 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
   return (
     <section className="card-grid">
       <article className="card">
-        <h3>Attributes</h3>
+        <h3>الخصائص</h3>
         <div className="actions">
-          <button onClick={() => loadBaseData().catch(() => undefined)}>Reload</button>
+          <button onClick={() => loadBaseData().catch(() => undefined)}>إعادة تحميل</button>
           <button className="primary" onClick={() => createAttribute().catch(() => undefined)}>
-            Create
+            إنشاء
           </button>
-          <button onClick={() => updateAttribute().catch(() => undefined)}>Update</button>
+          <button onClick={() => updateAttribute().catch(() => undefined)}>تحديث</button>
           <button className="danger" onClick={() => deleteAttribute().catch(() => undefined)}>
-            Delete
+            حذف
           </button>
         </div>
 
         <label>
-          Name
+          الاسم
           <input
             value={attributeForm.name}
             onChange={(event) =>
@@ -261,7 +261,7 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
         </label>
 
         <label>
-          Slug
+          المسار المختصر
           <input
             value={attributeForm.slug}
             onChange={(event) =>
@@ -276,36 +276,36 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
               <p>
                 <strong>{attribute.name}</strong> ({attribute.slug})
               </p>
-              <p>{attribute.values?.length ?? 0} values</p>
-              <button onClick={() => selectAttribute(attribute)}>Select</button>
+              <p>{attribute.values?.length ?? 0} قيمة</p>
+              <button onClick={() => selectAttribute(attribute)}>اختيار</button>
             </article>
           ))}
-          {attributes.length === 0 ? <p className="hint">No attributes loaded.</p> : null}
+          {attributes.length === 0 ? <p className="hint">لا توجد خصائص محملة.</p> : null}
         </div>
       </article>
 
       <article className="card">
-        <h3>Attribute Values</h3>
+        <h3>قيم الخصائص</h3>
         {selectedAttribute ? (
           <p>
-            Selected attribute: <strong>{selectedAttribute.name}</strong>
+            الخاصية المحددة: <strong>{selectedAttribute.name}</strong>
           </p>
         ) : (
-          <p className="hint">Select an attribute to manage values.</p>
+          <p className="hint">اختر خاصية لإدارة القيم.</p>
         )}
 
         <div className="actions">
           <button className="primary" onClick={() => createValue().catch(() => undefined)}>
-            Create Value
+            إنشاء قيمة
           </button>
-          <button onClick={() => updateValue().catch(() => undefined)}>Update Value</button>
+          <button onClick={() => updateValue().catch(() => undefined)}>تحديث القيمة</button>
           <button className="danger" onClick={() => deleteValue().catch(() => undefined)}>
-            Delete Value
+            حذف القيمة
           </button>
         </div>
 
         <label>
-          Value
+          القيمة
           <input
             value={valueForm.value}
             onChange={(event) => setValueForm((prev) => ({ ...prev, value: event.target.value }))}
@@ -313,7 +313,7 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
         </label>
 
         <label>
-          Slug
+          المسار المختصر
           <input
             value={valueForm.slug}
             onChange={(event) => setValueForm((prev) => ({ ...prev, slug: event.target.value }))}
@@ -326,24 +326,24 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
               <p>
                 <strong>{value.value}</strong> ({value.slug})
               </p>
-              <button onClick={() => selectValue(value)}>Select</button>
+              <button onClick={() => selectValue(value)}>اختيار</button>
             </article>
           ))}
           {(selectedAttribute?.values ?? []).length === 0 ? (
-            <p className="hint">No values for selected attribute.</p>
+            <p className="hint">لا توجد قيم للخاصية المحددة.</p>
           ) : null}
         </div>
       </article>
 
       <article className="card">
-        <h3>Category Attribute Mapping</h3>
+        <h3>ربط الخصائص بالتصنيف</h3>
         <label>
-          Category
+          التصنيف
           <select
             value={selectedCategoryId}
             onChange={(event) => loadCategoryAttributes(event.target.value).catch(() => undefined)}
           >
-            <option value="">Select category</option>
+            <option value="">اختر تصنيفاً</option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}
@@ -366,7 +366,7 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
         </div>
 
         <button className="primary" onClick={() => saveCategoryAttributes().catch(() => undefined)}>
-          Save Category Mapping
+          حفظ الربط
         </button>
       </article>
 

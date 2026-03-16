@@ -33,7 +33,7 @@ export function StaffPanel({ request }: StaffPanelProps) {
       const data = await request<UserProfile[]>('/users', { method: 'GET' });
       setUsers(data ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load users');
+      setError(err instanceof Error ? err.message : 'تعذر تحميل المستخدمين');
     }
   }
 
@@ -43,7 +43,7 @@ export function StaffPanel({ request }: StaffPanelProps) {
       const data = await request<StaffInvite[]>('/users/invites', { method: 'GET' });
       setInvites(data ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load invites');
+      setError(err instanceof Error ? err.message : 'تعذر تحميل الدعوات');
     }
   }
 
@@ -51,7 +51,7 @@ export function StaffPanel({ request }: StaffPanelProps) {
     setError('');
     setMessage('');
     if (!inviteEmail || !inviteFullName) {
-      setError('Email and full name are required');
+      setError('البريد الإلكتروني والاسم الكامل مطلوبان');
       return;
     }
 
@@ -66,10 +66,10 @@ export function StaffPanel({ request }: StaffPanelProps) {
         }),
       });
       if (result) {
-        setMessage(`Invite sent to ${result.email}`);
+        setMessage(`تم إرسال دعوة إلى ${result.email}`);
         if (result.inviteToken) {
           setMessage(
-            `Invite sent. Share this link: ${window.location.origin}/accept-invite?token=${result.inviteToken}`,
+            `تم إرسال الدعوة. شارك هذا الرابط: ${window.location.origin}/accept-invite?token=${result.inviteToken}`,
           );
         }
       }
@@ -79,13 +79,13 @@ export function StaffPanel({ request }: StaffPanelProps) {
       setShowInviteForm(false);
       await loadInvites();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send invite');
+      setError(err instanceof Error ? err.message : 'تعذر إرسال الدعوة');
     }
   }
 
   async function updateRole(): Promise<void> {
     if (!selectedUserId) {
-      setError('Select a user first');
+      setError('اختر مستخدماً أولاً');
       return;
     }
 
@@ -100,10 +100,10 @@ export function StaffPanel({ request }: StaffPanelProps) {
         }),
       });
       await loadUsers();
-      setMessage('User role updated');
+      setMessage('تم تحديث دور المستخدم');
       setSelectedUserId('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update user role');
+      setError(err instanceof Error ? err.message : 'تعذر تحديث دور المستخدم');
     }
   }
 
@@ -115,9 +115,9 @@ export function StaffPanel({ request }: StaffPanelProps) {
         method: 'PATCH',
       });
       await loadUsers();
-      setMessage('User disabled');
+      setMessage('تم تعطيل المستخدم');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to disable user');
+      setError(err instanceof Error ? err.message : 'تعذر تعطيل المستخدم');
     }
   }
 
@@ -129,9 +129,9 @@ export function StaffPanel({ request }: StaffPanelProps) {
         method: 'PATCH',
       });
       await loadUsers();
-      setMessage('User enabled');
+      setMessage('تم تفعيل المستخدم');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to enable user');
+      setError(err instanceof Error ? err.message : 'تعذر تفعيل المستخدم');
     }
   }
 
@@ -144,17 +144,17 @@ export function StaffPanel({ request }: StaffPanelProps) {
   return (
     <section className="card-grid">
       <article className="card">
-        <h3>Invite Staff</h3>
+        <h3>دعوة عضو فريق</h3>
         <div className="actions">
           <button onClick={() => setShowInviteForm(!showInviteForm)}>
-            {showInviteForm ? 'Cancel' : 'New Invite'}
+            {showInviteForm ? 'إلغاء' : 'دعوة جديدة'}
           </button>
         </div>
 
         {showInviteForm && (
           <div className="form-section">
             <label>
-              Email
+              البريد الإلكتروني
               <input
                 type="email"
                 value={inviteEmail}
@@ -164,27 +164,27 @@ export function StaffPanel({ request }: StaffPanelProps) {
             </label>
 
             <label>
-              Full Name
+              الاسم الكامل
               <input
                 value={inviteFullName}
                 onChange={(e) => setInviteFullName(e.target.value)}
-                placeholder="John Doe"
+                placeholder="محمد أحمد"
               />
             </label>
 
             <label>
-              Role
+              الدور
               <select
                 value={inviteRole}
                 onChange={(e) => setInviteRole(e.target.value as StoreRole)}
               >
-                <option value="staff">staff</option>
-                <option value="owner">owner</option>
+                <option value="staff">موظف</option>
+                <option value="owner">مالك</option>
               </select>
             </label>
 
             <label>
-              Permissions (comma separated)
+              الصلاحيات (تفصل بفاصلة)
               <input
                 value={invitePermissions}
                 onChange={(e) => setInvitePermissions(e.target.value)}
@@ -193,42 +193,42 @@ export function StaffPanel({ request }: StaffPanelProps) {
             </label>
 
             <button className="primary" onClick={() => sendInvite().catch(() => undefined)}>
-              Send Invite
+              إرسال الدعوة
             </button>
           </div>
         )}
       </article>
 
       <article className="card">
-        <h3>Pending Invites</h3>
+        <h3>الدعوات المعلقة</h3>
         <div className="list">
           {invites.map((invite) => (
             <article key={invite.id} className="list-item">
               <h4>{invite.fullName}</h4>
               <p>{invite.email}</p>
               <p>
-                {invite.role} | Expires: {new Date(invite.expiresAt).toLocaleDateString()}
+                {invite.role} | تنتهي: {new Date(invite.expiresAt).toLocaleDateString()}
               </p>
             </article>
           ))}
-          {invites.length === 0 ? <p className="hint">No pending invites.</p> : null}
+          {invites.length === 0 ? <p className="hint">لا توجد دعوات معلقة.</p> : null}
         </div>
       </article>
 
       <article className="card">
-        <h3>Edit User</h3>
+        <h3>تعديل المستخدم</h3>
         {selectedUserId ? (
           <>
             <label>
-              Role
+              الدور
               <select value={editRole} onChange={(e) => setEditRole(e.target.value as StoreRole)}>
-                <option value="owner">owner</option>
-                <option value="staff">staff</option>
+                <option value="owner">مالك</option>
+                <option value="staff">موظف</option>
               </select>
             </label>
 
             <label>
-              Permissions (comma separated)
+              الصلاحيات (تفصل بفاصلة)
               <input
                 value={editPermissions}
                 onChange={(e) => setEditPermissions(e.target.value)}
@@ -237,21 +237,21 @@ export function StaffPanel({ request }: StaffPanelProps) {
             </label>
 
             <div className="actions">
-              <button className="primary" onClick={() => updateRole().catch(() => undefined)}>
-                Update Role
-              </button>
-              <button onClick={() => setSelectedUserId('')}>Cancel</button>
+                <button className="primary" onClick={() => updateRole().catch(() => undefined)}>
+                تحديث الدور
+                </button>
+              <button onClick={() => setSelectedUserId('')}>إلغاء</button>
             </div>
           </>
         ) : (
-          <p className="hint">Select a user from the list to edit.</p>
+          <p className="hint">اختر مستخدماً من القائمة للتعديل.</p>
         )}
       </article>
 
       <article className="card">
-        <h3>Staff List</h3>
+        <h3>قائمة الفريق</h3>
         <div className="actions">
-          <button onClick={() => loadUsers().catch(() => undefined)}>Refresh</button>
+          <button onClick={() => loadUsers().catch(() => undefined)}>تحديث</button>
         </div>
 
         {message ? <p className="status-message success">{message}</p> : null}
@@ -262,28 +262,28 @@ export function StaffPanel({ request }: StaffPanelProps) {
             <article key={user.id} className="list-item">
               <div className="list-item-header">
                 <h4>{user.fullName}</h4>
-                {user.isActive === false && <span className="badge disabled">Disabled</span>}
+                {user.isActive === false && <span className="badge disabled">معطل</span>}
               </div>
               <p>{user.email}</p>
               <p>
-                {user.role} / {user.permissions.join(', ') || 'no permissions'}
+                {user.role} / {user.permissions.join(', ') || 'بدون صلاحيات'}
               </p>
               <div className="list-item-actions">
-                <button onClick={() => selectUser(user)}>Edit</button>
+                <button onClick={() => selectUser(user)}>تعديل</button>
                 {user.isActive !== false ? (
                   <button
                     className="danger"
                     onClick={() => disableUser(user.id).catch(() => undefined)}
                   >
-                    Disable
+                    تعطيل
                   </button>
                 ) : (
-                  <button onClick={() => enableUser(user.id).catch(() => undefined)}>Enable</button>
+                  <button onClick={() => enableUser(user.id).catch(() => undefined)}>تفعيل</button>
                 )}
               </div>
             </article>
           ))}
-          {users.length === 0 ? <p className="hint">No users found.</p> : null}
+          {users.length === 0 ? <p className="hint">لا يوجد مستخدمون.</p> : null}
         </div>
       </article>
     </section>

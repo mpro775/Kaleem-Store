@@ -25,9 +25,9 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
     try {
       const data = await request<ShippingZone[]>('/shipping-zones', { method: 'GET' });
       setZones(data ?? []);
-      setMessage('Shipping zones loaded');
+      setMessage('تم تحميل مناطق الشحن');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to load shipping zones');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحميل مناطق الشحن');
     }
   }
 
@@ -40,15 +40,15 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
       });
       setForm(emptyForm);
       await loadZones();
-      setMessage('Shipping zone created');
+      setMessage('تم إنشاء منطقة شحن');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to create shipping zone');
+      setMessage(error instanceof Error ? error.message : 'تعذر إنشاء منطقة الشحن');
     }
   }
 
   async function updateZone(): Promise<void> {
     if (!selectedId) {
-      setMessage('Select a zone before updating');
+      setMessage('اختر منطقة قبل التحديث');
       return;
     }
 
@@ -59,15 +59,15 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
         body: JSON.stringify(buildPayload(form)),
       });
       await loadZones();
-      setMessage('Shipping zone updated');
+      setMessage('تم تحديث منطقة الشحن');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to update shipping zone');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحديث منطقة الشحن');
     }
   }
 
   async function deleteZone(): Promise<void> {
     if (!selectedId) {
-      setMessage('Select a zone before deleting');
+      setMessage('اختر منطقة قبل الحذف');
       return;
     }
 
@@ -77,9 +77,9 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
       setSelectedId('');
       setForm(emptyForm);
       await loadZones();
-      setMessage('Shipping zone deleted');
+      setMessage('تم حذف منطقة الشحن');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to delete shipping zone');
+      setMessage(error instanceof Error ? error.message : 'تعذر حذف منطقة الشحن');
     }
   }
 
@@ -97,41 +97,41 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
   return (
     <section className="card-grid">
       <article className="card">
-        <h3>Shipping Zones</h3>
+        <h3>مناطق الشحن</h3>
         <div className="actions">
-          <button onClick={() => loadZones().catch(() => undefined)}>Load</button>
+          <button onClick={() => loadZones().catch(() => undefined)}>تحميل</button>
           <button className="primary" onClick={() => createZone().catch(() => undefined)}>
-            Create
+            إنشاء
           </button>
-          <button onClick={() => updateZone().catch(() => undefined)}>Update</button>
+          <button onClick={() => updateZone().catch(() => undefined)}>تحديث</button>
           <button className="danger" onClick={() => deleteZone().catch(() => undefined)}>
-            Delete
+            حذف
           </button>
         </div>
 
         <label>
-          Name
+          الاسم
           <input
             value={form.name}
             onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
           />
         </label>
         <label>
-          City
+          المدينة
           <input
             value={form.city}
             onChange={(event) => setForm((prev) => ({ ...prev, city: event.target.value }))}
           />
         </label>
         <label>
-          Area
+          المنطقة
           <input
             value={form.area}
             onChange={(event) => setForm((prev) => ({ ...prev, area: event.target.value }))}
           />
         </label>
         <label>
-          Fee
+          الرسوم
           <input
             type="number"
             min={0}
@@ -146,28 +146,28 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
             checked={form.isActive}
             onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
           />
-          Active
+          نشط
         </label>
 
         {message ? <p className="status-message">{message}</p> : null}
       </article>
 
       <article className="card">
-        <h3>Zone List</h3>
+        <h3>قائمة المناطق</h3>
         <div className="list">
           {zones.map((zone) => (
             <article key={zone.id} className="list-item">
               <h4>{zone.name}</h4>
               <p>
-                {zone.city ?? 'Any city'} / {zone.area ?? 'Any area'}
+                {zone.city ?? 'أي مدينة'} / {zone.area ?? 'أي منطقة'}
               </p>
               <p>
-                Fee: {zone.fee} - {zone.isActive ? 'active' : 'inactive'}
+                الرسوم: {zone.fee} - {zone.isActive ? 'نشط' : 'غير نشط'}
               </p>
-              <button onClick={() => selectZone(zone)}>Edit</button>
+              <button onClick={() => selectZone(zone)}>تعديل</button>
             </article>
           ))}
-          {zones.length === 0 ? <p className="hint">No zones loaded.</p> : null}
+          {zones.length === 0 ? <p className="hint">لا توجد مناطق محملة.</p> : null}
         </div>
       </article>
     </section>

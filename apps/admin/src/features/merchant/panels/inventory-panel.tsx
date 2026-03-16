@@ -37,9 +37,9 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
       setAlerts(alertsData ?? []);
       setMovements(movementsData?.items ?? []);
       setReservations(reservationsData?.items ?? []);
-      setMessage('Inventory data loaded');
+      setMessage('تم تحميل بيانات المخزون');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to load inventory data');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحميل بيانات المخزون');
     }
   }
 
@@ -48,11 +48,11 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
     const quantityDelta = Number(adjustDelta);
 
     if (!variantId) {
-      setMessage('Variant ID is required for stock adjustment');
+      setMessage('معرّف المتغير مطلوب لتعديل المخزون');
       return;
     }
     if (!Number.isInteger(quantityDelta) || quantityDelta === 0) {
-      setMessage('quantityDelta must be a non-zero integer');
+      setMessage('يجب أن تكون قيمة التعديل رقماً صحيحاً وغير صفري');
       return;
     }
 
@@ -66,9 +66,9 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
         }),
       });
       await loadInventoryData();
-      setMessage('Inventory adjusted');
+      setMessage('تم تعديل المخزون');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to adjust inventory');
+      setMessage(error instanceof Error ? error.message : 'تعذر تعديل المخزون');
     }
   }
 
@@ -77,11 +77,11 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
     const lowStockThreshold = Number(thresholdValue);
 
     if (!variantId) {
-      setMessage('Variant ID is required to update threshold');
+      setMessage('معرّف المتغير مطلوب لتحديث حد التنبيه');
       return;
     }
     if (!Number.isInteger(lowStockThreshold) || lowStockThreshold < 0) {
-      setMessage('lowStockThreshold must be an integer >= 0');
+      setMessage('حد انخفاض المخزون يجب أن يكون رقماً صحيحاً أكبر أو يساوي 0');
       return;
     }
 
@@ -92,30 +92,30 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
         body: JSON.stringify({ lowStockThreshold }),
       });
       await loadInventoryData();
-      setMessage('Low stock threshold updated');
+      setMessage('تم تحديث حد انخفاض المخزون');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to update threshold');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحديث حد التنبيه');
     }
   }
 
   return (
     <section className="card-grid">
       <article className="card">
-        <h3>Inventory Controls</h3>
+        <h3>التحكم بالمخزون</h3>
         <div className="actions">
-          <button onClick={() => loadInventoryData().catch(() => undefined)}>Load</button>
+          <button onClick={() => loadInventoryData().catch(() => undefined)}>تحميل</button>
         </div>
 
-        <h4>Manual Stock Adjustment</h4>
+        <h4>تعديل مخزون يدوي</h4>
         <label>
-          Variant ID
+          معرّف المتغير
           <input
             value={adjustVariantId}
             onChange={(event) => setAdjustVariantId(event.target.value)}
           />
         </label>
         <label>
-          Quantity Delta
+          فرق الكمية
           <input
             type="number"
             step={1}
@@ -124,23 +124,23 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
           />
         </label>
         <label>
-          Note
+          ملاحظة
           <input value={adjustNote} onChange={(event) => setAdjustNote(event.target.value)} />
         </label>
         <button className="primary" onClick={() => adjustInventory().catch(() => undefined)}>
-          Apply Adjustment
+          تطبيق التعديل
         </button>
 
-        <h4>Low-Stock Threshold</h4>
+        <h4>حد انخفاض المخزون</h4>
         <label>
-          Variant ID
+          معرّف المتغير
           <input
             value={thresholdVariantId}
             onChange={(event) => setThresholdVariantId(event.target.value)}
           />
         </label>
         <label>
-          Threshold
+          الحد
           <input
             type="number"
             min={0}
@@ -149,13 +149,13 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
             onChange={(event) => setThresholdValue(event.target.value)}
           />
         </label>
-        <button onClick={() => updateThreshold().catch(() => undefined)}>Update Threshold</button>
+        <button onClick={() => updateThreshold().catch(() => undefined)}>تحديث الحد</button>
 
         {message ? <p className="status-message">{message}</p> : null}
       </article>
 
       <article className="card">
-        <h3>Low Stock Alerts</h3>
+        <h3>تنبيهات انخفاض المخزون</h3>
         <div className="list compact-list">
           {alerts.map((alert) => (
             <article key={alert.variantId} className="list-item">
@@ -163,46 +163,46 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
                 {alert.productTitle} / {alert.variantTitle}
               </p>
               <p>
-                SKU {alert.sku} - stock {alert.stockQuantity} - threshold {alert.lowStockThreshold}
+                SKU {alert.sku} - المخزون {alert.stockQuantity} - الحد {alert.lowStockThreshold}
               </p>
               <p>
-                Reserved {alert.reservedQuantity} - available {alert.availableQuantity}
+                المحجوز {alert.reservedQuantity} - المتاح {alert.availableQuantity}
               </p>
             </article>
           ))}
-          {alerts.length === 0 ? <p className="hint">No low-stock alerts.</p> : null}
+          {alerts.length === 0 ? <p className="hint">لا توجد تنبيهات انخفاض مخزون.</p> : null}
         </div>
       </article>
 
       <article className="card">
-        <h3>Recent Movements</h3>
+        <h3>آخر الحركات</h3>
         <div className="list compact-list">
           {movements.map((movement) => (
             <article key={movement.id} className="list-item">
               <p>
                 {movement.movementType} ({movement.qtyDelta}) - {movement.sku}
               </p>
-              <p>{movement.note ?? 'No note'}</p>
+              <p>{movement.note ?? 'بدون ملاحظة'}</p>
             </article>
           ))}
-          {movements.length === 0 ? <p className="hint">No movements yet.</p> : null}
+          {movements.length === 0 ? <p className="hint">لا توجد حركات حتى الآن.</p> : null}
         </div>
       </article>
 
       <article className="card">
-        <h3>Active Reservations</h3>
+        <h3>الحجوزات النشطة</h3>
         <div className="list compact-list">
           {reservations.map((reservation) => (
             <article key={reservation.id} className="list-item">
               <p>
-                {reservation.sku} - qty {reservation.quantity}
+                {reservation.sku} - الكمية {reservation.quantity}
               </p>
               <p>
-                {reservation.status} - order {reservation.orderId}
+                {reservation.status} - الطلب {reservation.orderId}
               </p>
             </article>
           ))}
-          {reservations.length === 0 ? <p className="hint">No reservations found.</p> : null}
+          {reservations.length === 0 ? <p className="hint">لا توجد حجوزات.</p> : null}
         </div>
       </article>
     </section>

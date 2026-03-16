@@ -44,9 +44,9 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
 
       setEndpoints(endpointRows ?? []);
       setDeliveries(deliveryRows?.items ?? []);
-      setMessage('Webhook data loaded');
+      setMessage('تم تحميل بيانات الويب هوكس');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to load webhooks');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحميل الويب هوكس');
     } finally {
       setLoading(false);
     }
@@ -54,7 +54,7 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
 
   async function createEndpoint(): Promise<void> {
     if (!form.name.trim() || !form.url.trim() || form.events.length === 0) {
-      setMessage('Name, URL, and at least one event are required');
+      setMessage('الاسم والرابط وحدث واحد على الأقل مطلوبة');
       return;
     }
 
@@ -71,10 +71,10 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
         }),
       });
       await loadAll();
-      setMessage('Webhook endpoint created');
+      setMessage('تم إنشاء نقطة نهاية ويب هوك');
       setForm((prev) => ({ ...prev, name: '', url: '' }));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to create endpoint');
+      setMessage(error instanceof Error ? error.message : 'تعذر إنشاء نقطة النهاية');
     } finally {
       setLoading(false);
     }
@@ -95,9 +95,9 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
         }),
       });
       await loadAll();
-      setMessage('Test event dispatched');
+      setMessage('تم إرسال حدث اختباري');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to trigger test event');
+      setMessage(error instanceof Error ? error.message : 'تعذر تشغيل الحدث الاختباري');
     } finally {
       setLoading(false);
     }
@@ -109,9 +109,9 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
     try {
       await request('/webhooks/deliveries/retry-pending', { method: 'POST' });
       await loadAll();
-      setMessage('Pending retries processed');
+      setMessage('تمت معالجة الإعادات المعلقة');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to process pending retries');
+      setMessage(error instanceof Error ? error.message : 'تعذر معالجة الإعادات المعلقة');
     } finally {
       setLoading(false);
     }
@@ -119,16 +119,16 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
 
   return (
     <article className="card">
-      <h3>Webhooks</h3>
+      <h3>الويب هوكس</h3>
       <label>
-        Endpoint name
+        اسم نقطة النهاية
         <input
           value={form.name}
           onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
         />
       </label>
       <label>
-        Endpoint URL
+        رابط نقطة النهاية
         <input
           value={form.url}
           onChange={(event) => setForm((prev) => ({ ...prev, url: event.target.value }))}
@@ -136,7 +136,7 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
         />
       </label>
       <label>
-        Events
+        الأحداث
         <select
           multiple
           value={form.events}
@@ -155,33 +155,33 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
 
       <div className="actions">
         <button onClick={() => loadAll().catch(() => undefined)} disabled={loading}>
-          Reload
+          إعادة تحميل
         </button>
         <button className="primary" onClick={() => createEndpoint().catch(() => undefined)} disabled={loading}>
-          Add endpoint
+          إضافة نقطة نهاية
         </button>
         <button onClick={() => triggerTestEvent().catch(() => undefined)} disabled={loading}>
-          Trigger test event
+          تشغيل حدث اختباري
         </button>
         <button onClick={() => retryPending().catch(() => undefined)} disabled={loading}>
-          Retry pending
+          إعادة محاولة المعلق
         </button>
       </div>
 
-      <h4>Endpoints</h4>
+      <h4>نقاط النهاية</h4>
       <ul>
         {endpoints.map((endpoint) => (
           <li key={endpoint.id}>
-            <strong>{endpoint.name}</strong> - {endpoint.url} - events: {endpoint.events.join(', ')}
+            <strong>{endpoint.name}</strong> - {endpoint.url} - الأحداث: {endpoint.events.join(', ')}
           </li>
         ))}
       </ul>
 
-      <h4>Recent deliveries</h4>
+      <h4>آخر عمليات الإرسال</h4>
       <ul>
         {deliveries.map((delivery) => (
           <li key={delivery.id}>
-            {delivery.eventType} - status {delivery.responseStatus ?? 'pending'} - attempts{' '}
+            {delivery.eventType} - الحالة {delivery.responseStatus ?? 'قيد الانتظار'} - المحاولات{' '}
             {delivery.attemptNumber}
           </li>
         ))}

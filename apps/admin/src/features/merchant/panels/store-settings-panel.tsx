@@ -48,9 +48,9 @@ export function StoreSettingsPanel({ request }: StoreSettingsPanelProps) {
         privacyPolicy: data.privacyPolicy ?? '',
         termsAndConditions: data.termsAndConditions ?? '',
       });
-      setMessage('Store settings loaded');
+      setMessage('تم تحميل إعدادات المتجر');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to load store settings');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحميل إعدادات المتجر');
     } finally {
       setLoading(false);
     }
@@ -65,9 +65,9 @@ export function StoreSettingsPanel({ request }: StoreSettingsPanelProps) {
         method: 'PUT',
         body: JSON.stringify(buildPayload(form)),
       });
-      setMessage('Store settings updated');
+      setMessage('تم تحديث إعدادات المتجر');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to update settings');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحديث الإعدادات');
     } finally {
       setLoading(false);
     }
@@ -75,16 +75,16 @@ export function StoreSettingsPanel({ request }: StoreSettingsPanelProps) {
 
   return (
     <article className="card">
-      <h3>Store Settings</h3>
+      <h3>إعدادات المتجر</h3>
       <label>
-        Name
+        اسم المتجر
         <input
           value={form.name}
           onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
         />
       </label>
       <label>
-        Currency Code
+        رمز العملة
         <input
           value={form.currencyCode}
           maxLength={3}
@@ -94,35 +94,35 @@ export function StoreSettingsPanel({ request }: StoreSettingsPanelProps) {
         />
       </label>
       <label>
-        Timezone
+        المنطقة الزمنية
         <input
           value={form.timezone}
           onChange={(event) => setForm((prev) => ({ ...prev, timezone: event.target.value }))}
         />
       </label>
       <label>
-        Logo URL
+        رابط الشعار
         <input
           value={form.logoUrl}
           onChange={(event) => setForm((prev) => ({ ...prev, logoUrl: event.target.value }))}
         />
       </label>
       <label>
-        Phone
+        الهاتف
         <input
           value={form.phone}
           onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
         />
       </label>
       <label>
-        Address
+        العنوان
         <input
           value={form.address}
           onChange={(event) => setForm((prev) => ({ ...prev, address: event.target.value }))}
         />
       </label>
       <label>
-        Shipping Policy
+        سياسة الشحن
         <textarea
           value={form.shippingPolicy}
           onChange={(event) =>
@@ -131,21 +131,21 @@ export function StoreSettingsPanel({ request }: StoreSettingsPanelProps) {
         />
       </label>
       <label>
-        Return Policy
+        سياسة الاسترجاع
         <textarea
           value={form.returnPolicy}
           onChange={(event) => setForm((prev) => ({ ...prev, returnPolicy: event.target.value }))}
         />
       </label>
       <label>
-        Privacy Policy
+        سياسة الخصوصية
         <textarea
           value={form.privacyPolicy}
           onChange={(event) => setForm((prev) => ({ ...prev, privacyPolicy: event.target.value }))}
         />
       </label>
       <label>
-        Terms and Conditions
+        الشروط والأحكام
         <textarea
           value={form.termsAndConditions}
           onChange={(event) =>
@@ -156,14 +156,14 @@ export function StoreSettingsPanel({ request }: StoreSettingsPanelProps) {
 
       <div className="actions">
         <button onClick={() => loadSettings().catch(() => undefined)} disabled={loading}>
-          Reload
+          إعادة تحميل
         </button>
         <button
           className="primary"
           onClick={() => saveSettings().catch(() => undefined)}
           disabled={loading}
         >
-          Save
+          حفظ
         </button>
       </div>
 

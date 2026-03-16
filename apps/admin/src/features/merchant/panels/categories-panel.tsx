@@ -26,9 +26,9 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
     try {
       const data = await request<Category[]>('/categories', { method: 'GET' });
       setCategories(data ?? []);
-      setMessage('Categories loaded');
+      setMessage('تم تحميل التصنيفات');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to load categories');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحميل التصنيفات');
     }
   }
 
@@ -41,15 +41,15 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
       });
       setForm(emptyForm);
       await loadCategories();
-      setMessage('Category created');
+      setMessage('تم إنشاء التصنيف');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to create category');
+      setMessage(error instanceof Error ? error.message : 'تعذر إنشاء التصنيف');
     }
   }
 
   async function updateCategory(): Promise<void> {
     if (!selectedId) {
-      setMessage('Select a category before updating');
+      setMessage('اختر تصنيفاً قبل التحديث');
       return;
     }
 
@@ -60,15 +60,15 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
         body: JSON.stringify(buildCategoryPayload(form)),
       });
       await loadCategories();
-      setMessage('Category updated');
+      setMessage('تم تحديث التصنيف');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to update category');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحديث التصنيف');
     }
   }
 
   async function deleteCategory(): Promise<void> {
     if (!selectedId) {
-      setMessage('Select a category before deleting');
+      setMessage('اختر تصنيفاً قبل الحذف');
       return;
     }
 
@@ -80,9 +80,9 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
       setSelectedId('');
       setForm(emptyForm);
       await loadCategories();
-      setMessage('Category deleted');
+      setMessage('تم حذف التصنيف');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to delete category');
+      setMessage(error instanceof Error ? error.message : 'تعذر حذف التصنيف');
     }
   }
 
@@ -101,48 +101,48 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
   return (
     <section className="card-grid">
       <article className="card">
-        <h3>Categories</h3>
+        <h3>التصنيفات</h3>
         <div className="actions">
-          <button onClick={() => loadCategories().catch(() => undefined)}>Load</button>
+          <button onClick={() => loadCategories().catch(() => undefined)}>تحميل</button>
           <button className="primary" onClick={() => createCategory().catch(() => undefined)}>
-            Create
+            إنشاء
           </button>
-          <button onClick={() => updateCategory().catch(() => undefined)}>Update</button>
+          <button onClick={() => updateCategory().catch(() => undefined)}>تحديث</button>
           <button className="danger" onClick={() => deleteCategory().catch(() => undefined)}>
-            Delete
+            حذف
           </button>
         </div>
 
         <label>
-          Name
+          الاسم
           <input
             value={form.name}
             onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
           />
         </label>
         <label>
-          Slug
+          المسار المختصر
           <input
             value={form.slug}
             onChange={(event) => setForm((prev) => ({ ...prev, slug: event.target.value }))}
           />
         </label>
         <label>
-          Description
+          الوصف
           <input
             value={form.description}
             onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
           />
         </label>
         <label>
-          Parent ID
+          معرّف التصنيف الأب
           <input
             value={form.parentId}
             onChange={(event) => setForm((prev) => ({ ...prev, parentId: event.target.value }))}
           />
         </label>
         <label>
-          Sort Order
+          ترتيب العرض
           <input
             type="number"
             min={0}
@@ -156,25 +156,25 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
             checked={form.isActive}
             onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
           />
-          Active
+          نشط
         </label>
 
         {message ? <p className="status-message">{message}</p> : null}
       </article>
 
       <article className="card">
-        <h3>Category List</h3>
+        <h3>قائمة التصنيفات</h3>
         <div className="list">
           {categories.map((category) => (
             <article key={category.id} className="list-item">
               <h4>{category.name}</h4>
               <p>
-                {category.slug} - {category.isActive ? 'active' : 'inactive'}
+                {category.slug} - {category.isActive ? 'نشط' : 'غير نشط'}
               </p>
-              <button onClick={() => selectCategory(category)}>Edit</button>
+              <button onClick={() => selectCategory(category)}>تعديل</button>
             </article>
           ))}
-          {categories.length === 0 ? <p className="hint">No categories loaded.</p> : null}
+          {categories.length === 0 ? <p className="hint">لا توجد تصنيفات محملة.</p> : null}
         </div>
       </article>
     </section>

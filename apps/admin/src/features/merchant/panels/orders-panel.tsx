@@ -31,9 +31,9 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
       const query = buildOrdersQuery(statusFilter, searchQuery);
       const data = await request<{ items: Order[] }>(`/orders${query}`, { method: 'GET' });
       setOrders(data?.items ?? []);
-      setMessage('Orders loaded');
+      setMessage('تم تحميل الطلبات');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to load orders');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحميل الطلبات');
     }
   }
 
@@ -46,13 +46,13 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
         setNextStatus(resolveDefaultNextStatus(data.status));
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to load order details');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحميل تفاصيل الطلب');
     }
   }
 
   async function updateOrderStatus(): Promise<void> {
     if (!orderDetail) {
-      setMessage('Select an order first');
+      setMessage('اختر طلباً أولاً');
       return;
     }
 
@@ -67,31 +67,31 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
         setOrderDetail(data);
       }
       await loadOrders();
-      setMessage('Order status updated');
+      setMessage('تم تحديث حالة الطلب');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to update order status');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحديث حالة الطلب');
     }
   }
 
   return (
     <section className="card-grid">
       <article className="card">
-        <h3>Orders</h3>
+        <h3>الطلبات</h3>
         <div className="actions">
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-            <option value="">All statuses</option>
+            <option value="">كل الحالات</option>
             {statusOptions.map((status) => (
               <option key={status} value={status}>
                 {status}
               </option>
             ))}
           </select>
-          <input
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Search order code"
-          />
-          <button onClick={() => loadOrders().catch(() => undefined)}>Load</button>
+            <input
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="ابحث برمز الطلب"
+            />
+          <button onClick={() => loadOrders().catch(() => undefined)}>تحميل</button>
         </div>
 
         <div className="list">
@@ -101,28 +101,28 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
               <p>
                 {order.status} - {order.total} {order.currencyCode}
               </p>
-              <button onClick={() => loadOrderDetail(order.id).catch(() => undefined)}>
-                Details
-              </button>
+                <button onClick={() => loadOrderDetail(order.id).catch(() => undefined)}>
+                التفاصيل
+                </button>
             </article>
           ))}
-          {orders.length === 0 ? <p className="hint">No orders loaded.</p> : null}
+          {orders.length === 0 ? <p className="hint">لا توجد طلبات محملة.</p> : null}
         </div>
       </article>
 
       <article className="card">
-        <h3>Order Details</h3>
+        <h3>تفاصيل الطلب</h3>
         {orderDetail ? (
           <>
             <p>
               <strong>{orderDetail.orderCode}</strong> - {orderDetail.status}
             </p>
             <p>
-              Total: {orderDetail.total} {orderDetail.currencyCode}
+              الإجمالي: {orderDetail.total} {orderDetail.currencyCode}
             </p>
 
             <label>
-              Next Status
+              الحالة التالية
               <select
                 value={nextStatus}
                 onChange={(event) => setNextStatus(event.target.value as OrderStatus)}
@@ -135,25 +135,25 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
               </select>
             </label>
             <label>
-              Note
+              ملاحظة
               <input value={statusNote} onChange={(event) => setStatusNote(event.target.value)} />
             </label>
             <button className="primary" onClick={() => updateOrderStatus().catch(() => undefined)}>
-              Update Status
+              تحديث الحالة
             </button>
 
             {orderDetail.payment && (
               <>
-                <h4>Payment</h4>
+                <h4>الدفع</h4>
                 <div className="payment-info">
                   <p>
-                    <strong>Method:</strong> {orderDetail.payment.method}
+                    <strong>الطريقة:</strong> {orderDetail.payment.method}
                   </p>
                   <p>
-                    <strong>Status:</strong> {orderDetail.payment.status}
+                    <strong>الحالة:</strong> {orderDetail.payment.status}
                   </p>
                   <p>
-                    <strong>Amount:</strong> {orderDetail.payment.amount}
+                    <strong>المبلغ:</strong> {orderDetail.payment.amount}
                   </p>
                   {orderDetail.payment.receiptUrl && (
                     <p>
@@ -162,7 +162,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        View Receipt
+                        عرض الإيصال
                       </a>
                     </p>
                   )}
@@ -170,7 +170,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
               </>
             )}
 
-            <h4>Items</h4>
+            <h4>العناصر</h4>
             <div className="list compact-list">
               {orderDetail.items.map((item) => (
                 <article key={item.id} className="list-item">
@@ -182,20 +182,20 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
               ))}
             </div>
 
-            <h4>Timeline</h4>
+            <h4>سجل الحالة</h4>
             <div className="list compact-list">
               {orderDetail.timeline.map((entry, index) => (
                 <article key={`${entry.to}-${entry.createdAt}-${index}`} className="list-item">
                   <p>
-                    {entry.from ?? 'none'} {'->'} {entry.to}
+                    {entry.from ?? 'لا يوجد'} {'->'} {entry.to}
                   </p>
-                  <p>{entry.note ?? 'No note'}</p>
+                  <p>{entry.note ?? 'بدون ملاحظة'}</p>
                 </article>
               ))}
             </div>
           </>
         ) : (
-          <p className="hint">Select an order to view details.</p>
+          <p className="hint">اختر طلباً لعرض التفاصيل.</p>
         )}
       </article>
 

@@ -36,7 +36,7 @@ const defaultForm: ThemeEditorForm = {
   accentColor: '#c86f31',
   background: '#f4efe7',
   fontFamily: 'Lora, serif',
-  heroHeadline: 'Welcome to Kaleem Store',
+  heroHeadline: 'مرحباً بك في متجر كليم',
   sectionEnabled: {
     announcement_bar: true,
     header: true,
@@ -67,9 +67,9 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
 
       setThemeState(data);
       setForm(themeConfigToForm(data.draftConfig));
-      setMessage('Theme draft loaded');
+      setMessage('تم تحميل مسودة الثيم');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to load theme draft');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحميل مسودة الثيم');
     }
   }
 
@@ -84,9 +84,9 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
       if (data) {
         setThemeState(data);
       }
-      setMessage('Theme draft saved');
+      setMessage('تم حفظ مسودة الثيم');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to save theme draft');
+      setMessage(error instanceof Error ? error.message : 'تعذر حفظ مسودة الثيم');
     }
   }
 
@@ -97,9 +97,9 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
       if (data) {
         setThemeState(data);
       }
-      setMessage('Theme published');
+      setMessage('تم نشر الثيم');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to publish theme');
+      setMessage(error instanceof Error ? error.message : 'تعذر نشر الثيم');
     }
   }
 
@@ -111,54 +111,54 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
         body: JSON.stringify({ expiresInMinutes: 30 }),
       });
       setPreviewToken(token);
-      setMessage('Preview token created');
+      setMessage('تم إنشاء رمز المعاينة');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to create preview token');
+      setMessage(error instanceof Error ? error.message : 'تعذر إنشاء رمز المعاينة');
     }
   }
 
   return (
     <article className="card">
-      <h3>Themes</h3>
+      <h3>الثيمات</h3>
       <div className="actions">
-        <button onClick={() => loadDraft().catch(() => undefined)}>Load Draft</button>
-        <button onClick={() => saveDraft().catch(() => undefined)}>Save Draft</button>
-        <button onClick={() => createPreviewToken().catch(() => undefined)}>Preview Token</button>
+        <button onClick={() => loadDraft().catch(() => undefined)}>تحميل المسودة</button>
+        <button onClick={() => saveDraft().catch(() => undefined)}>حفظ المسودة</button>
+        <button onClick={() => createPreviewToken().catch(() => undefined)}>رمز المعاينة</button>
         <button className="primary" onClick={() => publishTheme().catch(() => undefined)}>
-          Publish
+          نشر
         </button>
       </div>
 
       <label>
-        Primary Color
+        اللون الأساسي
         <input
           value={form.primaryColor}
           onChange={(event) => setForm((prev) => ({ ...prev, primaryColor: event.target.value }))}
         />
       </label>
       <label>
-        Accent Color
+        لون التمييز
         <input
           value={form.accentColor}
           onChange={(event) => setForm((prev) => ({ ...prev, accentColor: event.target.value }))}
         />
       </label>
       <label>
-        Background Color
+        لون الخلفية
         <input
           value={form.background}
           onChange={(event) => setForm((prev) => ({ ...prev, background: event.target.value }))}
         />
       </label>
       <label>
-        Font Family
+        عائلة الخط
         <input
           value={form.fontFamily}
           onChange={(event) => setForm((prev) => ({ ...prev, fontFamily: event.target.value }))}
         />
       </label>
       <label>
-        Hero Headline
+        عنوان البانر الرئيسي
         <input
           value={form.heroHeadline}
           onChange={(event) => setForm((prev) => ({ ...prev, heroHeadline: event.target.value }))}
@@ -186,10 +186,10 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
         ))}
       </div>
 
-      {themeState ? <p className="hint">Current published version: {themeState.version}</p> : null}
+      {themeState ? <p className="hint">الإصدار المنشور الحالي: {themeState.version}</p> : null}
       {previewToken ? (
         <p className="hint">
-          Preview URL:{' '}
+          رابط المعاينة:{' '}
           <code>{`${apiBaseUrl}/sf/theme?previewToken=${previewToken.previewToken}`}</code>
         </p>
       ) : null}
@@ -240,7 +240,7 @@ function formToThemeConfig(form: ThemeEditorForm): Record<string, unknown> {
         id: 'announcement-main',
         type: 'announcement_bar',
         enabled: form.sectionEnabled.announcement_bar,
-        settings: { message: 'Free shipping for orders above 300 SAR' },
+         settings: { message: 'شحن مجاني للطلبات فوق 300 ريال' },
       },
       {
         id: 'header-main',
@@ -271,8 +271,8 @@ function formToThemeConfig(form: ThemeEditorForm): Record<string, unknown> {
         type: 'rich_text',
         enabled: form.sectionEnabled.rich_text,
         settings: {
-          title: 'Why customers trust us',
-          body: 'Fast delivery, curated products, and secure checkout.',
+           title: 'لماذا يثق العملاء بنا؟',
+           body: 'توصيل سريع، منتجات مختارة، ودفع آمن.',
         },
       },
       {
@@ -280,18 +280,18 @@ function formToThemeConfig(form: ThemeEditorForm): Record<string, unknown> {
         type: 'testimonials',
         enabled: form.sectionEnabled.testimonials,
         settings: {
-          title: 'Loved by shoppers',
-          items: [
-            { quote: 'Great quality and fast support.', author: 'Reem' },
-            { quote: 'Checkout was smooth on mobile.', author: 'Faisal' },
-          ],
+           title: 'مفضل لدى المتسوقين',
+           items: [
+             { quote: 'جودة ممتازة ودعم سريع.', author: 'ريم' },
+             { quote: 'تجربة دفع سلسة على الجوال.', author: 'فيصل' },
+           ],
         },
       },
       {
         id: 'newsletter-main',
         type: 'newsletter_signup',
         enabled: form.sectionEnabled.newsletter_signup,
-        settings: { title: 'Get weekly deals', ctaLabel: 'Subscribe' },
+         settings: { title: 'احصل على عروض أسبوعية', ctaLabel: 'اشترك' },
       },
       {
         id: 'offers-main',

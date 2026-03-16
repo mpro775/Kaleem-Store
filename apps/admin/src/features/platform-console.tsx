@@ -1,526 +1,210 @@
-import { useMemo, useState } from 'react';
-import { requestJson } from '../lib/http';
-import { useLocalStorageState } from '../lib/use-local-storage-state';
+interface PlatformConsoleProps {
+  onBackHome: () => void;
+  onMerchantLogin: () => void;
+}
 
-type PlanLimit = {
-  metricKey:
-    | 'products.total'
-    | 'orders.monthly'
-    | 'staff.total'
-    | 'domains.total'
-    | 'storage.used'
-    | 'api_calls.monthly'
-    | 'webhooks.monthly';
-  metricLimit: number | null;
-  resetPeriod: 'lifetime' | 'monthly';
-};
-
-type PlanResponse = {
-  id: string;
-  code: string;
-  name: string;
-  description: string | null;
-  isActive: boolean;
-  limits: PlanLimit[];
-};
-
-type PlatformStore = {
-  id: string;
-  name: string;
-  slug: string;
-  isSuspended: boolean;
-  suspensionReason: string | null;
-  planCode: string | null;
-  subscriptionStatus: string | null;
-  totalDomains: number;
-  activeDomains: number;
-};
-
-type PlatformSubscription = {
-  id: string;
-  storeId: string;
-  storeName: string;
-  planCode: string;
-  status: string;
-};
-
-type PlatformDomain = {
-  id: string;
-  storeId: string;
-  storeName: string;
-  hostname: string;
-  status: string;
-  sslStatus: string;
-};
-
-type DowngradeCheck = {
-  canDowngrade: boolean;
-  conflicts: Array<{ metricKey: string; used: number; limit: number }>;
-};
-
-const defaultLimits: PlanLimit[] = [
-  { metricKey: 'products.total', metricLimit: 250, resetPeriod: 'lifetime' },
-  { metricKey: 'orders.monthly', metricLimit: 400, resetPeriod: 'monthly' },
-  { metricKey: 'staff.total', metricLimit: 2, resetPeriod: 'lifetime' },
-  { metricKey: 'domains.total', metricLimit: 2, resetPeriod: 'lifetime' },
-  { metricKey: 'storage.used', metricLimit: 1000, resetPeriod: 'lifetime' },
-  { metricKey: 'api_calls.monthly', metricLimit: 50000, resetPeriod: 'monthly' },
-  { metricKey: 'webhooks.monthly', metricLimit: 5000, resetPeriod: 'monthly' },
+const platformMetrics = [
+  { value: '24/7', label: 'مراقبة تشغيلية', description: 'متابعة حالة المنصة والمتاجر والاشتراكات بشكل مستمر.' },
+  { value: '99.9%', label: 'استقرار متوقع', description: 'تصميم إداري يركز على الجاهزية وتقليل الانقطاعات.' },
+  { value: 'One View', label: 'صورة موحدة', description: 'لوحة تعريفية توضح ما يملكه فريق الإدارة قبل الدخول للتنفيذ.' },
 ];
 
-const METRIC_DISPLAY_NAMES: Record<string, string> = {
-  'products.total': 'Products',
-  'orders.monthly': 'Monthly Orders',
-  'staff.total': 'Staff Members',
-  'domains.total': 'Custom Domains',
-  'storage.used': 'Storage (MB)',
-  'api_calls.monthly': 'Monthly API Calls',
-  'webhooks.monthly': 'Monthly Webhooks',
-};
+const capabilities = [
+  {
+    title: 'إدارة خطط الاشتراك',
+    description: 'تعريف الخطط وحدودها وتحديثها بما يتناسب مع نمو المتاجر وتنوع احتياجاتهم.',
+  },
+  {
+    title: 'حوكمة المتاجر',
+    description: 'إيقاف أو إعادة تفعيل المتاجر عند الحاجة مع سجل واضح للأسباب وإجراءات المتابعة.',
+  },
+  {
+    title: 'متابعة النطاقات والاشتراكات',
+    description: 'رؤية مركزية لحالة النطاقات والاشتراكات لتسريع الدعم واتخاذ القرار.',
+  },
+  {
+    title: 'جاهزية للتوسع',
+    description: 'هيكل إداري مرن يدعم إضافة سياسات تسعير أو صلاحيات جديدة بدون إعادة بناء كاملة.',
+  },
+];
 
-export function PlatformConsole() {
-  const [apiBaseUrl, setApiBaseUrl] = useLocalStorageState(
-    'platform.apiBaseUrl',
-    'http://localhost:3000',
-  );
-  const [platformSecret, setPlatformSecret] = useLocalStorageState('platform.secret', '');
-  const [message, setMessage] = useState('');
+const adminSteps = [
+  {
+    step: '01',
+    title: 'تقييم الوضع العام',
+    description: 'ابدأ بنظرة سريعة على مؤشرات الأداء وحالة المتاجر والاشتراكات.',
+  },
+  {
+    step: '02',
+    title: 'تنفيذ القرار الإداري',
+    description: 'عدل الخطة أو حالة المتجر وفق السياسات المعتمدة ومعايير التشغيل.',
+  },
+  {
+    step: '03',
+    title: 'التحقق والمتابعة',
+    description: 'راجع أثر التغيير وتأكد من استقرار التجربة للتجار والعملاء.',
+  },
+];
 
-  const [plans, setPlans] = useState<PlanResponse[]>([]);
-  const [stores, setStores] = useState<PlatformStore[]>([]);
-  const [subscriptions, setSubscriptions] = useState<PlatformSubscription[]>([]);
-  const [domains, setDomains] = useState<PlatformDomain[]>([]);
+const footerColumns = [
+  {
+    title: 'صفحات سريعة',
+    links: ['الصفحة الرئيسية', 'دخول التاجر', 'بوابة الإدارة'],
+  },
+  {
+    title: 'محاور الإدارة',
+    links: ['الخطط', 'الاشتراكات', 'المتاجر', 'النطاقات'],
+  },
+  {
+    title: 'التركيز الحالي',
+    links: ['مظهر احترافي', 'رحلة واضحة', 'بدون Sidebar', 'جاهزية للموبايل'],
+  },
+];
 
-  const [planCode, setPlanCode] = useState('starter-plus');
-  const [planName, setPlanName] = useState('Starter Plus');
-  const [planDescription, setPlanDescription] = useState('Starter plan for fast-growing stores');
-  const [planLimitsText, setPlanLimitsText] = useState(JSON.stringify(defaultLimits, null, 2));
-
-  const [assignStoreId, setAssignStoreId] = useState('');
-  const [assignPlanCode, setAssignPlanCode] = useState('starter-plus');
-  const [assignStatus, setAssignStatus] = useState('active');
-
-  const [suspendStoreId, setSuspendStoreId] = useState('');
-  const [suspendReason, setSuspendReason] = useState('Policy review');
-  const [suspendEnabled, setSuspendEnabled] = useState(true);
-
-  const [subscriptionActionStoreId, setSubscriptionActionStoreId] = useState('');
-  const [downgradePlanCode, setDowngradePlanCode] = useState('free');
-  const [downgradeResult, setDowngradeResult] = useState<DowngradeCheck | null>(null);
-
-  const canCallApi = useMemo(
-    () => apiBaseUrl.trim().length > 0 && platformSecret.trim().length > 0,
-    [apiBaseUrl, platformSecret],
-  );
-
-  async function callPlatformApi<T>(path: string, init: RequestInit = {}): Promise<T | null> {
-    if (!canCallApi) {
-      throw new Error('API base URL and platform secret are required');
-    }
-
-    const hasBody = init.body !== undefined;
-    return requestJson<T>(`${apiBaseUrl}${path}`, {
-      ...init,
-      headers: {
-        'x-platform-admin-secret': platformSecret.trim(),
-        ...(hasBody ? { 'content-type': 'application/json' } : {}),
-        ...(init.headers ?? {}),
-      },
-    });
-  }
-
-  async function refreshOverview(): Promise<void> {
-    try {
-      const [plansData, storesData, subscriptionsData, domainsData] = await Promise.all([
-        callPlatformApi<PlanResponse[]>('/platform/plans', { method: 'GET' }),
-        callPlatformApi<{ items: PlatformStore[] }>('/platform/stores?page=1&limit=20', {
-          method: 'GET',
-        }),
-        callPlatformApi<{ items: PlatformSubscription[] }>(
-          '/platform/subscriptions?page=1&limit=20',
-          {
-            method: 'GET',
-          },
-        ),
-        callPlatformApi<PlatformDomain[]>('/platform/domains', { method: 'GET' }),
-      ]);
-
-      setPlans(plansData ?? []);
-      setStores(storesData?.items ?? []);
-      setSubscriptions(subscriptionsData?.items ?? []);
-      setDomains(domainsData ?? []);
-      setMessage('Platform overview loaded');
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to refresh overview');
-    }
-  }
-
-  async function createPlan(): Promise<void> {
-    try {
-      const parsedLimits = JSON.parse(planLimitsText) as PlanLimit[];
-      await callPlatformApi('/platform/plans', {
-        method: 'POST',
-        body: JSON.stringify({
-          code: planCode.trim().toLowerCase(),
-          name: planName.trim(),
-          description: planDescription.trim(),
-          isActive: true,
-          limits: parsedLimits,
-        }),
-      });
-
-      await refreshOverview();
-      setMessage('Plan created');
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to create plan');
-    }
-  }
-
-  async function assignPlanToStore(): Promise<void> {
-    try {
-      if (!assignStoreId.trim()) {
-        throw new Error('Store ID is required for assignment');
-      }
-
-      await callPlatformApi(`/platform/stores/${assignStoreId.trim()}/subscription`, {
-        method: 'POST',
-        body: JSON.stringify({
-          planCode: assignPlanCode.trim().toLowerCase(),
-          status: assignStatus,
-        }),
-      });
-
-      await refreshOverview();
-      setMessage('Plan assigned to store');
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to assign plan');
-    }
-  }
-
-  async function updateSuspension(): Promise<void> {
-    try {
-      if (!suspendStoreId.trim()) {
-        throw new Error('Store ID is required for suspension update');
-      }
-
-      await callPlatformApi(`/platform/stores/${suspendStoreId.trim()}/suspension`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          isSuspended: suspendEnabled,
-          reason: suspendReason.trim(),
-        }),
-      });
-
-      await refreshOverview();
-      setMessage(suspendEnabled ? 'Store suspended' : 'Store unsuspended');
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to update suspension');
-    }
-  }
-
-  async function cancelStoreSubscription(): Promise<void> {
-    try {
-      if (!subscriptionActionStoreId.trim()) {
-        throw new Error('Store ID is required');
-      }
-
-      await callPlatformApi(
-        `/platform/stores/${subscriptionActionStoreId.trim()}/subscription/cancel`,
-        {
-          method: 'POST',
-        },
-      );
-
-      await refreshOverview();
-      setMessage('Subscription canceled');
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to cancel subscription');
-    }
-  }
-
-  async function suspendStoreSubscription(): Promise<void> {
-    try {
-      if (!subscriptionActionStoreId.trim()) {
-        throw new Error('Store ID is required');
-      }
-
-      await callPlatformApi(
-        `/platform/stores/${subscriptionActionStoreId.trim()}/subscription/suspend`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ reason: suspendReason.trim() }),
-        },
-      );
-
-      await refreshOverview();
-      setMessage('Subscription suspended');
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to suspend subscription');
-    }
-  }
-
-  async function resumeStoreSubscription(): Promise<void> {
-    try {
-      if (!subscriptionActionStoreId.trim()) {
-        throw new Error('Store ID is required');
-      }
-
-      await callPlatformApi(
-        `/platform/stores/${subscriptionActionStoreId.trim()}/subscription/resume`,
-        {
-          method: 'POST',
-        },
-      );
-
-      await refreshOverview();
-      setMessage('Subscription resumed');
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to resume subscription');
-    }
-  }
-
-  async function checkDowngrade(): Promise<void> {
-    try {
-      if (!subscriptionActionStoreId.trim()) {
-        throw new Error('Store ID is required');
-      }
-
-      const result = await callPlatformApi<DowngradeCheck>(
-        `/platform/stores/${subscriptionActionStoreId.trim()}/subscription/can-downgrade/${downgradePlanCode.trim()}`,
-      );
-
-      setDowngradeResult(result);
-      if (result?.canDowngrade) {
-        setMessage('Downgrade is possible');
-      } else {
-        setMessage('Downgrade blocked - usage exceeds target plan limits');
-      }
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to check downgrade');
-    }
-  }
-
-  function clearPlatformSession(): void {
-    setPlatformSecret('');
-    setMessage('Platform secret cleared from local storage');
-  }
-
+export function PlatformConsole({ onBackHome, onMerchantLogin }: PlatformConsoleProps) {
   return (
-    <section className="panel panel-platform">
-      <header className="panel-header">
-        <h2>Platform Admin</h2>
-        <p>Plans, subscriptions, tenant suspension, and global status views.</p>
+    <section className="marketing-page platform-page" dir="rtl">
+      <header className="marketing-header panel platform-header">
+        <div className="marketing-brand-block">
+          <p className="eyebrow">Kaleem Platform</p>
+          <h1>الصفحة التعريفية لإدارة المنصة</h1>
+          <p>
+            هذه الصفحة تقدم نظرة واضحة واحترافية عن دور إدارة المنصة، مع تركيز على المحتوى
+            التعريفي وتجربة هبوط كاملة بهيدر وفوتر، بدون تصميم يشبه لوحات التحكم ذات السيدبار.
+          </p>
+        </div>
+
+        <nav className="marketing-nav" aria-label="روابط الصفحة التعريفية">
+          <a href="#capabilities">القدرات</a>
+          <a href="#workflow">آلية العمل</a>
+          <a href="#contact">الخطوة التالية</a>
+        </nav>
+
+        <div className="marketing-header-actions">
+          <button type="button" onClick={onBackHome}>
+            الرجوع للرئيسية
+          </button>
+          <button className="primary" type="button" onClick={onMerchantLogin}>
+            دخول التاجر
+          </button>
+        </div>
       </header>
 
-      <div className="card-grid">
-        <article className="card">
-          <h3>Connection</h3>
-          <label>
-            API Base URL
-            <input value={apiBaseUrl} onChange={(event) => setApiBaseUrl(event.target.value)} />
-          </label>
-          <label>
-            Platform Secret
-            <input
-              type="password"
-              value={platformSecret}
-              onChange={(event) => setPlatformSecret(event.target.value)}
-            />
-          </label>
-          <button onClick={clearPlatformSession}>Clear Secret</button>
-          <button className="primary" onClick={refreshOverview}>
-            Refresh Overview
-          </button>
-        </article>
+      <section className="marketing-hero panel">
+        <div className="marketing-hero-copy">
+          <p className="eyebrow">Admin Landing</p>
+          <h2>واجهة تعريفية احترافية لفريق الإدارة بدل شكل لوحة التحكم التقليدي</h2>
+          <p>
+            تم تصميم الصفحة لتكون مقروءة وسهلة التصفح على الجوال وسطح المكتب، وتعرض قيمة بوابة
+            الإدارة بشكل تسويقي واضح قبل الانتقال إلى أي إجراءات تشغيلية.
+          </p>
 
-        <article className="card">
-          <h3>Create Plan</h3>
-          <label>
-            Plan Code
-            <input value={planCode} onChange={(event) => setPlanCode(event.target.value)} />
-          </label>
-          <label>
-            Plan Name
-            <input value={planName} onChange={(event) => setPlanName(event.target.value)} />
-          </label>
-          <label>
-            Description
-            <input
-              value={planDescription}
-              onChange={(event) => setPlanDescription(event.target.value)}
-            />
-          </label>
-          <label>
-            Limits JSON
-            <textarea
-              value={planLimitsText}
-              onChange={(event) => setPlanLimitsText(event.target.value)}
-            />
-          </label>
-          <button className="primary" onClick={createPlan}>
-            Create Plan
-          </button>
-        </article>
-
-        <article className="card">
-          <h3>Assign Plan</h3>
-          <label>
-            Store ID
-            <input
-              value={assignStoreId}
-              onChange={(event) => setAssignStoreId(event.target.value)}
-            />
-          </label>
-          <label>
-            Plan Code
-            <input
-              value={assignPlanCode}
-              onChange={(event) => setAssignPlanCode(event.target.value)}
-            />
-          </label>
-          <label>
-            Subscription Status
-            <input value={assignStatus} onChange={(event) => setAssignStatus(event.target.value)} />
-          </label>
-          <button className="primary" onClick={assignPlanToStore}>
-            Assign
-          </button>
-        </article>
-
-        <article className="card">
-          <h3>Suspend / Unsuspend Store</h3>
-          <label>
-            Store ID
-            <input
-              value={suspendStoreId}
-              onChange={(event) => setSuspendStoreId(event.target.value)}
-            />
-          </label>
-          <label>
-            Reason
-            <input
-              value={suspendReason}
-              onChange={(event) => setSuspendReason(event.target.value)}
-            />
-          </label>
-          <label className="inline-check">
-            <input
-              type="checkbox"
-              checked={suspendEnabled}
-              onChange={(event) => setSuspendEnabled(event.target.checked)}
-            />
-            isSuspended
-          </label>
-          <button className="danger" onClick={updateSuspension}>
-            Apply Suspension State
-          </button>
-        </article>
-
-        <article className="card">
-          <h3>Subscription Management</h3>
-          <label>
-            Store ID
-            <input
-              value={subscriptionActionStoreId}
-              onChange={(event) => setSubscriptionActionStoreId(event.target.value)}
-            />
-          </label>
-          <div className="button-group">
-            <button className="warning" onClick={cancelStoreSubscription}>
-              Cancel
-            </button>
-            <button className="danger" onClick={suspendStoreSubscription}>
-              Suspend
-            </button>
-            <button onClick={resumeStoreSubscription}>Resume</button>
+          <div className="trust-metrics" aria-label="مؤشرات منصة الإدارة">
+            {platformMetrics.map((metric) => (
+              <article key={metric.label} className="trust-metric-card">
+                <strong>{metric.value}</strong>
+                <span>{metric.label}</span>
+                <p>{metric.description}</p>
+              </article>
+            ))}
           </div>
-          <label>
-            Target Plan (for downgrade check)
-            <input
-              value={downgradePlanCode}
-              onChange={(event) => setDowngradePlanCode(event.target.value)}
-            />
-          </label>
-          <button onClick={checkDowngrade}>Check Downgrade</button>
-          {downgradeResult && (
-            <div className="downgrade-result">
-              {downgradeResult.canDowngrade ? (
-                <p className="success">✓ Can downgrade safely</p>
-              ) : (
-                <div className="conflicts">
-                  <p className="error">✗ Cannot downgrade - conflicts:</p>
-                  <ul>
-                    {downgradeResult.conflicts.map((c, i) => (
-                      <li key={i}>
-                        {METRIC_DISPLAY_NAMES[c.metricKey] ?? c.metricKey}: {c.used} / {c.limit}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-        </article>
-      </div>
+        </div>
 
-      <section className="tables">
-        <article className="table-card">
-          <h3>Plans</h3>
-          <ul>
-            {plans.map((plan) => (
-              <li key={plan.id}>
-                <strong>{plan.code}</strong> - {plan.name} ({plan.isActive ? 'active' : 'inactive'})
-                <ul className="plan-limits">
-                  {plan.limits.map((limit, i) => (
-                    <li key={i}>
-                      {METRIC_DISPLAY_NAMES[limit.metricKey] ?? limit.metricKey}:{' '}
-                      {limit.metricLimit === null ? '∞' : limit.metricLimit} ({limit.resetPeriod})
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ul>
-        </article>
-
-        <article className="table-card">
-          <h3>Stores</h3>
-          <ul>
-            {stores.map((store) => (
-              <li key={store.id}>
-                <strong>{store.slug}</strong> - {store.planCode ?? 'no-plan'} /{' '}
-                {store.subscriptionStatus ?? 'no-subscription'} / suspended:{' '}
-                {String(store.isSuspended)}
-              </li>
-            ))}
-          </ul>
-        </article>
-
-        <article className="table-card">
-          <h3>Subscriptions</h3>
-          <ul>
-            {subscriptions.map((subscription) => (
-              <li key={subscription.id}>
-                <strong>{subscription.storeName}</strong> - {subscription.planCode} /{' '}
-                {subscription.status}
-              </li>
-            ))}
-          </ul>
-        </article>
-
-        <article className="table-card">
-          <h3>Domains</h3>
-          <ul>
-            {domains.map((domain) => (
-              <li key={domain.id}>
-                <strong>{domain.hostname}</strong> - {domain.status} / SSL: {domain.sslStatus}
-              </li>
-            ))}
-          </ul>
-        </article>
+        <aside className="marketing-showcase" aria-label="عرض قدرات الإدارة">
+          {capabilities.slice(0, 2).map((item) => (
+            <article key={item.title} className="showcase-card">
+              <h4>{item.title}</h4>
+              <p>{item.description}</p>
+            </article>
+          ))}
+        </aside>
       </section>
 
-      <p className="status-message">{message}</p>
+      <section id="capabilities" className="marketing-section panel">
+        <div className="section-heading centered">
+          <p className="eyebrow">قدرات الإدارة</p>
+          <h3>كل ما تحتاجه إدارة المنصة في عرض واحد واضح</h3>
+        </div>
+
+        <div className="marketing-card-grid large">
+          {capabilities.map((item) => (
+            <article key={item.title} className="marketing-card marketing-card-feature">
+              <div className="marketing-card-icon" aria-hidden="true">
+                <span />
+              </div>
+              <h4>{item.title}</h4>
+              <p>{item.description}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section id="workflow" className="marketing-section panel">
+        <div className="section-heading">
+          <p className="eyebrow">آلية العمل</p>
+          <h3>تدفق إداري مختصر من المراجعة حتى التنفيذ</h3>
+        </div>
+
+        <div className="journey-grid">
+          {adminSteps.map((step) => (
+            <article key={step.step} className="journey-card">
+              <span className="journey-step">{step.step}</span>
+              <h4>{step.title}</h4>
+              <p>{step.description}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section id="contact" className="marketing-cta panel">
+        <div>
+          <p className="eyebrow">الانتقال السريع</p>
+          <h3>اختر المسار المناسب بعد الاطلاع على الصفحة التعريفية</h3>
+          <p>
+            يمكنك الرجوع للصفحة الرئيسية أو الانتقال مباشرة إلى دخول التاجر. تم إبقاء التجربة
+            بسيطة وبدون عناصر جانبية مشتتة.
+          </p>
+        </div>
+
+        <div className="marketing-hero-actions compact">
+          <button type="button" onClick={onBackHome}>
+            الذهاب للرئيسية
+          </button>
+          <button className="primary" type="button" onClick={onMerchantLogin}>
+            الانتقال إلى تسجيل الدخول
+          </button>
+        </div>
+      </section>
+
+      <footer className="marketing-footer panel">
+        <div className="marketing-footer-brand">
+          <p className="eyebrow">Kaleem Admin</p>
+          <h3>صفحة تعريفية مخصصة لإدارة المنصة</h3>
+          <p>هيدر واضح، محتوى منظم، وفوتر احترافي مع تجربة أخف من نمط لوحات التحكم التقليدية.</p>
+        </div>
+
+        <div className="marketing-footer-grid">
+          {footerColumns.map((column) => (
+            <div key={column.title} className="footer-column">
+              <strong>{column.title}</strong>
+              <ul>
+                {column.links.map((link) => (
+                  <li key={link}>{link}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        <div className="marketing-footer-actions">
+          <button type="button" onClick={onBackHome}>
+            الرئيسية
+          </button>
+          <button className="primary" type="button" onClick={onMerchantLogin}>
+            دخول التاجر
+          </button>
+        </div>
+      </footer>
     </section>
   );
 }

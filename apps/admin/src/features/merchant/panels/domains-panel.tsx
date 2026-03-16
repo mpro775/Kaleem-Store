@@ -16,16 +16,16 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
     try {
       const data = await request<Domain[]>('/domains', { method: 'GET' });
       setDomains(data ?? []);
-      setMessage('Domains loaded');
+      setMessage('تم تحميل النطاقات');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to load domains');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحميل النطاقات');
     }
   }
 
   async function createDomain(): Promise<void> {
     const normalized = hostname.trim().toLowerCase();
     if (!normalized) {
-      setMessage('Hostname is required');
+      setMessage('اسم النطاق مطلوب');
       return;
     }
 
@@ -37,16 +37,16 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
       });
       setHostname('');
       await loadDomains();
-      setMessage('Domain added');
+      setMessage('تمت إضافة النطاق');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to add domain');
+      setMessage(error instanceof Error ? error.message : 'تعذر إضافة النطاق');
     }
   }
 
   async function verifyDomain(domainId: string): Promise<void> {
     await callDomainAction(
       `/domains/${domainId}/verify`,
-      'Domain verified',
+      'تم التحقق من النطاق',
       request,
       setMessage,
       loadDomains,
@@ -56,7 +56,7 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
   async function activateDomain(domainId: string): Promise<void> {
     await callDomainAction(
       `/domains/${domainId}/activate`,
-      'Domain activated and SSL provisioning started',
+      'تم تفعيل النطاق وبدء تجهيز شهادة SSL',
       request,
       setMessage,
       loadDomains,
@@ -66,7 +66,7 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
   async function syncSsl(domainId: string): Promise<void> {
     await callDomainAction(
       `/domains/${domainId}/sync-ssl`,
-      'SSL status synced from provider',
+      'تمت مزامنة حالة SSL من المزود',
       request,
       setMessage,
       loadDomains,
@@ -78,15 +78,15 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
     try {
       await request(`/domains/${domainId}`, { method: 'DELETE' });
       await loadDomains();
-      setMessage('Domain deleted');
+      setMessage('تم حذف النطاق');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to delete domain');
+      setMessage(error instanceof Error ? error.message : 'تعذر حذف النطاق');
     }
   }
 
   return (
     <article className="card">
-      <h3>Custom Domains</h3>
+      <h3>النطاقات المخصصة</h3>
       <div className="actions">
         <input
           value={hostname}
@@ -94,9 +94,9 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
           placeholder="shop.example.com"
         />
         <button className="primary" onClick={() => createDomain().catch(() => undefined)}>
-          Add
+          إضافة
         </button>
-        <button onClick={() => loadDomains().catch(() => undefined)}>Refresh</button>
+        <button onClick={() => loadDomains().catch(() => undefined)}>تحديث</button>
       </div>
 
       <div className="list">
@@ -104,40 +104,40 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
           <article key={domain.id} className="list-item">
             <h4>{domain.hostname}</h4>
             <p>
-              Status: {domain.status} / SSL: {domain.sslStatus}
+              الحالة: {domain.status} / SSL: {domain.sslStatus}
             </p>
             <p>
-              Create DNS TXT: <code>{domain.verificationDnsHost}</code> ={' '}
+              أضف سجل DNS TXT: <code>{domain.verificationDnsHost}</code> ={' '}
               <code>{domain.verificationToken}</code>
             </p>
             <p>
-              Create DNS CNAME: <code>{domain.routingHost ?? domain.hostname}</code> ={' '}
+              أضف سجل DNS CNAME: <code>{domain.routingHost ?? domain.hostname}</code> ={' '}
               <code>{domain.routingTarget ?? 'stores.example.com'}</code>
             </p>
             <p>
-              SSL Provider: {domain.sslProvider ?? 'cloudflare'} ({formatSslMode(domain.sslMode)})
+              مزود SSL: {domain.sslProvider ?? 'cloudflare'} ({formatSslMode(domain.sslMode)})
             </p>
-            {domain.sslLastCheckedAt ? <p>Last SSL check: {domain.sslLastCheckedAt}</p> : null}
-            {domain.sslError ? <p>SSL error: {domain.sslError}</p> : null}
+            {domain.sslLastCheckedAt ? <p>آخر فحص SSL: {domain.sslLastCheckedAt}</p> : null}
+            {domain.sslError ? <p>خطأ SSL: {domain.sslError}</p> : null}
             <div className="actions">
-              <button onClick={() => verifyDomain(domain.id).catch(() => undefined)}>Verify</button>
+              <button onClick={() => verifyDomain(domain.id).catch(() => undefined)}>تحقق</button>
               <button
                 className="primary"
                 onClick={() => activateDomain(domain.id).catch(() => undefined)}
               >
-                Activate
+                تفعيل
               </button>
-              <button onClick={() => syncSsl(domain.id).catch(() => undefined)}>Sync SSL</button>
+              <button onClick={() => syncSsl(domain.id).catch(() => undefined)}>مزامنة SSL</button>
               <button
                 className="danger"
                 onClick={() => deleteDomain(domain.id).catch(() => undefined)}
               >
-                Delete
+                حذف
               </button>
             </div>
           </article>
         ))}
-        {domains.length === 0 ? <p className="hint">No domains loaded.</p> : null}
+        {domains.length === 0 ? <p className="hint">لا توجد نطاقات محملة.</p> : null}
       </div>
 
       {message ? <p className="status-message">{message}</p> : null}
@@ -158,13 +158,13 @@ async function callDomainAction(
     await loadDomains();
     setMessage(successMessage);
   } catch (error) {
-    setMessage(error instanceof Error ? error.message : 'Domain action failed');
+    setMessage(error instanceof Error ? error.message : 'فشلت عملية النطاق');
   }
 }
 
 function formatSslMode(mode: Domain['sslMode'] | undefined): string {
   if (mode === 'full') {
-    return 'Full';
+    return 'كامل';
   }
-  return 'Full (Strict)';
+  return 'كامل (صارم)';
 }

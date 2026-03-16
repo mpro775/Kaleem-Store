@@ -67,9 +67,9 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
       setProducts(productsData?.items ?? []);
       setCategories(categoriesData ?? []);
       setAttributes(attributesData ?? []);
-      setMessage('Products, categories, and attributes loaded');
+      setMessage('تم تحميل المنتجات والتصنيفات والخصائص');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to load products');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحميل المنتجات');
     }
   }
 
@@ -89,17 +89,17 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
         });
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to load product details');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحميل تفاصيل المنتج');
     }
   }
 
   async function updateVariantAttributes(): Promise<void> {
     if (!selectedProduct) {
-      setMessage('Select a product first');
+      setMessage('اختر منتجاً أولاً');
       return;
     }
     if (!selectedVariantId) {
-      setMessage('Select a variant first');
+      setMessage('اختر متغيراً أولاً');
       return;
     }
 
@@ -112,9 +112,9 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
         }),
       });
       await loadProductDetails(selectedProduct.id);
-      setMessage('Variant attributes updated');
+      setMessage('تم تحديث خصائص المتغير');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to update variant attributes');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحديث خصائص المتغير');
     }
   }
 
@@ -135,15 +135,15 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
       });
       setProductForm(productFormDefault);
       await loadCatalog();
-      setMessage('Product created');
+      setMessage('تم إنشاء المنتج');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to create product');
+      setMessage(error instanceof Error ? error.message : 'تعذر إنشاء المنتج');
     }
   }
 
   async function updateProduct(): Promise<void> {
     if (!selectedProduct) {
-      setMessage('Select a product first');
+      setMessage('اختر منتجاً أولاً');
       return;
     }
 
@@ -155,15 +155,15 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
       });
       await loadCatalog();
       await loadProductDetails(selectedProduct.id);
-      setMessage('Product updated');
+      setMessage('تم تحديث المنتج');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to update product');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحديث المنتج');
     }
   }
 
   async function deleteProduct(): Promise<void> {
     if (!selectedProduct) {
-      setMessage('Select a product first');
+      setMessage('اختر منتجاً أولاً');
       return;
     }
 
@@ -173,15 +173,15 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
       setSelectedProduct(null);
       setProductForm(productFormDefault);
       await loadCatalog();
-      setMessage('Product deleted');
+      setMessage('تم حذف المنتج');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to delete product');
+      setMessage(error instanceof Error ? error.message : 'تعذر حذف المنتج');
     }
   }
 
   async function addVariant(): Promise<void> {
     if (!selectedProduct) {
-      setMessage('Select a product first');
+      setMessage('اختر منتجاً أولاً');
       return;
     }
 
@@ -193,19 +193,19 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
       });
       setVariantForm(createVariantFormDefault());
       await loadProductDetails(selectedProduct.id);
-      setMessage('Variant added');
+      setMessage('تمت إضافة المتغير');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to add variant');
+      setMessage(error instanceof Error ? error.message : 'تعذر إضافة المتغير');
     }
   }
 
   async function uploadAndAttachImage(): Promise<void> {
     if (!selectedProduct) {
-      setMessage('Select a product first');
+      setMessage('اختر منتجاً أولاً');
       return;
     }
     if (!imageFile) {
-      setMessage('Choose an image file');
+      setMessage('اختر ملف صورة');
       return;
     }
 
@@ -220,43 +220,43 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
       setImageForm(imageFormDefault);
       setImageFile(null);
       await loadProductDetails(selectedProduct.id);
-      setMessage('Image uploaded and attached');
+      setMessage('تم رفع الصورة وربطها');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to upload image');
+      setMessage(error instanceof Error ? error.message : 'تعذر رفع الصورة');
     }
   }
 
   return (
     <section className="card-grid">
       <article className="card">
-        <h3>Products</h3>
+        <h3>المنتجات</h3>
         <div className="actions">
-          <button onClick={() => loadCatalog().catch(() => undefined)}>Load</button>
+          <button onClick={() => loadCatalog().catch(() => undefined)}>تحميل</button>
           <button className="primary" onClick={() => createProduct().catch(() => undefined)}>
-            Create
+            إنشاء
           </button>
-          <button onClick={() => updateProduct().catch(() => undefined)}>Update</button>
+          <button onClick={() => updateProduct().catch(() => undefined)}>تحديث</button>
           <button className="danger" onClick={() => deleteProduct().catch(() => undefined)}>
-            Delete
+            حذف
           </button>
         </div>
 
         <label>
-          Title
+          العنوان
           <input
             value={productForm.title}
             onChange={(event) => setProductForm((prev) => ({ ...prev, title: event.target.value }))}
           />
         </label>
         <label>
-          Slug
+          المسار المختصر
           <input
             value={productForm.slug}
             onChange={(event) => setProductForm((prev) => ({ ...prev, slug: event.target.value }))}
           />
         </label>
         <label>
-          Description
+          الوصف
           <textarea
             value={productForm.description}
             onChange={(event) =>
@@ -265,14 +265,14 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
           />
         </label>
         <label>
-          Category
+          التصنيف
           <select
             value={productForm.categoryId}
             onChange={(event) =>
               setProductForm((prev) => ({ ...prev, categoryId: event.target.value }))
             }
           >
-            <option value="">No category</option>
+            <option value="">بدون تصنيف</option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}
@@ -281,16 +281,16 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
           </select>
         </label>
         <label>
-          Status
+          الحالة
           <select
             value={productForm.status}
             onChange={(event) =>
               setProductForm((prev) => ({ ...prev, status: event.target.value as ProductStatus }))
             }
           >
-            <option value="draft">draft</option>
-            <option value="active">active</option>
-            <option value="archived">archived</option>
+            <option value="draft">مسودة</option>
+            <option value="active">نشط</option>
+            <option value="archived">مؤرشف</option>
           </select>
         </label>
 
@@ -298,7 +298,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
       </article>
 
       <article className="card">
-        <h3>Product List</h3>
+        <h3>قائمة المنتجات</h3>
         <div className="list">
           {products.map((product) => (
             <article key={product.id} className="list-item">
@@ -307,25 +307,25 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                 {product.slug} - {product.status}
               </p>
               <button onClick={() => loadProductDetails(product.id).catch(() => undefined)}>
-                Manage
+                إدارة
               </button>
             </article>
           ))}
-          {products.length === 0 ? <p className="hint">No products loaded.</p> : null}
+          {products.length === 0 ? <p className="hint">لا توجد منتجات محملة.</p> : null}
         </div>
       </article>
 
       <article className="card">
-        <h3>Variants and Images</h3>
+        <h3>المتغيرات والصور</h3>
         {selectedProduct ? (
-          <p>Selected: {selectedProduct.title}</p>
+          <p>المحدد: {selectedProduct.title}</p>
         ) : (
-          <p>Select a product to manage media.</p>
+          <p>اختر منتجاً لإدارة الوسائط.</p>
         )}
 
-        <h4>Add Variant</h4>
+        <h4>إضافة متغير</h4>
         <label>
-          Title
+          العنوان
           <input
             value={variantForm.title}
             onChange={(event) => setVariantForm((prev) => ({ ...prev, title: event.target.value }))}
@@ -339,7 +339,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
           />
         </label>
         <label>
-          Barcode
+          الباركود
           <input
             value={variantForm.barcode}
             onChange={(event) =>
@@ -348,7 +348,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
           />
         </label>
         <label>
-          Price
+          السعر
           <input
             type="number"
             min={0}
@@ -358,7 +358,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
           />
         </label>
         <label>
-          Compare At Price
+          سعر المقارنة
           <input
             type="number"
             min={0}
@@ -370,7 +370,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
           />
         </label>
         <label>
-          Stock Quantity
+          كمية المخزون
           <input
             type="number"
             min={0}
@@ -381,7 +381,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
           />
         </label>
         <label>
-          Low Stock Threshold
+          حد انخفاض المخزون
           <input
             type="number"
             min={0}
@@ -393,7 +393,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
         </label>
         {attributes.length > 0 ? (
           <>
-            <p className="hint">Variant Attribute Values</p>
+            <p className="hint">قيم خصائص المتغير</p>
             {attributes.map((attribute) => (
               <label key={attribute.id}>
                 {attribute.name}
@@ -409,7 +409,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                     }))
                   }
                 >
-                  <option value="">No value</option>
+                  <option value="">بدون قيمة</option>
                   {(attribute.values ?? []).map((value) => (
                     <option key={value.id} value={value.id}>
                       {value.value}
@@ -420,7 +420,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
             ))}
           </>
         ) : (
-          <p className="hint">No attributes available. Create them in the Attributes tab.</p>
+          <p className="hint">لا توجد خصائص متاحة. أنشئها من تبويب الخصائص.</p>
         )}
         <label className="inline-check">
           <input
@@ -430,17 +430,17 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
               setVariantForm((prev) => ({ ...prev, isDefault: event.target.checked }))
             }
           />
-          Default Variant
+          المتغير الافتراضي
         </label>
-        <button onClick={() => addVariant().catch(() => undefined)}>Add Variant</button>
+        <button onClick={() => addVariant().catch(() => undefined)}>إضافة متغير</button>
         <button onClick={() => updateVariantAttributes().catch(() => undefined)}>
-          Update Variant Attributes
+          تحديث خصائص المتغير
         </button>
-        {selectedVariantId ? <p className="hint">Editing variant: {selectedVariantId}</p> : null}
+        {selectedVariantId ? <p className="hint">تعديل المتغير: {selectedVariantId}</p> : null}
 
-        <h4>Upload and Attach Image</h4>
+        <h4>رفع وربط صورة</h4>
         <label>
-          File
+          الملف
           <input
             type="file"
             accept="image/*"
@@ -448,7 +448,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
           />
         </label>
         <label>
-          Variant ID (optional)
+          معرّف المتغير (اختياري)
           <input
             value={imageForm.variantId}
             onChange={(event) =>
@@ -457,14 +457,14 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
           />
         </label>
         <label>
-          Alt Text
+          النص البديل
           <input
             value={imageForm.altText}
             onChange={(event) => setImageForm((prev) => ({ ...prev, altText: event.target.value }))}
           />
         </label>
         <label>
-          Sort Order
+          ترتيب العرض
           <input
             type="number"
             min={0}
@@ -474,23 +474,23 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
             }
           />
         </label>
-        <button onClick={() => uploadAndAttachImage().catch(() => undefined)}>Upload Image</button>
+        <button onClick={() => uploadAndAttachImage().catch(() => undefined)}>رفع الصورة</button>
 
-        <h4>Current Variants</h4>
+        <h4>المتغيرات الحالية</h4>
         <div className="list compact-list">
           {(selectedProduct?.variants ?? []).map((variant: ProductVariant) => (
             <article key={variant.id} className="list-item">
               <p>
-                {variant.title} ({variant.sku}) - stock {variant.stockQuantity} (low at{' '}
+                {variant.title} ({variant.sku}) - المخزون {variant.stockQuantity} (الحد{' '}
                 {variant.lowStockThreshold})
               </p>
-              <p>Attributes: {formatVariantAttributes(variant.attributes)}</p>
-              <button onClick={() => selectVariantAttributes(variant)}>Load Values</button>
+              <p>الخصائص: {formatVariantAttributes(variant.attributes)}</p>
+              <button onClick={() => selectVariantAttributes(variant)}>تحميل القيم</button>
             </article>
           ))}
         </div>
 
-        <h4>Current Images</h4>
+        <h4>الصور الحالية</h4>
         <div className="list compact-list">
           {(selectedProduct?.images ?? []).map((image) => (
             <article key={image.id} className="list-item">
@@ -620,7 +620,7 @@ function buildVariantValueSelection(
 function formatVariantAttributes(attributes: Record<string, string>): string {
   const entries = Object.entries(attributes);
   if (entries.length === 0) {
-    return 'none';
+    return 'لا يوجد';
   }
 
   return entries.map(([key, value]) => `${key}:${value}`).join(', ');
@@ -637,7 +637,7 @@ async function uploadMediaAsset(request: MerchantRequester, file: File): Promise
   });
 
   if (!presigned) {
-    throw new Error('Failed to get presigned upload URL');
+    throw new Error('تعذر الحصول على رابط الرفع الموقّع');
   }
 
   const uploadResponse = await fetch(presigned.uploadUrl, {
@@ -647,7 +647,7 @@ async function uploadMediaAsset(request: MerchantRequester, file: File): Promise
   });
 
   if (!uploadResponse.ok) {
-    throw new Error('Direct media upload failed');
+    throw new Error('فشل رفع الوسائط المباشر');
   }
 
   const etag = uploadResponse.headers.get('etag') ?? undefined;
@@ -674,7 +674,7 @@ async function uploadMediaAsset(request: MerchantRequester, file: File): Promise
   });
 
   if (!mediaAsset) {
-    throw new Error('Failed to confirm uploaded media');
+    throw new Error('تعذر تأكيد الوسائط المرفوعة');
   }
 
   return mediaAsset;

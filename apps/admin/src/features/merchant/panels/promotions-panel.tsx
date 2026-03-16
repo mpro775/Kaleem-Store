@@ -83,9 +83,9 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
       setCoupons(couponData ?? []);
       setOffers(offerData ?? []);
       setAdvancedOffers(advancedOfferData ?? []);
-      setMessage('Promotions loaded');
+      setMessage('تم تحميل العروض');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to load promotions');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحميل العروض');
     }
   }
 
@@ -98,15 +98,15 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
       });
       setCouponForm(couponFormDefault);
       await loadAll();
-      setMessage('Coupon created');
+      setMessage('تم إنشاء القسيمة');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to create coupon');
+      setMessage(error instanceof Error ? error.message : 'تعذر إنشاء القسيمة');
     }
   }
 
   async function updateCoupon(): Promise<void> {
     if (!selectedCouponId) {
-      setMessage('Select a coupon to update');
+      setMessage('اختر قسيمة لتحديثها');
       return;
     }
 
@@ -117,9 +117,9 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
         body: JSON.stringify(buildCouponUpdatePayload(couponForm)),
       });
       await loadAll();
-      setMessage('Coupon updated');
+      setMessage('تم تحديث القسيمة');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to update coupon');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحديث القسيمة');
     }
   }
 
@@ -132,15 +132,15 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
       });
       setOfferForm(offerFormDefault);
       await loadAll();
-      setMessage('Offer created');
+      setMessage('تم إنشاء العرض');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to create offer');
+      setMessage(error instanceof Error ? error.message : 'تعذر إنشاء العرض');
     }
   }
 
   async function updateOffer(): Promise<void> {
     if (!selectedOfferId) {
-      setMessage('Select an offer to update');
+      setMessage('اختر عرضاً لتحديثه');
       return;
     }
 
@@ -151,9 +151,9 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
         body: JSON.stringify(buildOfferUpdatePayload(offerForm)),
       });
       await loadAll();
-      setMessage('Offer updated');
+      setMessage('تم تحديث العرض');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to update offer');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحديث العرض');
     }
   }
 
@@ -166,15 +166,15 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
       });
       setAdvancedOfferForm(advancedOfferFormDefault);
       await loadAll();
-      setMessage('Advanced offer created');
+      setMessage('تم إنشاء العرض المتقدم');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to create advanced offer');
+      setMessage(error instanceof Error ? error.message : 'تعذر إنشاء العرض المتقدم');
     }
   }
 
   async function updateAdvancedOffer(): Promise<void> {
     if (!selectedAdvancedOfferId) {
-      setMessage('Select an advanced offer to update');
+      setMessage('اختر عرضاً متقدماً لتحديثه');
       return;
     }
 
@@ -185,9 +185,9 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
         body: JSON.stringify(buildAdvancedOfferUpdatePayload(advancedOfferForm)),
       });
       await loadAll();
-      setMessage('Advanced offer updated');
+      setMessage('تم تحديث العرض المتقدم');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to update advanced offer');
+      setMessage(error instanceof Error ? error.message : 'تعذر تحديث العرض المتقدم');
     }
   }
 
@@ -237,24 +237,24 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
   return (
     <section className="card-grid">
       <article className="card">
-        <h3>Coupons</h3>
+        <h3>القسائم</h3>
         <div className="actions">
-          <button onClick={() => loadAll().catch(() => undefined)}>Load</button>
+          <button onClick={() => loadAll().catch(() => undefined)}>تحميل</button>
           <button className="primary" onClick={() => createCoupon().catch(() => undefined)}>
-            Create
+            إنشاء
           </button>
-          <button onClick={() => updateCoupon().catch(() => undefined)}>Update</button>
+          <button onClick={() => updateCoupon().catch(() => undefined)}>تحديث</button>
         </div>
 
         <label>
-          Code
+          الرمز
           <input
             value={couponForm.code}
             onChange={(event) => setCouponForm((prev) => ({ ...prev, code: event.target.value }))}
           />
         </label>
         <label>
-          Discount Type
+          نوع الخصم
           <select
             value={couponForm.discountType}
             onChange={(event) =>
@@ -264,12 +264,12 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
               }))
             }
           >
-            <option value="percent">percent</option>
-            <option value="fixed">fixed</option>
+            <option value="percent">نسبة</option>
+            <option value="fixed">قيمة ثابتة</option>
           </select>
         </label>
         <label>
-          Discount Value
+          قيمة الخصم
           <input
             type="number"
             min={0}
@@ -281,7 +281,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
           />
         </label>
         <label>
-          Min Order Amount
+          الحد الأدنى للطلب
           <input
             type="number"
             min={0}
@@ -293,7 +293,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
           />
         </label>
         <label>
-          Starts At
+          يبدأ في
           <input
             type="datetime-local"
             value={couponForm.startsAt}
@@ -303,7 +303,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
           />
         </label>
         <label>
-          Ends At
+          ينتهي في
           <input
             type="datetime-local"
             value={couponForm.endsAt}
@@ -311,7 +311,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
           />
         </label>
         <label>
-          Max Uses
+          الحد الأقصى للاستخدام
           <input
             type="number"
             min={1}
@@ -329,7 +329,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
               setCouponForm((prev) => ({ ...prev, isActive: event.target.checked }))
             }
           />
-          Active
+          نشط
         </label>
 
         <div className="list">
@@ -337,33 +337,33 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
             <article key={coupon.id} className="list-item">
               <h4>{coupon.code}</h4>
               <p>
-                {coupon.discountType} {coupon.discountValue} - used {coupon.usedCount}
+                {coupon.discountType} {coupon.discountValue} - عدد الاستخدام {coupon.usedCount}
               </p>
-              <button onClick={() => selectCoupon(coupon)}>Edit</button>
+              <button onClick={() => selectCoupon(coupon)}>تعديل</button>
             </article>
           ))}
         </div>
       </article>
 
       <article className="card">
-        <h3>Offers</h3>
+        <h3>العروض</h3>
         <div className="actions">
-          <button onClick={() => loadAll().catch(() => undefined)}>Load</button>
+          <button onClick={() => loadAll().catch(() => undefined)}>تحميل</button>
           <button className="primary" onClick={() => createOffer().catch(() => undefined)}>
-            Create
+            إنشاء
           </button>
-          <button onClick={() => updateOffer().catch(() => undefined)}>Update</button>
+          <button onClick={() => updateOffer().catch(() => undefined)}>تحديث</button>
         </div>
 
         <label>
-          Name
+          الاسم
           <input
             value={offerForm.name}
             onChange={(event) => setOfferForm((prev) => ({ ...prev, name: event.target.value }))}
           />
         </label>
         <label>
-          Target Type
+          نوع الهدف
           <select
             value={offerForm.targetType}
             onChange={(event) =>
@@ -373,13 +373,13 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
               }))
             }
           >
-            <option value="cart">cart</option>
-            <option value="product">product</option>
-            <option value="category">category</option>
+            <option value="cart">السلة</option>
+            <option value="product">منتج</option>
+            <option value="category">تصنيف</option>
           </select>
         </label>
         <label>
-          Target Product ID
+          معرّف المنتج المستهدف
           <input
             value={offerForm.targetProductId}
             onChange={(event) =>
@@ -388,7 +388,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
           />
         </label>
         <label>
-          Target Category ID
+          معرّف التصنيف المستهدف
           <input
             value={offerForm.targetCategoryId}
             onChange={(event) =>
@@ -397,7 +397,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
           />
         </label>
         <label>
-          Discount Type
+          نوع الخصم
           <select
             value={offerForm.discountType}
             onChange={(event) =>
@@ -407,12 +407,12 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
               }))
             }
           >
-            <option value="percent">percent</option>
-            <option value="fixed">fixed</option>
+            <option value="percent">نسبة</option>
+            <option value="fixed">قيمة ثابتة</option>
           </select>
         </label>
         <label>
-          Discount Value
+          قيمة الخصم
           <input
             type="number"
             min={0}
@@ -424,7 +424,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
           />
         </label>
         <label>
-          Starts At
+          يبدأ في
           <input
             type="datetime-local"
             value={offerForm.startsAt}
@@ -434,7 +434,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
           />
         </label>
         <label>
-          Ends At
+          ينتهي في
           <input
             type="datetime-local"
             value={offerForm.endsAt}
@@ -449,7 +449,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
               setOfferForm((prev) => ({ ...prev, isActive: event.target.checked }))
             }
           />
-          Active
+          نشط
         </label>
 
         <div className="list">
@@ -459,24 +459,24 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
               <p>
                 {offer.targetType} - {offer.discountType} {offer.discountValue}
               </p>
-              <button onClick={() => selectOffer(offer)}>Edit</button>
+              <button onClick={() => selectOffer(offer)}>تعديل</button>
             </article>
           ))}
         </div>
       </article>
 
       <article className="card">
-        <h3>Advanced Offers</h3>
+        <h3>العروض المتقدمة</h3>
         <div className="actions">
-          <button onClick={() => loadAll().catch(() => undefined)}>Load</button>
+          <button onClick={() => loadAll().catch(() => undefined)}>تحميل</button>
           <button className="primary" onClick={() => createAdvancedOffer().catch(() => undefined)}>
-            Create
+            إنشاء
           </button>
-          <button onClick={() => updateAdvancedOffer().catch(() => undefined)}>Update</button>
+          <button onClick={() => updateAdvancedOffer().catch(() => undefined)}>تحديث</button>
         </div>
 
         <label>
-          Name
+          الاسم
           <input
             value={advancedOfferForm.name}
             onChange={(event) =>
@@ -485,7 +485,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
           />
         </label>
         <label>
-          Description
+          الوصف
           <input
             value={advancedOfferForm.description}
             onChange={(event) =>
@@ -494,7 +494,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
           />
         </label>
         <label>
-          Offer Type
+          نوع العرض
           <select
             value={advancedOfferForm.offerType}
             onChange={(event) =>
@@ -510,7 +510,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
           </select>
         </label>
         <label>
-          Priority
+          الأولوية
           <input
             type="number"
             value={advancedOfferForm.priority}
@@ -520,7 +520,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
           />
         </label>
         <label>
-          Config (JSON)
+          الإعدادات (JSON)
           <textarea
             value={advancedOfferForm.config}
             onChange={(event) =>
@@ -529,7 +529,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
           />
         </label>
         <label>
-          Starts At
+          يبدأ في
           <input
             type="datetime-local"
             value={advancedOfferForm.startsAt}
@@ -539,7 +539,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
           />
         </label>
         <label>
-          Ends At
+          ينتهي في
           <input
             type="datetime-local"
             value={advancedOfferForm.endsAt}
@@ -556,7 +556,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
               setAdvancedOfferForm((prev) => ({ ...prev, isActive: event.target.checked }))
             }
           />
-          Active
+          نشط
         </label>
 
         <div className="list">
@@ -564,9 +564,9 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
             <article key={offer.id} className="list-item">
               <h4>{offer.name}</h4>
               <p>
-                {offer.offerType} - priority {offer.priority} - active {String(offer.isActive)}
+                {offer.offerType} - الأولوية {offer.priority} - نشط {String(offer.isActive)}
               </p>
-              <button onClick={() => selectAdvancedOffer(offer)}>Edit</button>
+              <button onClick={() => selectAdvancedOffer(offer)}>تعديل</button>
             </article>
           ))}
         </div>

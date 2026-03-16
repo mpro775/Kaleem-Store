@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type ReactElement } from 'react';
 import { merchantRequestJson, type MerchantRequestOptions } from './api-client';
 import { AttributesPanel } from './panels/attributes-panel';
 import { CategoriesPanel } from './panels/categories-panel';
@@ -72,20 +72,20 @@ export function MerchantDashboard({
   const tabs = useMemo(
     () =>
       [
-        { key: 'overview', label: 'Overview' },
-        { key: 'store', label: 'Store Settings' },
-        { key: 'products', label: 'Products' },
-        { key: 'inventory', label: 'Inventory' },
-        { key: 'attributes', label: 'Attributes' },
-        { key: 'categories', label: 'Categories' },
-        { key: 'orders', label: 'Orders' },
-        { key: 'payments', label: 'Payments' },
-        { key: 'shipping', label: 'Shipping' },
-        { key: 'promotions', label: 'Promotions' },
-        { key: 'themes', label: 'Themes' },
-        { key: 'domains', label: 'Domains' },
-        { key: 'webhooks', label: 'Webhooks' },
-        { key: 'staff', label: 'Staff' },
+        { key: 'overview', label: 'نظرة عامة' },
+        { key: 'store', label: 'إعدادات المتجر' },
+        { key: 'products', label: 'المنتجات' },
+        { key: 'inventory', label: 'المخزون' },
+        { key: 'attributes', label: 'الخصائص' },
+        { key: 'categories', label: 'التصنيفات' },
+        { key: 'orders', label: 'الطلبات' },
+        { key: 'payments', label: 'المدفوعات' },
+        { key: 'shipping', label: 'الشحن' },
+        { key: 'promotions', label: 'العروض' },
+        { key: 'themes', label: 'الثيمات' },
+        { key: 'domains', label: 'النطاقات' },
+        { key: 'webhooks', label: 'الويب هوكس' },
+        { key: 'staff', label: 'الفريق' },
       ] as Array<{ key: MerchantTabKey; label: string }>,
     [],
   );
@@ -103,23 +103,23 @@ export function MerchantDashboard({
   return (
     <section className="panel panel-merchant merchant-dashboard">
       <header className="panel-header">
-        <h2>Merchant Dashboard</h2>
+        <h2>لوحة التاجر</h2>
         <p>
-          Signed in as {session.user.fullName} ({session.user.email}) - role: {session.user.role}
+          تم تسجيل الدخول باسم {session.user.fullName} ({session.user.email}) - الدور: {session.user.role}
         </p>
-        <p className="route-hint">Store ID: {session.user.storeId}</p>
+        <p className="route-hint">معرّف المتجر: {session.user.storeId}</p>
       </header>
 
       <div className="dashboard-actions">
-        <button onClick={() => setBannerMessage('Session is active and refresh-enabled.')}>
-          Check session
+        <button onClick={() => setBannerMessage('الجلسة فعالة وتدعم التحديث التلقائي.') }>
+          فحص الجلسة
         </button>
         <button className="danger" onClick={() => signOut().catch(() => undefined)}>
-          Sign out
+          تسجيل الخروج
         </button>
       </div>
 
-      <nav className="tab-nav" aria-label="Merchant sections">
+      <nav className="tab-nav" aria-label="أقسام التاجر">
         {tabs.map((tab) => (
           <button
             key={tab.key}
@@ -143,7 +143,7 @@ function renderPanel(activeTab: MerchantTabKey, props: MerchantPanelProps) {
   return renderer ? renderer(props) : null;
 }
 
-const panelRenderers: Record<MerchantTabKey, (props: MerchantPanelProps) => JSX.Element> = {
+const panelRenderers: Record<MerchantTabKey, (props: MerchantPanelProps) => ReactElement> = {
   overview: (props) => <OverviewPanel session={props.session} />,
   store: (props) => <StoreSettingsPanel request={props.request} />,
   products: (props) => <ProductsPanel request={props.request} />,
@@ -164,22 +164,22 @@ function OverviewPanel({ session }: { session: MerchantSession }) {
   return (
     <section className="card-grid">
       <article className="card">
-        <h3>Store Context</h3>
-        <p>Store ID: {session.user.storeId}</p>
-        <p>Permissions: {session.user.permissions.join(', ') || 'none'}</p>
+        <h3>ملخص المتجر</h3>
+        <p>معرّف المتجر: {session.user.storeId}</p>
+        <p>الصلاحيات: {session.user.permissions.join(', ') || 'لا توجد'}</p>
       </article>
 
       <article className="card">
-        <h3>Execution Checklist</h3>
+        <h3>قائمة التشغيل</h3>
         <ul>
-          <li>Store settings with save flow</li>
-          <li>Products, variants, and media attach</li>
-          <li>Inventory reservations, movements, and low-stock alerts</li>
-          <li>Categories CRUD</li>
-          <li>Attributes, values, and category mapping</li>
-          <li>Orders management and status updates</li>
-          <li>Shipping zones, promotions, themes, domains</li>
-          <li>Staff role assignment UX</li>
+          <li>إعدادات المتجر مع حفظ كامل للبيانات</li>
+          <li>إدارة المنتجات والمتغيرات وربط الوسائط</li>
+          <li>حركات وحجوزات المخزون وتنبيهات انخفاض الكمية</li>
+          <li>إدارة التصنيفات بالكامل</li>
+          <li>إدارة الخصائص وقيمها وربطها بالتصنيفات</li>
+          <li>إدارة الطلبات وتحديث حالاتها</li>
+          <li>مناطق الشحن والعروض والثيمات والنطاقات</li>
+          <li>إدارة الفريق وتوزيع الأدوار</li>
         </ul>
       </article>
     </section>

@@ -7,11 +7,11 @@ interface PaymentsPanelProps {
 }
 
 const statusLabels: Record<PaymentStatus, string> = {
-  pending: 'Pending',
-  under_review: 'Under Review',
-  approved: 'Approved',
-  rejected: 'Rejected',
-  refunded: 'Refunded',
+  pending: 'قيد الانتظار',
+  under_review: 'قيد المراجعة',
+  approved: 'مقبول',
+  rejected: 'مرفوض',
+  refunded: 'مسترجع',
 };
 
 const statusColors: Record<PaymentStatus, string> = {
@@ -34,9 +34,9 @@ export function PaymentsPanel({ request }: PaymentsPanelProps) {
     try {
       const data = await request<PaymentWithOrder[]>('/payments/pending-review', { method: 'GET' });
       setPayments(data ?? []);
-      setMessage(`Loaded ${data?.length ?? 0} payments pending review`);
+      setMessage(`تم تحميل ${data?.length ?? 0} مدفوعات قيد المراجعة`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load payments');
+      setError(err instanceof Error ? err.message : 'تعذر تحميل المدفوعات');
     }
   }
 
@@ -45,9 +45,9 @@ export function PaymentsPanel({ request }: PaymentsPanelProps) {
     try {
       const data = await request<PaymentWithOrder[]>('/payments', { method: 'GET' });
       setPayments(data ?? []);
-      setMessage(`Loaded ${data?.length ?? 0} payments`);
+      setMessage(`تم تحميل ${data?.length ?? 0} مدفوعات`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load payments');
+      setError(err instanceof Error ? err.message : 'تعذر تحميل المدفوعات');
     }
   }
 
@@ -64,12 +64,12 @@ export function PaymentsPanel({ request }: PaymentsPanelProps) {
           reviewNote: reviewNote.trim() || undefined,
         }),
       });
-      setMessage('Payment approved successfully');
+      setMessage('تم اعتماد الدفعة بنجاح');
       setSelectedPayment(null);
       setReviewNote('');
       await loadPendingPayments();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to approve payment');
+      setError(err instanceof Error ? err.message : 'تعذر اعتماد الدفعة');
     }
   }
 
@@ -79,7 +79,7 @@ export function PaymentsPanel({ request }: PaymentsPanelProps) {
     setMessage('');
 
     if (!reviewNote.trim()) {
-      setError('Rejection reason is required');
+      setError('سبب الرفض مطلوب');
       return;
     }
 
@@ -91,12 +91,12 @@ export function PaymentsPanel({ request }: PaymentsPanelProps) {
           reviewNote: reviewNote.trim(),
         }),
       });
-      setMessage('Payment rejected');
+      setMessage('تم رفض الدفعة');
       setSelectedPayment(null);
       setReviewNote('');
       await loadPendingPayments();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reject payment');
+      setError(err instanceof Error ? err.message : 'تعذر رفض الدفعة');
     }
   }
 
@@ -110,68 +110,68 @@ export function PaymentsPanel({ request }: PaymentsPanelProps) {
   return (
     <section className="card-grid">
       <article className="card">
-        <h3>Transfer Payments</h3>
+        <h3>مدفوعات التحويل</h3>
         <div className="actions">
           <button onClick={() => loadPendingPayments().catch(() => undefined)}>
-            Pending Review
+            قيد المراجعة
           </button>
-          <button onClick={() => loadAllPayments().catch(() => undefined)}>All Payments</button>
+          <button onClick={() => loadAllPayments().catch(() => undefined)}>كل المدفوعات</button>
         </div>
 
         <div className="list">
           {payments.map((payment) => (
             <article key={payment.id} className="list-item">
               <div className="list-item-header">
-                <h4>Order {payment.orderCode}</h4>
+                <h4>طلب {payment.orderCode}</h4>
                 <span className={`badge ${statusColors[payment.status]}`}>
                   {statusLabels[payment.status]}
                 </span>
               </div>
               <p>
-                Amount: {payment.amount} | Method: {payment.method}
+                المبلغ: {payment.amount} | الطريقة: {payment.method}
               </p>
-              <p>Order Status: {payment.orderStatus}</p>
+              <p>حالة الطلب: {payment.orderStatus}</p>
               {payment.receiptUrl && (
                 <p>
                   <a href={payment.receiptUrl} target="_blank" rel="noopener noreferrer">
-                    View Receipt
+                    عرض الإيصال
                   </a>
                 </p>
               )}
               <div className="list-item-actions">
-                <button onClick={() => selectPayment(payment)}>Review</button>
+                <button onClick={() => selectPayment(payment)}>مراجعة</button>
               </div>
             </article>
           ))}
           {payments.length === 0 ? (
-            <p className="hint">No payments found. Click a button above to load payments.</p>
+            <p className="hint">لا توجد مدفوعات. اضغط أحد الأزرار بالأعلى للتحميل.</p>
           ) : null}
         </div>
       </article>
 
       <article className="card">
-        <h3>Review Payment</h3>
+        <h3>مراجعة الدفعة</h3>
         {selectedPayment ? (
           <>
             <div className="payment-summary">
               <p>
-                <strong>Order:</strong> {selectedPayment.orderCode}
+                <strong>الطلب:</strong> {selectedPayment.orderCode}
               </p>
               <p>
-                <strong>Amount:</strong> {selectedPayment.amount}
+                <strong>المبلغ:</strong> {selectedPayment.amount}
               </p>
               <p>
-                <strong>Method:</strong> {selectedPayment.method}
+                <strong>الطريقة:</strong> {selectedPayment.method}
               </p>
               <p>
-                <strong>Status:</strong>{' '}
+                <strong>الحالة:</strong>{' '}
                 <span className={`badge ${statusColors[selectedPayment.status]}`}>
                   {statusLabels[selectedPayment.status]}
                 </span>
               </p>
               {selectedPayment.customerUploadedAt && (
                 <p>
-                  <strong>Receipt uploaded:</strong>{' '}
+                  <strong>تاريخ رفع الإيصال:</strong>{' '}
                   {new Date(selectedPayment.customerUploadedAt).toLocaleString()}
                 </p>
               )}
@@ -179,43 +179,43 @@ export function PaymentsPanel({ request }: PaymentsPanelProps) {
 
             {selectedPayment.receiptUrl && (
               <div className="receipt-preview">
-                <h4>Receipt</h4>
+                <h4>الإيصال</h4>
                 <a
                   href={selectedPayment.receiptUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="button"
                 >
-                  Open Receipt
+                  فتح الإيصال
                 </a>
               </div>
             )}
 
             <label>
-              Review Note
+              ملاحظة المراجعة
               <textarea
                 value={reviewNote}
                 onChange={(e) => setReviewNote(e.target.value)}
-                placeholder="Add a note (required for rejection)"
+                placeholder="أضف ملاحظة (مطلوبة عند الرفض)"
                 rows={3}
               />
             </label>
 
             <div className="actions">
               <button className="primary" onClick={() => approvePayment().catch(() => undefined)}>
-                Approve
+                اعتماد
               </button>
               <button className="danger" onClick={() => rejectPayment().catch(() => undefined)}>
-                Reject
+                رفض
               </button>
-              <button onClick={() => setSelectedPayment(null)}>Cancel</button>
+              <button onClick={() => setSelectedPayment(null)}>إلغاء</button>
             </div>
 
             {error && <p className="status-message error">{error}</p>}
             {message && <p className="status-message success">{message}</p>}
           </>
         ) : (
-          <p className="hint">Select a payment from the list to review.</p>
+          <p className="hint">اختر دفعة من القائمة للمراجعة.</p>
         )}
       </article>
     </section>

@@ -19,7 +19,7 @@ export function MerchantLogin({ onLoggedIn }: MerchantLoginProps) {
 
     const trimmedApiBaseUrl = apiBaseUrl.trim();
     if (!trimmedApiBaseUrl) {
-      setError('API base URL is required');
+      setError('رابط API مطلوب');
       return;
     }
 
@@ -39,7 +39,7 @@ export function MerchantLogin({ onLoggedIn }: MerchantLoginProps) {
       });
 
       if (!result) {
-        throw new Error('Unable to sign in');
+        throw new Error('تعذر تسجيل الدخول');
       }
 
       onLoggedIn({
@@ -49,7 +49,7 @@ export function MerchantLogin({ onLoggedIn }: MerchantLoginProps) {
         user: result.user,
       });
     } catch (loginError) {
-      setError(loginError instanceof Error ? loginError.message : 'Unable to sign in');
+      setError(loginError instanceof Error ? loginError.message : 'تعذر تسجيل الدخول');
     } finally {
       setBusy(false);
     }
@@ -58,38 +58,49 @@ export function MerchantLogin({ onLoggedIn }: MerchantLoginProps) {
   return (
     <section className="panel panel-merchant auth-panel">
       <header className="panel-header">
-        <h2>Merchant Login</h2>
-        <p>Authenticate to access store management screens.</p>
+        <h2>تسجيل دخول التاجر</h2>
+        <p>استخدم بيانات المتجر للوصول إلى لوحة الإدارة. يتم حفظ رابط الـ API محلياً لسهولة الاستخدام.</p>
       </header>
 
       <form className="stack-form" onSubmit={onSubmit}>
         <label>
-          API Base URL
-          <input value={apiBaseUrl} onChange={(event) => setApiBaseUrl(event.target.value)} />
-        </label>
-
-        <label>
-          Email
+          رابط API
           <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
+            value={apiBaseUrl}
+            onChange={(event) => setApiBaseUrl(event.target.value)}
+            placeholder="http://localhost:3000"
           />
         </label>
 
-        <label>
-          Password
-          <input
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-          />
-        </label>
+        <div className="auth-form-grid">
+          <label>
+            البريد الإلكتروني
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
+          </label>
+
+          <label>
+            كلمة المرور
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+            />
+          </label>
+        </div>
+
+        <div className="auth-inline-hint subdued">
+          <span>المسار التالي بعد النجاح:</span>
+          <strong>`/merchant`</strong>
+        </div>
 
         <button className="primary" type="submit" disabled={busy}>
-          {busy ? 'Signing in...' : 'Sign in'}
+          {busy ? 'جارٍ تسجيل الدخول...' : 'تسجيل الدخول'}
         </button>
       </form>
 
