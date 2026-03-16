@@ -3,6 +3,7 @@
 import type { CheckoutResponse, ShippingZone, StorefrontCart, TrackOrderResponse } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
+const STOREFRONT_STORE_SLUG = process.env.NEXT_PUBLIC_STOREFRONT_STORE_SLUG?.trim();
 
 function generateIdempotencyKey(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
@@ -91,7 +92,7 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
     headers.set('content-type', 'application/json');
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${API_BASE_URL}${appendStoreSlugQuery(path)}`, {
     ...init,
     headers,
   });
@@ -102,4 +103,13 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+function appendStoreSlugQuery(path: string): string {
+  if (!STOREFRONT_STORE_SLUG || path.includes('store=')) {
+    return path;
+  }
+
+  const separator = path.includes('?') ? '&' : '?';
+  return `${path}${separator}store=${encodeURIComponent(STOREFRONT_STORE_SLUG)}`;
 }

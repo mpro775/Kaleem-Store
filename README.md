@@ -58,3 +58,4 @@ npm run dev --workspace @kaleem/storefront
 - Go-live checklist: `docs/runbooks/go-live-checklist.md`
 - Rollback plan: `docs/runbooks/rollback-plan.md`
 - Incident response: `docs/runbooks/incident-response.md`
+- pgAdmin on VPS: `docs/runbooks/pgadmin-vps-setup.md`

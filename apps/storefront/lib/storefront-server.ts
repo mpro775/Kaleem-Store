@@ -10,6 +10,7 @@ import type {
 } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
+const STOREFRONT_STORE_SLUG = process.env.NEXT_PUBLIC_STOREFRONT_STORE_SLUG?.trim();
 
 export async function resolveStore(): Promise<PublicStoreResolveResponse> {
   return serverGet('/public/store/resolve', { revalidate: 60 });
@@ -82,7 +83,7 @@ async function serverGet<T>(path: string, cacheOptions: { revalidate: number }):
   const host =
     requestHeaders.get('x-forwarded-host') ?? requestHeaders.get('host') ?? 'localhost:3001';
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${API_BASE_URL}${appendStoreSlugQuery(path)}`, {
     headers: {
       'x-forwarded-host': host,
     },
@@ -96,4 +97,13 @@ async function serverGet<T>(path: string, cacheOptions: { revalidate: number }):
   }
 
   return response.json() as Promise<T>;
+}
+
+function appendStoreSlugQuery(path: string): string {
+  if (!STOREFRONT_STORE_SLUG || path.includes('store=')) {
+    return path;
+  }
+
+  const separator = path.includes('?') ? '&' : '?';
+  return `${path}${separator}store=${encodeURIComponent(STOREFRONT_STORE_SLUG)}`;
 }

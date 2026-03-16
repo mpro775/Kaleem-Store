@@ -110,6 +110,23 @@ services:
     networks:
       - backend
 
+  pgadmin:
+    image: dpage/pgadmin4:8.14
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+      PGADMIN_DISABLE_POSTFIX: "1"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - backend
+
   nginx-proxy-manager:
     image: jc21/nginx-proxy-manager:latest
     restart: unless-stopped
@@ -132,6 +149,7 @@ volumes:
   postgres_data:
   redis_data:
   rabbitmq_data:
+  pgadmin_data:
   npm_data:
   npm_letsencrypt:
 
