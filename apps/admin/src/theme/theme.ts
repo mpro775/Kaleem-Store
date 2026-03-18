@@ -1,11 +1,13 @@
 import { arSD } from '@mui/material/locale';
 import { alpha, createTheme } from '@mui/material/styles';
 import '@fontsource/cairo';
+import '@fontsource/tajawal';
 
-const primaryMain = '#7e66ac';
-const primaryDark = '#502e91';
-const secondaryMain = '#8f00ff';
-const surfaceTint = '#f4f2fa';
+const primaryMain = '#502E91';
+const primaryDark = '#4B247A';
+const secondaryMain = '#7E66AC';
+const accentMain = '#8F00FF';
+const surfaceTint = '#F4F2FA';
 
 const theme = createTheme(
   {
@@ -21,17 +23,17 @@ const theme = createTheme(
         main: secondaryMain,
       },
       background: {
-        default: '#ffffff',
-        paper: '#ffffff',
+        default: '#FAFAFF',
+        paper: '#FFFFFF',
       },
       text: {
         primary: '#333333',
-        secondary: '#8589a0',
+        secondary: '#8589A0',
       },
-      divider: '#e7e0f3',
+      divider: '#EDE7F6',
     },
     typography: {
-      fontFamily: 'Cairo, sans-serif',
+      fontFamily: 'Cairo, Tajawal, sans-serif',
       h1: {
         fontWeight: 800,
       },
@@ -53,9 +55,16 @@ const theme = createTheme(
       },
       button: {
         fontWeight: 700,
+        fontFamily: 'Tajawal, Cairo, sans-serif',
       },
       body2: {
-        color: '#8589a0',
+        color: '#8589A0',
+      },
+      subtitle1: {
+        fontFamily: 'Tajawal, Cairo, sans-serif',
+      },
+      subtitle2: {
+        fontFamily: 'Tajawal, Cairo, sans-serif',
       },
     },
     shape: {
@@ -69,7 +78,7 @@ const theme = createTheme(
           },
           body: {
             margin: 0,
-            backgroundColor: '#ffffff',
+            backgroundColor: '#FAFAFF',
             color: '#333333',
           },
           '#root': {
@@ -91,11 +100,11 @@ const theme = createTheme(
             fontWeight: 700,
           },
           containedPrimary: {
-            background: 'linear-gradient(90deg, #6a3f9c 0%, #4b247a 100%)',
+            background: 'linear-gradient(90deg, #6A3F9C 0%, #4B247A 100%)',
             color: '#ffffff',
-            boxShadow: '0 3px 10px 0 rgba(76,60,170,0.10)',
+            boxShadow: '0 4px 14px 0 rgba(80, 46, 145, 0.28)',
             '&:hover': {
-              background: 'linear-gradient(90deg, #603792 0%, #421f6d 100%)',
+              background: 'linear-gradient(90deg, #5D368D 0%, #421F6E 100%)',
             },
           },
           outlined: {
@@ -129,11 +138,11 @@ const theme = createTheme(
               borderColor: '#e0e0e0',
             },
             '&:hover fieldset': {
-              borderColor: '#764ba2',
+              borderColor: primaryMain,
             },
             '&.Mui-focused fieldset': {
-              borderColor: '#764ba2',
-              boxShadow: '0 0 0 2px rgba(118, 75, 162, 0.1)',
+              borderColor: primaryMain,
+              boxShadow: '0 0 0 2px rgba(80, 46, 145, 0.2)',
             },
           },
           input: {
@@ -152,9 +161,9 @@ const theme = createTheme(
         styleOverrides: {
           root: {
             backgroundColor: alpha('#ffffff', 0.96),
-            color: '#333333',
+            color: '#1c2f34',
             backdropFilter: 'blur(12px)',
-            boxShadow: '0 4px 16px rgba(166, 159, 216, 0.13)',
+            boxShadow: '0 4px 16px rgba(80, 46, 145, 0.16)',
           },
         },
       },
@@ -171,7 +180,7 @@ const theme = createTheme(
           indicator: {
             height: 3,
             borderRadius: 999,
-            backgroundColor: primaryDark,
+            backgroundColor: accentMain,
           },
         },
       },

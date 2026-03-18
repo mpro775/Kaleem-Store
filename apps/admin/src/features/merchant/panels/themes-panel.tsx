@@ -1,4 +1,15 @@
 import { useState } from 'react';
+import {
+  Alert,
+  Box,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
 import type { MerchantRequester } from '../merchant-dashboard';
 import type { PreviewTokenResponse, ThemeState } from '../types';
 
@@ -118,83 +129,59 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
   }
 
   return (
-    <article className="card">
-      <h3>الثيمات</h3>
-      <div className="actions">
-        <button onClick={() => loadDraft().catch(() => undefined)}>تحميل المسودة</button>
-        <button onClick={() => saveDraft().catch(() => undefined)}>حفظ المسودة</button>
-        <button onClick={() => createPreviewToken().catch(() => undefined)}>رمز المعاينة</button>
-        <button className="primary" onClick={() => publishTheme().catch(() => undefined)}>
+    <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
+      <Typography variant="h6">الثيمات</Typography>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+        <Button variant="outlined" onClick={() => loadDraft().catch(() => undefined)}>تحميل المسودة</Button>
+        <Button variant="outlined" onClick={() => saveDraft().catch(() => undefined)}>حفظ المسودة</Button>
+        <Button variant="outlined" onClick={() => createPreviewToken().catch(() => undefined)}>رمز المعاينة</Button>
+        <Button variant="contained" onClick={() => publishTheme().catch(() => undefined)}>
           نشر
-        </button>
-      </div>
+        </Button>
+      </Stack>
 
-      <label>
-        اللون الأساسي
-        <input
-          value={form.primaryColor}
-          onChange={(event) => setForm((prev) => ({ ...prev, primaryColor: event.target.value }))}
-        />
-      </label>
-      <label>
-        لون التمييز
-        <input
-          value={form.accentColor}
-          onChange={(event) => setForm((prev) => ({ ...prev, accentColor: event.target.value }))}
-        />
-      </label>
-      <label>
-        لون الخلفية
-        <input
-          value={form.background}
-          onChange={(event) => setForm((prev) => ({ ...prev, background: event.target.value }))}
-        />
-      </label>
-      <label>
-        عائلة الخط
-        <input
-          value={form.fontFamily}
-          onChange={(event) => setForm((prev) => ({ ...prev, fontFamily: event.target.value }))}
-        />
-      </label>
-      <label>
-        عنوان البانر الرئيسي
-        <input
-          value={form.heroHeadline}
-          onChange={(event) => setForm((prev) => ({ ...prev, heroHeadline: event.target.value }))}
-        />
-      </label>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
+        <TextField label="اللون الأساسي" value={form.primaryColor} onChange={(event) => setForm((prev) => ({ ...prev, primaryColor: event.target.value }))} />
+        <TextField label="لون التمييز" value={form.accentColor} onChange={(event) => setForm((prev) => ({ ...prev, accentColor: event.target.value }))} />
+      </Stack>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
+        <TextField label="لون الخلفية" value={form.background} onChange={(event) => setForm((prev) => ({ ...prev, background: event.target.value }))} />
+        <TextField label="عائلة الخط" value={form.fontFamily} onChange={(event) => setForm((prev) => ({ ...prev, fontFamily: event.target.value }))} />
+      </Stack>
+      <TextField label="عنوان البانر الرئيسي" value={form.heroHeadline} onChange={(event) => setForm((prev) => ({ ...prev, heroHeadline: event.target.value }))} />
 
-      <div className="inline-check-grid">
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' } }}>
         {sectionKeys.map((key) => (
-          <label key={key} className="inline-check">
-            <input
-              type="checkbox"
-              checked={form.sectionEnabled[key]}
-              onChange={(event) =>
-                setForm((prev) => ({
-                  ...prev,
-                  sectionEnabled: {
-                    ...prev.sectionEnabled,
-                    [key]: event.target.checked,
-                  },
-                }))
-              }
-            />
-            {key}
-          </label>
+          <FormControlLabel
+            key={key}
+            control={
+              <Checkbox
+                checked={form.sectionEnabled[key]}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    sectionEnabled: {
+                      ...prev.sectionEnabled,
+                      [key]: event.target.checked,
+                    },
+                  }))
+                }
+              />
+            }
+            label={key}
+          />
         ))}
-      </div>
+      </Box>
 
-      {themeState ? <p className="hint">الإصدار المنشور الحالي: {themeState.version}</p> : null}
+      {themeState ? <Typography color="text.secondary">الإصدار المنشور الحالي: {themeState.version}</Typography> : null}
       {previewToken ? (
-        <p className="hint">
+        <Typography color="text.secondary">
           رابط المعاينة:{' '}
           <code>{`${apiBaseUrl}/sf/theme?previewToken=${previewToken.previewToken}`}</code>
-        </p>
+        </Typography>
       ) : null}
-      {message ? <p className="status-message">{message}</p> : null}
-    </article>
+      {message ? <Alert severity="info">{message}</Alert> : null}
+    </Paper>
   );
 }
 

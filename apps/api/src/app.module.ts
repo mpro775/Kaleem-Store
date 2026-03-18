@@ -10,6 +10,7 @@ import { AuthModule } from './auth/auth.module';
 import { CategoriesModule } from './categories/categories.module';
 import { DatabaseModule } from './database/database.module';
 import { DomainsModule } from './domains/domains.module';
+import { EmailModule } from './email/email.module';
 import { HealthModule } from './health/health.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { MediaModule } from './media/media.module';
@@ -43,6 +44,7 @@ import { AdvancedOffersModule } from './advanced-offers/advanced-offers.module';
       },
     ]),
     DatabaseModule,
+    EmailModule,
     ObservabilityModule,
     AuditModule,
     MessagingModule,

@@ -29,10 +29,32 @@ export interface RegisterOwnerInput {
   userId: string;
   storeName: string;
   storeSlug: string;
+  storePhone?: string | null;
   fullName: string;
   email: string;
   passwordHash: string;
+  ownerPhone?: string | null;
   permissions: string[];
+}
+
+export interface OwnerRegistrationChallengeRecord {
+  id: string;
+  full_name: string;
+  email: string;
+  email_normalized: string;
+  password_hash: string;
+  owner_phone: string;
+  store_name: string;
+  store_slug: string;
+  store_phone: string | null;
+  otp_hash: string;
+  otp_expires_at: Date;
+  verify_attempts: number;
+  resend_count: number;
+  last_sent_at: Date;
+  consumed_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
 }
 
 @Injectable()
@@ -92,6 +114,151 @@ export class AuthRepository {
     } finally {
       client.release();
     }
+  }
+
+  async deletePendingOwnerRegistrationChallengesByEmailOrSlug(
+    emailNormalized: string,
+    storeSlug: string,
+  ): Promise<void> {
+    await this.databaseService.db.query(
+      `
+        DELETE FROM owner_registration_challenges
+        WHERE consumed_at IS NULL
+          AND (email_normalized = $1 OR store_slug = $2)
+      `,
+      [emailNormalized, storeSlug],
+    );
+  }
+
+  async createOwnerRegistrationChallenge(input: {
+    challengeId: string;
+    fullName: string;
+    email: string;
+    emailNormalized: string;
+    passwordHash: string;
+    ownerPhone: string;
+    storeName: string;
+    storeSlug: string;
+    storePhone: string | null;
+    otpHash: string;
+    otpExpiresAt: Date;
+    lastSentAt: Date;
+  }): Promise<void> {
+    await this.databaseService.db.query(
+      `
+        INSERT INTO owner_registration_challenges (
+          id,
+          full_name,
+          email,
+          email_normalized,
+          password_hash,
+          owner_phone,
+          store_name,
+          store_slug,
+          store_phone,
+          otp_hash,
+          otp_expires_at,
+          verify_attempts,
+          resend_count,
+          last_sent_at,
+          consumed_at,
+          created_at,
+          updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 0, 0, $12, NULL, NOW(), NOW())
+      `,
+      [
+        input.challengeId,
+        input.fullName,
+        input.email,
+        input.emailNormalized,
+        input.passwordHash,
+        input.ownerPhone,
+        input.storeName,
+        input.storeSlug,
+        input.storePhone,
+        input.otpHash,
+        input.otpExpiresAt,
+        input.lastSentAt,
+      ],
+    );
+  }
+
+  async findOwnerRegistrationChallengeById(
+    challengeId: string,
+  ): Promise<OwnerRegistrationChallengeRecord | null> {
+    const result = await this.databaseService.db.query<OwnerRegistrationChallengeRecord>(
+      `
+        SELECT
+          id,
+          full_name,
+          email,
+          email_normalized,
+          password_hash,
+          owner_phone,
+          store_name,
+          store_slug,
+          store_phone,
+          otp_hash,
+          otp_expires_at,
+          verify_attempts,
+          resend_count,
+          last_sent_at,
+          consumed_at,
+          created_at,
+          updated_at
+        FROM owner_registration_challenges
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [challengeId],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async incrementOwnerRegistrationVerifyAttempts(challengeId: string): Promise<void> {
+    await this.databaseService.db.query(
+      `
+        UPDATE owner_registration_challenges
+        SET verify_attempts = verify_attempts + 1,
+            updated_at = NOW()
+        WHERE id = $1
+      `,
+      [challengeId],
+    );
+  }
+
+  async updateOwnerRegistrationChallengeOtp(input: {
+    challengeId: string;
+    otpHash: string;
+    otpExpiresAt: Date;
+    lastSentAt: Date;
+  }): Promise<void> {
+    await this.databaseService.db.query(
+      `
+        UPDATE owner_registration_challenges
+        SET otp_hash = $2,
+            otp_expires_at = $3,
+            resend_count = resend_count + 1,
+            last_sent_at = $4,
+            updated_at = NOW()
+        WHERE id = $1
+      `,
+      [input.challengeId, input.otpHash, input.otpExpiresAt, input.lastSentAt],
+    );
+  }
+
+  async markOwnerRegistrationChallengeConsumed(challengeId: string): Promise<void> {
+    await this.databaseService.db.query(
+      `
+        UPDATE owner_registration_challenges
+        SET consumed_at = NOW(),
+            updated_at = NOW()
+        WHERE id = $1
+      `,
+      [challengeId],
+    );
   }
 
   async createSession(input: {
@@ -214,6 +381,18 @@ export class AuthRepository {
       `,
       [input.storeId, input.storeName, input.storeSlug],
     );
+
+    if (input.storePhone) {
+      await client.query(
+        `
+          UPDATE stores
+          SET phone = $2,
+              updated_at = NOW()
+          WHERE id = $1
+        `,
+        [input.storeId, input.storePhone],
+      );
+    }
   }
 
   private async insertStoreUser(
@@ -227,16 +406,18 @@ export class AuthRepository {
           store_id,
           email,
           password_hash,
+          phone,
           full_name,
           role,
           permissions
-        ) VALUES ($1, $2, $3, $4, $5, 'owner', $6::jsonb)
+        ) VALUES ($1, $2, $3, $4, $5, $6, 'owner', $7::jsonb)
       `,
       [
         input.userId,
         input.storeId,
         input.email,
         input.passwordHash,
+        input.ownerPhone ?? null,
         input.fullName,
         JSON.stringify(input.permissions),
       ],

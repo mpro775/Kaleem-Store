@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Alert, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material';
 import type { MerchantRequester } from '../merchant-dashboard';
 import type { StoreSettings } from '../types';
 
@@ -74,101 +75,39 @@ export function StoreSettingsPanel({ request }: StoreSettingsPanelProps) {
   }
 
   return (
-    <article className="card">
-      <h3>إعدادات المتجر</h3>
-      <label>
-        اسم المتجر
-        <input
-          value={form.name}
-          onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-        />
-      </label>
-      <label>
-        رمز العملة
-        <input
+    <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
+      <Typography variant="h6">إعدادات المتجر</Typography>
+      <TextField label="اسم المتجر" value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} />
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
+        <TextField
+          label="رمز العملة"
           value={form.currencyCode}
-          maxLength={3}
-          onChange={(event) =>
-            setForm((prev) => ({ ...prev, currencyCode: event.target.value.toUpperCase() }))
-          }
+          inputProps={{ maxLength: 3 }}
+          onChange={(event) => setForm((prev) => ({ ...prev, currencyCode: event.target.value.toUpperCase() }))}
         />
-      </label>
-      <label>
-        المنطقة الزمنية
-        <input
-          value={form.timezone}
-          onChange={(event) => setForm((prev) => ({ ...prev, timezone: event.target.value }))}
-        />
-      </label>
-      <label>
-        رابط الشعار
-        <input
-          value={form.logoUrl}
-          onChange={(event) => setForm((prev) => ({ ...prev, logoUrl: event.target.value }))}
-        />
-      </label>
-      <label>
-        الهاتف
-        <input
-          value={form.phone}
-          onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
-        />
-      </label>
-      <label>
-        العنوان
-        <input
-          value={form.address}
-          onChange={(event) => setForm((prev) => ({ ...prev, address: event.target.value }))}
-        />
-      </label>
-      <label>
-        سياسة الشحن
-        <textarea
-          value={form.shippingPolicy}
-          onChange={(event) =>
-            setForm((prev) => ({ ...prev, shippingPolicy: event.target.value }))
-          }
-        />
-      </label>
-      <label>
-        سياسة الاسترجاع
-        <textarea
-          value={form.returnPolicy}
-          onChange={(event) => setForm((prev) => ({ ...prev, returnPolicy: event.target.value }))}
-        />
-      </label>
-      <label>
-        سياسة الخصوصية
-        <textarea
-          value={form.privacyPolicy}
-          onChange={(event) => setForm((prev) => ({ ...prev, privacyPolicy: event.target.value }))}
-        />
-      </label>
-      <label>
-        الشروط والأحكام
-        <textarea
-          value={form.termsAndConditions}
-          onChange={(event) =>
-            setForm((prev) => ({ ...prev, termsAndConditions: event.target.value }))
-          }
-        />
-      </label>
+        <TextField label="المنطقة الزمنية" value={form.timezone} onChange={(event) => setForm((prev) => ({ ...prev, timezone: event.target.value }))} />
+      </Stack>
+      <TextField label="رابط الشعار" value={form.logoUrl} onChange={(event) => setForm((prev) => ({ ...prev, logoUrl: event.target.value }))} />
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
+        <TextField label="الهاتف" value={form.phone} onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))} />
+        <TextField label="العنوان" value={form.address} onChange={(event) => setForm((prev) => ({ ...prev, address: event.target.value }))} />
+      </Stack>
+      <TextField label="سياسة الشحن" multiline minRows={3} value={form.shippingPolicy} onChange={(event) => setForm((prev) => ({ ...prev, shippingPolicy: event.target.value }))} />
+      <TextField label="سياسة الاسترجاع" multiline minRows={3} value={form.returnPolicy} onChange={(event) => setForm((prev) => ({ ...prev, returnPolicy: event.target.value }))} />
+      <TextField label="سياسة الخصوصية" multiline minRows={3} value={form.privacyPolicy} onChange={(event) => setForm((prev) => ({ ...prev, privacyPolicy: event.target.value }))} />
+      <TextField label="الشروط والأحكام" multiline minRows={3} value={form.termsAndConditions} onChange={(event) => setForm((prev) => ({ ...prev, termsAndConditions: event.target.value }))} />
 
-      <div className="actions">
-        <button onClick={() => loadSettings().catch(() => undefined)} disabled={loading}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+        <Button variant="outlined" onClick={() => loadSettings().catch(() => undefined)} disabled={loading}>
           إعادة تحميل
-        </button>
-        <button
-          className="primary"
-          onClick={() => saveSettings().catch(() => undefined)}
-          disabled={loading}
-        >
+        </Button>
+        <Button variant="contained" onClick={() => saveSettings().catch(() => undefined)} disabled={loading}>
           حفظ
-        </button>
-      </div>
+        </Button>
+      </Stack>
 
-      {message ? <p className="status-message">{message}</p> : null}
-    </article>
+      {message ? <Alert severity="info">{message}</Alert> : null}
+    </Paper>
   );
 }
 

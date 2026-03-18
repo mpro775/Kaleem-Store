@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Alert, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material';
 import type { MerchantRequester } from '../merchant-dashboard';
 import type { Domain } from '../types';
 
@@ -85,63 +86,58 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
   }
 
   return (
-    <article className="card">
-      <h3>النطاقات المخصصة</h3>
-      <div className="actions">
-        <input
+    <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
+      <Typography variant="h6">النطاقات المخصصة</Typography>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
+        <TextField
+          fullWidth
           value={hostname}
           onChange={(event) => setHostname(event.target.value)}
           placeholder="shop.example.com"
         />
-        <button className="primary" onClick={() => createDomain().catch(() => undefined)}>
+        <Button variant="contained" onClick={() => createDomain().catch(() => undefined)}>
           إضافة
-        </button>
-        <button onClick={() => loadDomains().catch(() => undefined)}>تحديث</button>
-      </div>
+        </Button>
+        <Button variant="outlined" onClick={() => loadDomains().catch(() => undefined)}>تحديث</Button>
+      </Stack>
 
-      <div className="list">
+      <Box sx={{ display: 'grid', gap: 0.8 }}>
         {domains.map((domain) => (
-          <article key={domain.id} className="list-item">
-            <h4>{domain.hostname}</h4>
-            <p>
+          <Paper key={domain.id} variant="outlined" sx={{ p: 1 }}>
+            <Typography variant="subtitle1">{domain.hostname}</Typography>
+            <Typography variant="body2" sx={{ mt: 0.4 }}>
               الحالة: {domain.status} / SSL: {domain.sslStatus}
-            </p>
-            <p>
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.4 }}>
               أضف سجل DNS TXT: <code>{domain.verificationDnsHost}</code> ={' '}
               <code>{domain.verificationToken}</code>
-            </p>
-            <p>
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.4 }}>
               أضف سجل DNS CNAME: <code>{domain.routingHost ?? domain.hostname}</code> ={' '}
               <code>{domain.routingTarget ?? 'stores.example.com'}</code>
-            </p>
-            <p>
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.4 }}>
               مزود SSL: {domain.sslProvider ?? 'cloudflare'} ({formatSslMode(domain.sslMode)})
-            </p>
-            {domain.sslLastCheckedAt ? <p>آخر فحص SSL: {domain.sslLastCheckedAt}</p> : null}
-            {domain.sslError ? <p>خطأ SSL: {domain.sslError}</p> : null}
-            <div className="actions">
-              <button onClick={() => verifyDomain(domain.id).catch(() => undefined)}>تحقق</button>
-              <button
-                className="primary"
-                onClick={() => activateDomain(domain.id).catch(() => undefined)}
-              >
+            </Typography>
+            {domain.sslLastCheckedAt ? <Typography variant="body2">آخر فحص SSL: {domain.sslLastCheckedAt}</Typography> : null}
+            {domain.sslError ? <Typography variant="body2">خطأ SSL: {domain.sslError}</Typography> : null}
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 0.8 }}>
+              <Button variant="outlined" onClick={() => verifyDomain(domain.id).catch(() => undefined)}>تحقق</Button>
+              <Button variant="contained" onClick={() => activateDomain(domain.id).catch(() => undefined)}>
                 تفعيل
-              </button>
-              <button onClick={() => syncSsl(domain.id).catch(() => undefined)}>مزامنة SSL</button>
-              <button
-                className="danger"
-                onClick={() => deleteDomain(domain.id).catch(() => undefined)}
-              >
+              </Button>
+              <Button variant="outlined" onClick={() => syncSsl(domain.id).catch(() => undefined)}>مزامنة SSL</Button>
+              <Button color="error" variant="outlined" onClick={() => deleteDomain(domain.id).catch(() => undefined)}>
                 حذف
-              </button>
-            </div>
-          </article>
+              </Button>
+            </Stack>
+          </Paper>
         ))}
-        {domains.length === 0 ? <p className="hint">لا توجد نطاقات محملة.</p> : null}
-      </div>
+        {domains.length === 0 ? <Typography color="text.secondary">لا توجد نطاقات محملة.</Typography> : null}
+      </Box>
 
-      {message ? <p className="status-message">{message}</p> : null}
-    </article>
+      {message ? <Alert severity="info">{message}</Alert> : null}
+    </Paper>
   );
 }
 

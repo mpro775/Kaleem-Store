@@ -1,4 +1,16 @@
 import { useState } from 'react';
+import {
+  Alert,
+  Box,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  MenuItem,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
 import type { MerchantRequester } from '../merchant-dashboard';
 import type {
   AdvancedOffer,
@@ -235,345 +247,108 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
   }
 
   return (
-    <section className="card-grid">
-      <article className="card">
-        <h3>القسائم</h3>
-        <div className="actions">
-          <button onClick={() => loadAll().catch(() => undefined)}>تحميل</button>
-          <button className="primary" onClick={() => createCoupon().catch(() => undefined)}>
-            إنشاء
-          </button>
-          <button onClick={() => updateCoupon().catch(() => undefined)}>تحديث</button>
-        </div>
+    <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', xl: 'repeat(3, minmax(0, 1fr))' } }}>
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
+        <Typography variant="h6">القسائم</Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+          <Button variant="outlined" onClick={() => loadAll().catch(() => undefined)}>تحميل</Button>
+          <Button variant="contained" onClick={() => createCoupon().catch(() => undefined)}>إنشاء</Button>
+          <Button variant="outlined" onClick={() => updateCoupon().catch(() => undefined)}>تحديث</Button>
+        </Stack>
 
-        <label>
-          الرمز
-          <input
-            value={couponForm.code}
-            onChange={(event) => setCouponForm((prev) => ({ ...prev, code: event.target.value }))}
-          />
-        </label>
-        <label>
-          نوع الخصم
-          <select
-            value={couponForm.discountType}
-            onChange={(event) =>
-              setCouponForm((prev) => ({
-                ...prev,
-                discountType: event.target.value as DiscountType,
-              }))
-            }
-          >
-            <option value="percent">نسبة</option>
-            <option value="fixed">قيمة ثابتة</option>
-          </select>
-        </label>
-        <label>
-          قيمة الخصم
-          <input
-            type="number"
-            min={0}
-            step={0.01}
-            value={couponForm.discountValue}
-            onChange={(event) =>
-              setCouponForm((prev) => ({ ...prev, discountValue: event.target.value }))
-            }
-          />
-        </label>
-        <label>
-          الحد الأدنى للطلب
-          <input
-            type="number"
-            min={0}
-            step={0.01}
-            value={couponForm.minOrderAmount}
-            onChange={(event) =>
-              setCouponForm((prev) => ({ ...prev, minOrderAmount: event.target.value }))
-            }
-          />
-        </label>
-        <label>
-          يبدأ في
-          <input
-            type="datetime-local"
-            value={couponForm.startsAt}
-            onChange={(event) =>
-              setCouponForm((prev) => ({ ...prev, startsAt: event.target.value }))
-            }
-          />
-        </label>
-        <label>
-          ينتهي في
-          <input
-            type="datetime-local"
-            value={couponForm.endsAt}
-            onChange={(event) => setCouponForm((prev) => ({ ...prev, endsAt: event.target.value }))}
-          />
-        </label>
-        <label>
-          الحد الأقصى للاستخدام
-          <input
-            type="number"
-            min={1}
-            value={couponForm.maxUses}
-            onChange={(event) =>
-              setCouponForm((prev) => ({ ...prev, maxUses: event.target.value }))
-            }
-          />
-        </label>
-        <label className="inline-check">
-          <input
-            type="checkbox"
-            checked={couponForm.isActive}
-            onChange={(event) =>
-              setCouponForm((prev) => ({ ...prev, isActive: event.target.checked }))
-            }
-          />
-          نشط
-        </label>
+        <TextField label="الرمز" value={couponForm.code} onChange={(event) => setCouponForm((prev) => ({ ...prev, code: event.target.value }))} />
+        <TextField select label="نوع الخصم" value={couponForm.discountType} onChange={(event) => setCouponForm((prev) => ({ ...prev, discountType: event.target.value as DiscountType }))}>
+          <MenuItem value="percent">نسبة</MenuItem>
+          <MenuItem value="fixed">قيمة ثابتة</MenuItem>
+        </TextField>
+        <TextField label="قيمة الخصم" type="number" inputProps={{ min: 0, step: 0.01 }} value={couponForm.discountValue} onChange={(event) => setCouponForm((prev) => ({ ...prev, discountValue: event.target.value }))} />
+        <TextField label="الحد الأدنى للطلب" type="number" inputProps={{ min: 0, step: 0.01 }} value={couponForm.minOrderAmount} onChange={(event) => setCouponForm((prev) => ({ ...prev, minOrderAmount: event.target.value }))} />
+        <TextField label="يبدأ في" type="datetime-local" InputLabelProps={{ shrink: true }} value={couponForm.startsAt} onChange={(event) => setCouponForm((prev) => ({ ...prev, startsAt: event.target.value }))} />
+        <TextField label="ينتهي في" type="datetime-local" InputLabelProps={{ shrink: true }} value={couponForm.endsAt} onChange={(event) => setCouponForm((prev) => ({ ...prev, endsAt: event.target.value }))} />
+        <TextField label="الحد الأقصى للاستخدام" type="number" inputProps={{ min: 1 }} value={couponForm.maxUses} onChange={(event) => setCouponForm((prev) => ({ ...prev, maxUses: event.target.value }))} />
+        <FormControlLabel control={<Checkbox checked={couponForm.isActive} onChange={(event) => setCouponForm((prev) => ({ ...prev, isActive: event.target.checked }))} />} label="نشط" />
 
-        <div className="list">
+        <Box sx={{ display: 'grid', gap: 0.8 }}>
           {coupons.map((coupon) => (
-            <article key={coupon.id} className="list-item">
-              <h4>{coupon.code}</h4>
-              <p>
-                {coupon.discountType} {coupon.discountValue} - عدد الاستخدام {coupon.usedCount}
-              </p>
-              <button onClick={() => selectCoupon(coupon)}>تعديل</button>
-            </article>
+            <Paper key={coupon.id} variant="outlined" sx={{ p: 1 }}>
+              <Typography variant="subtitle2">{coupon.code}</Typography>
+              <Typography variant="body2">{coupon.discountType} {coupon.discountValue} - عدد الاستخدام {coupon.usedCount}</Typography>
+              <Button sx={{ mt: 0.6 }} variant="outlined" onClick={() => selectCoupon(coupon)}>تعديل</Button>
+            </Paper>
           ))}
-        </div>
-      </article>
+        </Box>
+      </Paper>
 
-      <article className="card">
-        <h3>العروض</h3>
-        <div className="actions">
-          <button onClick={() => loadAll().catch(() => undefined)}>تحميل</button>
-          <button className="primary" onClick={() => createOffer().catch(() => undefined)}>
-            إنشاء
-          </button>
-          <button onClick={() => updateOffer().catch(() => undefined)}>تحديث</button>
-        </div>
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
+        <Typography variant="h6">العروض</Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+          <Button variant="outlined" onClick={() => loadAll().catch(() => undefined)}>تحميل</Button>
+          <Button variant="contained" onClick={() => createOffer().catch(() => undefined)}>إنشاء</Button>
+          <Button variant="outlined" onClick={() => updateOffer().catch(() => undefined)}>تحديث</Button>
+        </Stack>
 
-        <label>
-          الاسم
-          <input
-            value={offerForm.name}
-            onChange={(event) => setOfferForm((prev) => ({ ...prev, name: event.target.value }))}
-          />
-        </label>
-        <label>
-          نوع الهدف
-          <select
-            value={offerForm.targetType}
-            onChange={(event) =>
-              setOfferForm((prev) => ({
-                ...prev,
-                targetType: event.target.value as OfferTargetType,
-              }))
-            }
-          >
-            <option value="cart">السلة</option>
-            <option value="product">منتج</option>
-            <option value="category">تصنيف</option>
-          </select>
-        </label>
-        <label>
-          معرّف المنتج المستهدف
-          <input
-            value={offerForm.targetProductId}
-            onChange={(event) =>
-              setOfferForm((prev) => ({ ...prev, targetProductId: event.target.value }))
-            }
-          />
-        </label>
-        <label>
-          معرّف التصنيف المستهدف
-          <input
-            value={offerForm.targetCategoryId}
-            onChange={(event) =>
-              setOfferForm((prev) => ({ ...prev, targetCategoryId: event.target.value }))
-            }
-          />
-        </label>
-        <label>
-          نوع الخصم
-          <select
-            value={offerForm.discountType}
-            onChange={(event) =>
-              setOfferForm((prev) => ({
-                ...prev,
-                discountType: event.target.value as DiscountType,
-              }))
-            }
-          >
-            <option value="percent">نسبة</option>
-            <option value="fixed">قيمة ثابتة</option>
-          </select>
-        </label>
-        <label>
-          قيمة الخصم
-          <input
-            type="number"
-            min={0}
-            step={0.01}
-            value={offerForm.discountValue}
-            onChange={(event) =>
-              setOfferForm((prev) => ({ ...prev, discountValue: event.target.value }))
-            }
-          />
-        </label>
-        <label>
-          يبدأ في
-          <input
-            type="datetime-local"
-            value={offerForm.startsAt}
-            onChange={(event) =>
-              setOfferForm((prev) => ({ ...prev, startsAt: event.target.value }))
-            }
-          />
-        </label>
-        <label>
-          ينتهي في
-          <input
-            type="datetime-local"
-            value={offerForm.endsAt}
-            onChange={(event) => setOfferForm((prev) => ({ ...prev, endsAt: event.target.value }))}
-          />
-        </label>
-        <label className="inline-check">
-          <input
-            type="checkbox"
-            checked={offerForm.isActive}
-            onChange={(event) =>
-              setOfferForm((prev) => ({ ...prev, isActive: event.target.checked }))
-            }
-          />
-          نشط
-        </label>
+        <TextField label="الاسم" value={offerForm.name} onChange={(event) => setOfferForm((prev) => ({ ...prev, name: event.target.value }))} />
+        <TextField select label="نوع الهدف" value={offerForm.targetType} onChange={(event) => setOfferForm((prev) => ({ ...prev, targetType: event.target.value as OfferTargetType }))}>
+          <MenuItem value="cart">السلة</MenuItem>
+          <MenuItem value="product">منتج</MenuItem>
+          <MenuItem value="category">تصنيف</MenuItem>
+        </TextField>
+        <TextField label="معرّف المنتج المستهدف" value={offerForm.targetProductId} onChange={(event) => setOfferForm((prev) => ({ ...prev, targetProductId: event.target.value }))} />
+        <TextField label="معرّف التصنيف المستهدف" value={offerForm.targetCategoryId} onChange={(event) => setOfferForm((prev) => ({ ...prev, targetCategoryId: event.target.value }))} />
+        <TextField select label="نوع الخصم" value={offerForm.discountType} onChange={(event) => setOfferForm((prev) => ({ ...prev, discountType: event.target.value as DiscountType }))}>
+          <MenuItem value="percent">نسبة</MenuItem>
+          <MenuItem value="fixed">قيمة ثابتة</MenuItem>
+        </TextField>
+        <TextField label="قيمة الخصم" type="number" inputProps={{ min: 0, step: 0.01 }} value={offerForm.discountValue} onChange={(event) => setOfferForm((prev) => ({ ...prev, discountValue: event.target.value }))} />
+        <TextField label="يبدأ في" type="datetime-local" InputLabelProps={{ shrink: true }} value={offerForm.startsAt} onChange={(event) => setOfferForm((prev) => ({ ...prev, startsAt: event.target.value }))} />
+        <TextField label="ينتهي في" type="datetime-local" InputLabelProps={{ shrink: true }} value={offerForm.endsAt} onChange={(event) => setOfferForm((prev) => ({ ...prev, endsAt: event.target.value }))} />
+        <FormControlLabel control={<Checkbox checked={offerForm.isActive} onChange={(event) => setOfferForm((prev) => ({ ...prev, isActive: event.target.checked }))} />} label="نشط" />
 
-        <div className="list">
+        <Box sx={{ display: 'grid', gap: 0.8 }}>
           {offers.map((offer) => (
-            <article key={offer.id} className="list-item">
-              <h4>{offer.name}</h4>
-              <p>
-                {offer.targetType} - {offer.discountType} {offer.discountValue}
-              </p>
-              <button onClick={() => selectOffer(offer)}>تعديل</button>
-            </article>
+            <Paper key={offer.id} variant="outlined" sx={{ p: 1 }}>
+              <Typography variant="subtitle2">{offer.name}</Typography>
+              <Typography variant="body2">{offer.targetType} - {offer.discountType} {offer.discountValue}</Typography>
+              <Button sx={{ mt: 0.6 }} variant="outlined" onClick={() => selectOffer(offer)}>تعديل</Button>
+            </Paper>
           ))}
-        </div>
-      </article>
+        </Box>
+      </Paper>
 
-      <article className="card">
-        <h3>العروض المتقدمة</h3>
-        <div className="actions">
-          <button onClick={() => loadAll().catch(() => undefined)}>تحميل</button>
-          <button className="primary" onClick={() => createAdvancedOffer().catch(() => undefined)}>
-            إنشاء
-          </button>
-          <button onClick={() => updateAdvancedOffer().catch(() => undefined)}>تحديث</button>
-        </div>
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
+        <Typography variant="h6">العروض المتقدمة</Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+          <Button variant="outlined" onClick={() => loadAll().catch(() => undefined)}>تحميل</Button>
+          <Button variant="contained" onClick={() => createAdvancedOffer().catch(() => undefined)}>إنشاء</Button>
+          <Button variant="outlined" onClick={() => updateAdvancedOffer().catch(() => undefined)}>تحديث</Button>
+        </Stack>
 
-        <label>
-          الاسم
-          <input
-            value={advancedOfferForm.name}
-            onChange={(event) =>
-              setAdvancedOfferForm((prev) => ({ ...prev, name: event.target.value }))
-            }
-          />
-        </label>
-        <label>
-          الوصف
-          <input
-            value={advancedOfferForm.description}
-            onChange={(event) =>
-              setAdvancedOfferForm((prev) => ({ ...prev, description: event.target.value }))
-            }
-          />
-        </label>
-        <label>
-          نوع العرض
-          <select
-            value={advancedOfferForm.offerType}
-            onChange={(event) =>
-              setAdvancedOfferForm((prev) => ({
-                ...prev,
-                offerType: event.target.value as AdvancedOfferType,
-              }))
-            }
-          >
-            <option value="bxgy">bxgy</option>
-            <option value="bundle">bundle</option>
-            <option value="tiered_discount">tiered_discount</option>
-          </select>
-        </label>
-        <label>
-          الأولوية
-          <input
-            type="number"
-            value={advancedOfferForm.priority}
-            onChange={(event) =>
-              setAdvancedOfferForm((prev) => ({ ...prev, priority: event.target.value }))
-            }
-          />
-        </label>
-        <label>
-          الإعدادات (JSON)
-          <textarea
-            value={advancedOfferForm.config}
-            onChange={(event) =>
-              setAdvancedOfferForm((prev) => ({ ...prev, config: event.target.value }))
-            }
-          />
-        </label>
-        <label>
-          يبدأ في
-          <input
-            type="datetime-local"
-            value={advancedOfferForm.startsAt}
-            onChange={(event) =>
-              setAdvancedOfferForm((prev) => ({ ...prev, startsAt: event.target.value }))
-            }
-          />
-        </label>
-        <label>
-          ينتهي في
-          <input
-            type="datetime-local"
-            value={advancedOfferForm.endsAt}
-            onChange={(event) =>
-              setAdvancedOfferForm((prev) => ({ ...prev, endsAt: event.target.value }))
-            }
-          />
-        </label>
-        <label className="inline-check">
-          <input
-            type="checkbox"
-            checked={advancedOfferForm.isActive}
-            onChange={(event) =>
-              setAdvancedOfferForm((prev) => ({ ...prev, isActive: event.target.checked }))
-            }
-          />
-          نشط
-        </label>
+        <TextField label="الاسم" value={advancedOfferForm.name} onChange={(event) => setAdvancedOfferForm((prev) => ({ ...prev, name: event.target.value }))} />
+        <TextField label="الوصف" value={advancedOfferForm.description} onChange={(event) => setAdvancedOfferForm((prev) => ({ ...prev, description: event.target.value }))} />
+        <TextField select label="نوع العرض" value={advancedOfferForm.offerType} onChange={(event) => setAdvancedOfferForm((prev) => ({ ...prev, offerType: event.target.value as AdvancedOfferType }))}>
+          <MenuItem value="bxgy">bxgy</MenuItem>
+          <MenuItem value="bundle">bundle</MenuItem>
+          <MenuItem value="tiered_discount">tiered_discount</MenuItem>
+        </TextField>
+        <TextField label="الأولوية" type="number" value={advancedOfferForm.priority} onChange={(event) => setAdvancedOfferForm((prev) => ({ ...prev, priority: event.target.value }))} />
+        <TextField label="الإعدادات (JSON)" multiline minRows={6} value={advancedOfferForm.config} onChange={(event) => setAdvancedOfferForm((prev) => ({ ...prev, config: event.target.value }))} />
+        <TextField label="يبدأ في" type="datetime-local" InputLabelProps={{ shrink: true }} value={advancedOfferForm.startsAt} onChange={(event) => setAdvancedOfferForm((prev) => ({ ...prev, startsAt: event.target.value }))} />
+        <TextField label="ينتهي في" type="datetime-local" InputLabelProps={{ shrink: true }} value={advancedOfferForm.endsAt} onChange={(event) => setAdvancedOfferForm((prev) => ({ ...prev, endsAt: event.target.value }))} />
+        <FormControlLabel control={<Checkbox checked={advancedOfferForm.isActive} onChange={(event) => setAdvancedOfferForm((prev) => ({ ...prev, isActive: event.target.checked }))} />} label="نشط" />
 
-        <div className="list">
+        <Box sx={{ display: 'grid', gap: 0.8 }}>
           {advancedOffers.map((offer) => (
-            <article key={offer.id} className="list-item">
-              <h4>{offer.name}</h4>
-              <p>
-                {offer.offerType} - الأولوية {offer.priority} - نشط {String(offer.isActive)}
-              </p>
-              <button onClick={() => selectAdvancedOffer(offer)}>تعديل</button>
-            </article>
+            <Paper key={offer.id} variant="outlined" sx={{ p: 1 }}>
+              <Typography variant="subtitle2">{offer.name}</Typography>
+              <Typography variant="body2">{offer.offerType} - الأولوية {offer.priority} - نشط {String(offer.isActive)}</Typography>
+              <Button sx={{ mt: 0.6 }} variant="outlined" onClick={() => selectAdvancedOffer(offer)}>تعديل</Button>
+            </Paper>
           ))}
-        </div>
-      </article>
+        </Box>
+      </Paper>
 
-      {message ? <p className="status-message">{message}</p> : null}
-    </section>
+      {message ? <Alert severity="info" sx={{ gridColumn: { xs: 'auto', xl: '1 / -1' } }}>{message}</Alert> : null}
+    </Box>
   );
 }
 

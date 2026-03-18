@@ -1,4 +1,14 @@
 import { useState } from 'react';
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
 import type { MerchantRequester } from '../merchant-dashboard';
 import type { PaymentWithOrder, PaymentStatus, PresignedMediaUpload, MediaAsset } from '../types';
 
@@ -14,12 +24,12 @@ const statusLabels: Record<PaymentStatus, string> = {
   refunded: 'مسترجع',
 };
 
-const statusColors: Record<PaymentStatus, string> = {
-  pending: 'badge-pending',
-  under_review: 'badge-review',
-  approved: 'badge-success',
-  rejected: 'badge-error',
-  refunded: 'badge-info',
+const statusColors: Record<PaymentStatus, 'default' | 'warning' | 'success' | 'error' | 'info'> = {
+  pending: 'warning',
+  under_review: 'info',
+  approved: 'success',
+  rejected: 'error',
+  refunded: 'default',
 };
 
 export function PaymentsPanel({ request }: PaymentsPanelProps) {
@@ -108,116 +118,109 @@ export function PaymentsPanel({ request }: PaymentsPanelProps) {
   }
 
   return (
-    <section className="card-grid">
-      <article className="card">
-        <h3>مدفوعات التحويل</h3>
-        <div className="actions">
-          <button onClick={() => loadPendingPayments().catch(() => undefined)}>
+    <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, minmax(0, 1fr))' } }}>
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
+        <Typography variant="h6">مدفوعات التحويل</Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+          <Button variant="outlined" onClick={() => loadPendingPayments().catch(() => undefined)}>
             قيد المراجعة
-          </button>
-          <button onClick={() => loadAllPayments().catch(() => undefined)}>كل المدفوعات</button>
-        </div>
+          </Button>
+          <Button variant="outlined" onClick={() => loadAllPayments().catch(() => undefined)}>كل المدفوعات</Button>
+        </Stack>
 
-        <div className="list">
+        <Box sx={{ display: 'grid', gap: 0.8 }}>
           {payments.map((payment) => (
-            <article key={payment.id} className="list-item">
-              <div className="list-item-header">
-                <h4>طلب {payment.orderCode}</h4>
-                <span className={`badge ${statusColors[payment.status]}`}>
-                  {statusLabels[payment.status]}
-                </span>
-              </div>
-              <p>
+            <Paper key={payment.id} variant="outlined" sx={{ p: 1 }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="subtitle1">طلب {payment.orderCode}</Typography>
+                <Chip label={statusLabels[payment.status]} color={statusColors[payment.status]} size="small" />
+              </Stack>
+              <Typography variant="body2" sx={{ mt: 0.4 }}>
                 المبلغ: {payment.amount} | الطريقة: {payment.method}
-              </p>
-              <p>حالة الطلب: {payment.orderStatus}</p>
+              </Typography>
+              <Typography variant="body2">حالة الطلب: {payment.orderStatus}</Typography>
               {payment.receiptUrl && (
-                <p>
+                <Typography variant="body2" sx={{ mt: 0.4 }}>
                   <a href={payment.receiptUrl} target="_blank" rel="noopener noreferrer">
                     عرض الإيصال
                   </a>
-                </p>
+                </Typography>
               )}
-              <div className="list-item-actions">
-                <button onClick={() => selectPayment(payment)}>مراجعة</button>
-              </div>
-            </article>
+              <Button sx={{ mt: 0.6 }} variant="outlined" onClick={() => selectPayment(payment)}>مراجعة</Button>
+            </Paper>
           ))}
           {payments.length === 0 ? (
-            <p className="hint">لا توجد مدفوعات. اضغط أحد الأزرار بالأعلى للتحميل.</p>
+            <Typography color="text.secondary">لا توجد مدفوعات. اضغط أحد الأزرار بالأعلى للتحميل.</Typography>
           ) : null}
-        </div>
-      </article>
+        </Box>
+      </Paper>
 
-      <article className="card">
-        <h3>مراجعة الدفعة</h3>
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
+        <Typography variant="h6">مراجعة الدفعة</Typography>
         {selectedPayment ? (
           <>
-            <div className="payment-summary">
-              <p>
+            <Box>
+              <Typography variant="body2">
                 <strong>الطلب:</strong> {selectedPayment.orderCode}
-              </p>
-              <p>
+              </Typography>
+              <Typography variant="body2">
                 <strong>المبلغ:</strong> {selectedPayment.amount}
-              </p>
-              <p>
+              </Typography>
+              <Typography variant="body2">
                 <strong>الطريقة:</strong> {selectedPayment.method}
-              </p>
-              <p>
+              </Typography>
+              <Typography variant="body2">
                 <strong>الحالة:</strong>{' '}
-                <span className={`badge ${statusColors[selectedPayment.status]}`}>
-                  {statusLabels[selectedPayment.status]}
-                </span>
-              </p>
+                <Chip
+                  sx={{ ml: 0.6 }}
+                  label={statusLabels[selectedPayment.status]}
+                  color={statusColors[selectedPayment.status]}
+                  size="small"
+                />
+              </Typography>
               {selectedPayment.customerUploadedAt && (
-                <p>
+                <Typography variant="body2">
                   <strong>تاريخ رفع الإيصال:</strong>{' '}
                   {new Date(selectedPayment.customerUploadedAt).toLocaleString()}
-                </p>
+                </Typography>
               )}
-            </div>
+            </Box>
 
             {selectedPayment.receiptUrl && (
-              <div className="receipt-preview">
-                <h4>الإيصال</h4>
-                <a
-                  href={selectedPayment.receiptUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="button"
-                >
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Typography variant="subtitle2">الإيصال</Typography>
+                <Button component="a" href={selectedPayment.receiptUrl} target="_blank" rel="noopener noreferrer" variant="outlined">
                   فتح الإيصال
-                </a>
-              </div>
+                </Button>
+              </Stack>
             )}
 
-            <label>
-              ملاحظة المراجعة
-              <textarea
-                value={reviewNote}
-                onChange={(e) => setReviewNote(e.target.value)}
-                placeholder="أضف ملاحظة (مطلوبة عند الرفض)"
-                rows={3}
-              />
-            </label>
+            <TextField
+              label="ملاحظة المراجعة"
+              value={reviewNote}
+              onChange={(e) => setReviewNote(e.target.value)}
+              placeholder="أضف ملاحظة (مطلوبة عند الرفض)"
+              multiline
+              minRows={3}
+            />
 
-            <div className="actions">
-              <button className="primary" onClick={() => approvePayment().catch(() => undefined)}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <Button variant="contained" onClick={() => approvePayment().catch(() => undefined)}>
                 اعتماد
-              </button>
-              <button className="danger" onClick={() => rejectPayment().catch(() => undefined)}>
+              </Button>
+              <Button color="error" variant="outlined" onClick={() => rejectPayment().catch(() => undefined)}>
                 رفض
-              </button>
-              <button onClick={() => setSelectedPayment(null)}>إلغاء</button>
-            </div>
+              </Button>
+              <Button variant="outlined" onClick={() => setSelectedPayment(null)}>إلغاء</Button>
+            </Stack>
 
-            {error && <p className="status-message error">{error}</p>}
-            {message && <p className="status-message success">{message}</p>}
+            {error && <Alert severity="error">{error}</Alert>}
+            {message && <Alert severity="success">{message}</Alert>}
           </>
         ) : (
-          <p className="hint">اختر دفعة من القائمة للمراجعة.</p>
+          <Typography color="text.secondary">اختر دفعة من القائمة للمراجعة.</Typography>
         )}
-      </article>
-    </section>
+      </Paper>
+    </Box>
   );
 }

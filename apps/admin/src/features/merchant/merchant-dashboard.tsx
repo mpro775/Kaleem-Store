@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState, type ReactElement } from 'react';
+import { Alert, Box, Button, Paper, Stack, Tab, Tabs, Typography } from '@mui/material';
 import { merchantRequestJson, type MerchantRequestOptions } from './api-client';
 import { AttributesPanel } from './panels/attributes-panel';
 import { CategoriesPanel } from './panels/categories-panel';
@@ -101,40 +102,47 @@ export function MerchantDashboard({
   }
 
   return (
-    <section className="panel panel-merchant merchant-dashboard">
-      <header className="panel-header">
-        <h2>لوحة التاجر</h2>
-        <p>
+    <Paper variant="outlined" sx={{ p: { xs: 1.2, md: 2 }, borderRadius: 3, display: 'grid', gap: 1.1 }}>
+      <Box>
+        <Typography variant="h5">لوحة التاجر</Typography>
+        <Typography sx={{ mt: 0.4 }}>
           تم تسجيل الدخول باسم {session.user.fullName} ({session.user.email}) - الدور: {session.user.role}
-        </p>
-        <p className="route-hint">معرّف المتجر: {session.user.storeId}</p>
-      </header>
+        </Typography>
+        <Typography variant="caption" sx={{ color: 'secondary.main', fontWeight: 700 }}>
+          معرّف المتجر: {session.user.storeId}
+        </Typography>
+      </Box>
 
-      <div className="dashboard-actions">
-        <button onClick={() => setBannerMessage('الجلسة فعالة وتدعم التحديث التلقائي.') }>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+        <Button variant="outlined" onClick={() => setBannerMessage('الجلسة فعالة وتدعم التحديث التلقائي.')}>
           فحص الجلسة
-        </button>
-        <button className="danger" onClick={() => signOut().catch(() => undefined)}>
+        </Button>
+        <Button color="error" variant="outlined" onClick={() => signOut().catch(() => undefined)}>
           تسجيل الخروج
-        </button>
-      </div>
+        </Button>
+      </Stack>
 
-      <nav className="tab-nav" aria-label="أقسام التاجر">
+      <Tabs
+        value={tabs.findIndex((tab) => tab.key === activeTab)}
+        onChange={(_, index: number) => {
+          const tab = tabs[index];
+          if (tab) {
+            setActiveTab(tab.key);
+          }
+        }}
+        variant="scrollable"
+        allowScrollButtonsMobile
+        aria-label="أقسام التاجر"
+      >
         {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            className={tab.key === activeTab ? 'selected' : ''}
-            onClick={() => setActiveTab(tab.key)}
-          >
-            {tab.label}
-          </button>
+          <Tab key={tab.key} label={tab.label} />
         ))}
-      </nav>
+      </Tabs>
 
-      <div className="tab-content">{renderPanel(activeTab, { session, request })}</div>
+      <Box>{renderPanel(activeTab, { session, request })}</Box>
 
-      {bannerMessage ? <p className="status-message">{bannerMessage}</p> : null}
-    </section>
+      {bannerMessage ? <Alert severity="success">{bannerMessage}</Alert> : null}
+    </Paper>
   );
 }
 
@@ -162,26 +170,26 @@ const panelRenderers: Record<MerchantTabKey, (props: MerchantPanelProps) => Reac
 
 function OverviewPanel({ session }: { session: MerchantSession }) {
   return (
-    <section className="card-grid">
-      <article className="card">
-        <h3>ملخص المتجر</h3>
-        <p>معرّف المتجر: {session.user.storeId}</p>
-        <p>الصلاحيات: {session.user.permissions.join(', ') || 'لا توجد'}</p>
-      </article>
+    <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, minmax(0, 1fr))' } }}>
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2 }}>
+        <Typography variant="h6">ملخص المتجر</Typography>
+        <Typography sx={{ mt: 0.5 }}>معرّف المتجر: {session.user.storeId}</Typography>
+        <Typography sx={{ mt: 0.3 }}>الصلاحيات: {session.user.permissions.join(', ') || 'لا توجد'}</Typography>
+      </Paper>
 
-      <article className="card">
-        <h3>قائمة التشغيل</h3>
-        <ul>
-          <li>إعدادات المتجر مع حفظ كامل للبيانات</li>
-          <li>إدارة المنتجات والمتغيرات وربط الوسائط</li>
-          <li>حركات وحجوزات المخزون وتنبيهات انخفاض الكمية</li>
-          <li>إدارة التصنيفات بالكامل</li>
-          <li>إدارة الخصائص وقيمها وربطها بالتصنيفات</li>
-          <li>إدارة الطلبات وتحديث حالاتها</li>
-          <li>مناطق الشحن والعروض والثيمات والنطاقات</li>
-          <li>إدارة الفريق وتوزيع الأدوار</li>
-        </ul>
-      </article>
-    </section>
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2 }}>
+        <Typography variant="h6">قائمة التشغيل</Typography>
+        <Box component="ul" sx={{ m: 0, mt: 0.7, pl: 2, display: 'grid', gap: 0.5 }}>
+          <Box component="li">إعدادات المتجر مع حفظ كامل للبيانات</Box>
+          <Box component="li">إدارة المنتجات والمتغيرات وربط الوسائط</Box>
+          <Box component="li">حركات وحجوزات المخزون وتنبيهات انخفاض الكمية</Box>
+          <Box component="li">إدارة التصنيفات بالكامل</Box>
+          <Box component="li">إدارة الخصائص وقيمها وربطها بالتصنيفات</Box>
+          <Box component="li">إدارة الطلبات وتحديث حالاتها</Box>
+          <Box component="li">مناطق الشحن والعروض والثيمات والنطاقات</Box>
+          <Box component="li">إدارة الفريق وتوزيع الأدوار</Box>
+        </Box>
+      </Paper>
+    </Box>
   );
 }

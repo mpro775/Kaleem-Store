@@ -1,4 +1,16 @@
 import { useState } from 'react';
+import {
+  Alert,
+  Box,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  MenuItem,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
 import type { MerchantRequester } from '../merchant-dashboard';
 import type {
   Attribute,
@@ -227,279 +239,136 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
   }
 
   return (
-    <section className="card-grid">
-      <article className="card">
-        <h3>المنتجات</h3>
-        <div className="actions">
-          <button onClick={() => loadCatalog().catch(() => undefined)}>تحميل</button>
-          <button className="primary" onClick={() => createProduct().catch(() => undefined)}>
-            إنشاء
-          </button>
-          <button onClick={() => updateProduct().catch(() => undefined)}>تحديث</button>
-          <button className="danger" onClick={() => deleteProduct().catch(() => undefined)}>
-            حذف
-          </button>
-        </div>
+    <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', xl: 'repeat(3, minmax(0, 1fr))' } }}>
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
+        <Typography variant="h6">المنتجات</Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+          <Button variant="outlined" onClick={() => loadCatalog().catch(() => undefined)}>تحميل</Button>
+          <Button variant="contained" onClick={() => createProduct().catch(() => undefined)}>إنشاء</Button>
+          <Button variant="outlined" onClick={() => updateProduct().catch(() => undefined)}>تحديث</Button>
+          <Button color="error" variant="outlined" onClick={() => deleteProduct().catch(() => undefined)}>حذف</Button>
+        </Stack>
 
-        <label>
-          العنوان
-          <input
-            value={productForm.title}
-            onChange={(event) => setProductForm((prev) => ({ ...prev, title: event.target.value }))}
-          />
-        </label>
-        <label>
-          المسار المختصر
-          <input
-            value={productForm.slug}
-            onChange={(event) => setProductForm((prev) => ({ ...prev, slug: event.target.value }))}
-          />
-        </label>
-        <label>
-          الوصف
-          <textarea
-            value={productForm.description}
-            onChange={(event) =>
-              setProductForm((prev) => ({ ...prev, description: event.target.value }))
-            }
-          />
-        </label>
-        <label>
-          التصنيف
-          <select
-            value={productForm.categoryId}
-            onChange={(event) =>
-              setProductForm((prev) => ({ ...prev, categoryId: event.target.value }))
-            }
-          >
-            <option value="">بدون تصنيف</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          الحالة
-          <select
-            value={productForm.status}
-            onChange={(event) =>
-              setProductForm((prev) => ({ ...prev, status: event.target.value as ProductStatus }))
-            }
-          >
-            <option value="draft">مسودة</option>
-            <option value="active">نشط</option>
-            <option value="archived">مؤرشف</option>
-          </select>
-        </label>
+        <TextField label="العنوان" value={productForm.title} onChange={(event) => setProductForm((prev) => ({ ...prev, title: event.target.value }))} />
+        <TextField label="المسار المختصر" value={productForm.slug} onChange={(event) => setProductForm((prev) => ({ ...prev, slug: event.target.value }))} />
+        <TextField label="الوصف" multiline minRows={4} value={productForm.description} onChange={(event) => setProductForm((prev) => ({ ...prev, description: event.target.value }))} />
+        <TextField select label="التصنيف" value={productForm.categoryId} onChange={(event) => setProductForm((prev) => ({ ...prev, categoryId: event.target.value }))}>
+          <MenuItem value="">بدون تصنيف</MenuItem>
+          {categories.map((category) => (
+            <MenuItem key={category.id} value={category.id}>
+              {category.name}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField select label="الحالة" value={productForm.status} onChange={(event) => setProductForm((prev) => ({ ...prev, status: event.target.value as ProductStatus }))}>
+          <MenuItem value="draft">مسودة</MenuItem>
+          <MenuItem value="active">نشط</MenuItem>
+          <MenuItem value="archived">مؤرشف</MenuItem>
+        </TextField>
+      </Paper>
 
-        {message ? <p className="status-message">{message}</p> : null}
-      </article>
-
-      <article className="card">
-        <h3>قائمة المنتجات</h3>
-        <div className="list">
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
+        <Typography variant="h6">قائمة المنتجات</Typography>
+        <Box sx={{ display: 'grid', gap: 0.8 }}>
           {products.map((product) => (
-            <article key={product.id} className="list-item">
-              <h4>{product.title}</h4>
-              <p>
-                {product.slug} - {product.status}
-              </p>
-              <button onClick={() => loadProductDetails(product.id).catch(() => undefined)}>
-                إدارة
-              </button>
-            </article>
+            <Paper key={product.id} variant="outlined" sx={{ p: 1 }}>
+              <Typography variant="subtitle2">{product.title}</Typography>
+              <Typography variant="body2">{product.slug} - {product.status}</Typography>
+              <Button sx={{ mt: 0.6 }} variant="outlined" onClick={() => loadProductDetails(product.id).catch(() => undefined)}>إدارة</Button>
+            </Paper>
           ))}
-          {products.length === 0 ? <p className="hint">لا توجد منتجات محملة.</p> : null}
-        </div>
-      </article>
+          {products.length === 0 ? <Typography color="text.secondary">لا توجد منتجات محملة.</Typography> : null}
+        </Box>
+      </Paper>
 
-      <article className="card">
-        <h3>المتغيرات والصور</h3>
-        {selectedProduct ? (
-          <p>المحدد: {selectedProduct.title}</p>
-        ) : (
-          <p>اختر منتجاً لإدارة الوسائط.</p>
-        )}
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1, gridColumn: { xs: 'auto', xl: '1 / -1' } }}>
+        <Typography variant="h6">المتغيرات والصور</Typography>
+        <Typography color="text.secondary">{selectedProduct ? `المحدد: ${selectedProduct.title}` : 'اختر منتجاً لإدارة الوسائط.'}</Typography>
 
-        <h4>إضافة متغير</h4>
-        <label>
-          العنوان
-          <input
-            value={variantForm.title}
-            onChange={(event) => setVariantForm((prev) => ({ ...prev, title: event.target.value }))}
-          />
-        </label>
-        <label>
-          SKU
-          <input
-            value={variantForm.sku}
-            onChange={(event) => setVariantForm((prev) => ({ ...prev, sku: event.target.value }))}
-          />
-        </label>
-        <label>
-          الباركود
-          <input
-            value={variantForm.barcode}
-            onChange={(event) =>
-              setVariantForm((prev) => ({ ...prev, barcode: event.target.value }))
-            }
-          />
-        </label>
-        <label>
-          السعر
-          <input
-            type="number"
-            min={0}
-            step={0.01}
-            value={variantForm.price}
-            onChange={(event) => setVariantForm((prev) => ({ ...prev, price: event.target.value }))}
-          />
-        </label>
-        <label>
-          سعر المقارنة
-          <input
-            type="number"
-            min={0}
-            step={0.01}
-            value={variantForm.compareAtPrice}
-            onChange={(event) =>
-              setVariantForm((prev) => ({ ...prev, compareAtPrice: event.target.value }))
-            }
-          />
-        </label>
-        <label>
-          كمية المخزون
-          <input
-            type="number"
-            min={0}
-            value={variantForm.stockQuantity}
-            onChange={(event) =>
-              setVariantForm((prev) => ({ ...prev, stockQuantity: event.target.value }))
-            }
-          />
-        </label>
-        <label>
-          حد انخفاض المخزون
-          <input
-            type="number"
-            min={0}
-            value={variantForm.lowStockThreshold}
-            onChange={(event) =>
-              setVariantForm((prev) => ({ ...prev, lowStockThreshold: event.target.value }))
-            }
-          />
-        </label>
+        <Typography variant="subtitle1">إضافة متغير</Typography>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
+          <TextField label="العنوان" value={variantForm.title} onChange={(event) => setVariantForm((prev) => ({ ...prev, title: event.target.value }))} />
+          <TextField label="SKU" value={variantForm.sku} onChange={(event) => setVariantForm((prev) => ({ ...prev, sku: event.target.value }))} />
+          <TextField label="الباركود" value={variantForm.barcode} onChange={(event) => setVariantForm((prev) => ({ ...prev, barcode: event.target.value }))} />
+        </Stack>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
+          <TextField label="السعر" type="number" inputProps={{ min: 0, step: 0.01 }} value={variantForm.price} onChange={(event) => setVariantForm((prev) => ({ ...prev, price: event.target.value }))} />
+          <TextField label="سعر المقارنة" type="number" inputProps={{ min: 0, step: 0.01 }} value={variantForm.compareAtPrice} onChange={(event) => setVariantForm((prev) => ({ ...prev, compareAtPrice: event.target.value }))} />
+          <TextField label="كمية المخزون" type="number" inputProps={{ min: 0 }} value={variantForm.stockQuantity} onChange={(event) => setVariantForm((prev) => ({ ...prev, stockQuantity: event.target.value }))} />
+          <TextField label="حد انخفاض المخزون" type="number" inputProps={{ min: 0 }} value={variantForm.lowStockThreshold} onChange={(event) => setVariantForm((prev) => ({ ...prev, lowStockThreshold: event.target.value }))} />
+        </Stack>
+
         {attributes.length > 0 ? (
-          <>
-            <p className="hint">قيم خصائص المتغير</p>
+          <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' } }}>
             {attributes.map((attribute) => (
-              <label key={attribute.id}>
-                {attribute.name}
-                <select
-                  value={variantForm.selectedValueByAttributeId[attribute.id] ?? ''}
-                  onChange={(event) =>
-                    setVariantForm((prev) => ({
-                      ...prev,
-                      selectedValueByAttributeId: {
-                        ...prev.selectedValueByAttributeId,
-                        [attribute.id]: event.target.value,
-                      },
-                    }))
-                  }
-                >
-                  <option value="">بدون قيمة</option>
-                  {(attribute.values ?? []).map((value) => (
-                    <option key={value.id} value={value.id}>
-                      {value.value}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <TextField
+                key={attribute.id}
+                select
+                label={attribute.name}
+                value={variantForm.selectedValueByAttributeId[attribute.id] ?? ''}
+                onChange={(event) =>
+                  setVariantForm((prev) => ({
+                    ...prev,
+                    selectedValueByAttributeId: {
+                      ...prev.selectedValueByAttributeId,
+                      [attribute.id]: event.target.value,
+                    },
+                  }))
+                }
+              >
+                <MenuItem value="">بدون قيمة</MenuItem>
+                {(attribute.values ?? []).map((value) => (
+                  <MenuItem key={value.id} value={value.id}>
+                    {value.value}
+                  </MenuItem>
+                ))}
+              </TextField>
             ))}
-          </>
+          </Box>
         ) : (
-          <p className="hint">لا توجد خصائص متاحة. أنشئها من تبويب الخصائص.</p>
+          <Typography color="text.secondary">لا توجد خصائص متاحة. أنشئها من تبويب الخصائص.</Typography>
         )}
-        <label className="inline-check">
-          <input
-            type="checkbox"
-            checked={variantForm.isDefault}
-            onChange={(event) =>
-              setVariantForm((prev) => ({ ...prev, isDefault: event.target.checked }))
-            }
-          />
-          المتغير الافتراضي
-        </label>
-        <button onClick={() => addVariant().catch(() => undefined)}>إضافة متغير</button>
-        <button onClick={() => updateVariantAttributes().catch(() => undefined)}>
-          تحديث خصائص المتغير
-        </button>
-        {selectedVariantId ? <p className="hint">تعديل المتغير: {selectedVariantId}</p> : null}
 
-        <h4>رفع وربط صورة</h4>
-        <label>
-          الملف
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
-          />
-        </label>
-        <label>
-          معرّف المتغير (اختياري)
-          <input
-            value={imageForm.variantId}
-            onChange={(event) =>
-              setImageForm((prev) => ({ ...prev, variantId: event.target.value }))
-            }
-          />
-        </label>
-        <label>
-          النص البديل
-          <input
-            value={imageForm.altText}
-            onChange={(event) => setImageForm((prev) => ({ ...prev, altText: event.target.value }))}
-          />
-        </label>
-        <label>
-          ترتيب العرض
-          <input
-            type="number"
-            min={0}
-            value={imageForm.sortOrder}
-            onChange={(event) =>
-              setImageForm((prev) => ({ ...prev, sortOrder: event.target.value }))
-            }
-          />
-        </label>
-        <button onClick={() => uploadAndAttachImage().catch(() => undefined)}>رفع الصورة</button>
+        <FormControlLabel control={<Checkbox checked={variantForm.isDefault} onChange={(event) => setVariantForm((prev) => ({ ...prev, isDefault: event.target.checked }))} />} label="المتغير الافتراضي" />
 
-        <h4>المتغيرات الحالية</h4>
-        <div className="list compact-list">
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+          <Button variant="contained" onClick={() => addVariant().catch(() => undefined)}>إضافة متغير</Button>
+          <Button variant="outlined" onClick={() => updateVariantAttributes().catch(() => undefined)}>تحديث خصائص المتغير</Button>
+        </Stack>
+        {selectedVariantId ? <Typography color="text.secondary">تعديل المتغير: {selectedVariantId}</Typography> : null}
+
+        <Typography variant="subtitle1">رفع وربط صورة</Typography>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
+          <TextField type="file" inputProps={{ accept: 'image/*' }} onChange={(event) => setImageFile((event.target as HTMLInputElement).files?.[0] ?? null)} />
+          <TextField label="معرّف المتغير (اختياري)" value={imageForm.variantId} onChange={(event) => setImageForm((prev) => ({ ...prev, variantId: event.target.value }))} />
+          <TextField label="النص البديل" value={imageForm.altText} onChange={(event) => setImageForm((prev) => ({ ...prev, altText: event.target.value }))} />
+          <TextField label="ترتيب العرض" type="number" inputProps={{ min: 0 }} value={imageForm.sortOrder} onChange={(event) => setImageForm((prev) => ({ ...prev, sortOrder: event.target.value }))} />
+        </Stack>
+        <Button variant="outlined" sx={{ width: 'fit-content' }} onClick={() => uploadAndAttachImage().catch(() => undefined)}>رفع الصورة</Button>
+
+        <Typography variant="subtitle1">المتغيرات الحالية</Typography>
+        <Box sx={{ display: 'grid', gap: 0.8 }}>
           {(selectedProduct?.variants ?? []).map((variant: ProductVariant) => (
-            <article key={variant.id} className="list-item">
-              <p>
-                {variant.title} ({variant.sku}) - المخزون {variant.stockQuantity} (الحد{' '}
-                {variant.lowStockThreshold})
-              </p>
-              <p>الخصائص: {formatVariantAttributes(variant.attributes)}</p>
-              <button onClick={() => selectVariantAttributes(variant)}>تحميل القيم</button>
-            </article>
+            <Paper key={variant.id} variant="outlined" sx={{ p: 1 }}>
+              <Typography variant="body2">{variant.title} ({variant.sku}) - المخزون {variant.stockQuantity} (الحد {variant.lowStockThreshold})</Typography>
+              <Typography variant="body2">الخصائص: {formatVariantAttributes(variant.attributes)}</Typography>
+              <Button sx={{ mt: 0.6 }} variant="outlined" onClick={() => selectVariantAttributes(variant)}>تحميل القيم</Button>
+            </Paper>
           ))}
-        </div>
+        </Box>
 
-        <h4>الصور الحالية</h4>
-        <div className="list compact-list">
+        <Typography variant="subtitle1">الصور الحالية</Typography>
+        <Box sx={{ display: 'grid', gap: 0.8 }}>
           {(selectedProduct?.images ?? []).map((image) => (
-            <article key={image.id} className="list-item">
-              <p>{image.url}</p>
-            </article>
+            <Paper key={image.id} variant="outlined" sx={{ p: 1 }}>
+              <Typography variant="body2">{image.url}</Typography>
+            </Paper>
           ))}
-        </div>
-      </article>
-    </section>
+        </Box>
+      </Paper>
+
+      {message ? <Alert severity="info" sx={{ gridColumn: { xs: 'auto', xl: '1 / -1' } }}>{message}</Alert> : null}
+    </Box>
   );
 }
 

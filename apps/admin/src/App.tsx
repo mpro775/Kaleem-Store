@@ -35,7 +35,6 @@ import { MerchantOnboarding } from './features/merchant/merchant-onboarding';
 import { PlatformConsole } from './features/platform-console';
 import { useMerchantSession } from './features/merchant/use-merchant-session';
 import type { MerchantSession } from './features/merchant/types';
-import './styles.css';
 
 const ONBOARDING_STORAGE_KEY = 'merchant.onboarding.pending.v1';
 
@@ -227,8 +226,10 @@ export function App() {
   }
 
   const activeShellIndex = shellItems.findIndex((item) => item.route === route);
+  const isStandalonePage =
+    route === 'platform' || route === 'marketing' || route === 'register' || route === 'login';
 
-  if (route === 'platform' || route === 'marketing') {
+  if (isStandalonePage) {
     return (
       <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default', py: { xs: 1, md: 2 } }}>
         <Container maxWidth="xl">{renderRouteContent(route, session)}</Container>

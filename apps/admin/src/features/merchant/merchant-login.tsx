@@ -1,4 +1,7 @@
 import { FormEvent, useState } from 'react';
+import { Alert, Box, Button, TextField, Typography, InputAdornment, IconButton } from '@mui/material';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { requestJson } from '../../lib/http';
 import { readStoredApiBaseUrl } from './session-storage';
 import type { AuthResult, MerchantSession } from './types';
@@ -8,18 +11,18 @@ interface MerchantLoginProps {
 }
 
 export function MerchantLogin({ onLoggedIn }: MerchantLoginProps) {
-  const [apiBaseUrl, setApiBaseUrl] = useState(readStoredApiBaseUrl());
   const [email, setEmail] = useState('owner@example.com');
   const [password, setPassword] = useState('Owner123!');
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   async function onSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
 
-    const trimmedApiBaseUrl = apiBaseUrl.trim();
+    const trimmedApiBaseUrl = readStoredApiBaseUrl();
     if (!trimmedApiBaseUrl) {
-      setError('رابط API مطلوب');
+      setError('تعذر العثور على رابط API. اضبط VITE_API_BASE_URL.');
       return;
     }
 
@@ -39,7 +42,7 @@ export function MerchantLogin({ onLoggedIn }: MerchantLoginProps) {
       });
 
       if (!result) {
-        throw new Error('تعذر تسجيل الدخول');
+        throw new Error('تعذر تسجيل الدخول. تأكد من صحة البيانات.');
       }
 
       onLoggedIn({
@@ -56,55 +59,59 @@ export function MerchantLogin({ onLoggedIn }: MerchantLoginProps) {
   }
 
   return (
-    <section className="panel panel-merchant auth-panel">
-      <header className="panel-header">
-        <h2>تسجيل دخول التاجر</h2>
-        <p>استخدم بيانات المتجر للوصول إلى لوحة الإدارة. يتم حفظ رابط الـ API محلياً لسهولة الاستخدام.</p>
-      </header>
+    <Box component="form" onSubmit={onSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, width: '100%' }}>
+      {error && (
+        <Alert severity="error" sx={{ borderRadius: 2 }}>
+          {error}
+        </Alert>
+      )}
 
-      <form className="stack-form" onSubmit={onSubmit}>
-        <label>
-          رابط API
-          <input
-            value={apiBaseUrl}
-            onChange={(event) => setApiBaseUrl(event.target.value)}
-            placeholder="http://localhost:3000"
-          />
-        </label>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+        <TextField
+          label="البريد الإلكتروني"
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          required
+          placeholder="أدخل بريدك الإلكتروني"
+          fullWidth
+        />
+        
+        <TextField
+          label="كلمة المرور"
+          type={showPassword ? 'text' : 'password'}
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          required
+          placeholder="أدخل كلمة المرور"
+          fullWidth
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  aria-label="toggle password visibility"
+                  onClick={() => setShowPassword(!showPassword)}
+                  edge="end"
+                >
+                  {showPassword ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
+        />
+      </Box>
 
-        <div className="auth-form-grid">
-          <label>
-            البريد الإلكتروني
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
-          </label>
-
-          <label>
-            كلمة المرور
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-            />
-          </label>
-        </div>
-
-        <div className="auth-inline-hint subdued">
-          <span>المسار التالي بعد النجاح:</span>
-          <strong>`/merchant`</strong>
-        </div>
-
-        <button className="primary" type="submit" disabled={busy}>
-          {busy ? 'جارٍ تسجيل الدخول...' : 'تسجيل الدخول'}
-        </button>
-      </form>
-
-      {error ? <p className="status-message error-text">{error}</p> : null}
-    </section>
+      <Button 
+        variant="contained" 
+        color="primary" 
+        type="submit" 
+        disabled={busy}
+        size="large"
+        sx={{ mt: 1, py: 1.5, borderRadius: 2 }}
+        fullWidth
+      >
+        {busy ? 'جارٍ تسجيل الدخول...' : 'تسجيل الدخول'}
+      </Button>
+    </Box>
   );
 }

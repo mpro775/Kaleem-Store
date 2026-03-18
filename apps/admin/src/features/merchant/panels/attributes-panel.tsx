@@ -1,4 +1,16 @@
 import { useEffect, useState } from 'react';
+import {
+  Alert,
+  Box,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  MenuItem,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
 import type { MerchantRequester } from '../merchant-dashboard';
 import type { Attribute, AttributeValue, Category, CategoryAttributes } from '../types';
 
@@ -236,142 +248,103 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
     attributes.find((attribute) => attribute.id === selectedAttributeId) ?? null;
 
   return (
-    <section className="card-grid">
-      <article className="card">
-        <h3>الخصائص</h3>
-        <div className="actions">
-          <button onClick={() => loadBaseData().catch(() => undefined)}>إعادة تحميل</button>
-          <button className="primary" onClick={() => createAttribute().catch(() => undefined)}>
-            إنشاء
-          </button>
-          <button onClick={() => updateAttribute().catch(() => undefined)}>تحديث</button>
-          <button className="danger" onClick={() => deleteAttribute().catch(() => undefined)}>
-            حذف
-          </button>
-        </div>
+    <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, minmax(0, 1fr))' } }}>
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
+        <Typography variant="h6">الخصائص</Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+          <Button variant="outlined" onClick={() => loadBaseData().catch(() => undefined)}>إعادة تحميل</Button>
+          <Button variant="contained" onClick={() => createAttribute().catch(() => undefined)}>إنشاء</Button>
+          <Button variant="outlined" onClick={() => updateAttribute().catch(() => undefined)}>تحديث</Button>
+          <Button color="error" variant="outlined" onClick={() => deleteAttribute().catch(() => undefined)}>حذف</Button>
+        </Stack>
 
-        <label>
-          الاسم
-          <input
-            value={attributeForm.name}
-            onChange={(event) =>
-              setAttributeForm((prev) => ({ ...prev, name: event.target.value }))
-            }
-          />
-        </label>
+        <TextField label="الاسم" value={attributeForm.name} onChange={(event) => setAttributeForm((prev) => ({ ...prev, name: event.target.value }))} />
+        <TextField label="المسار المختصر" value={attributeForm.slug} onChange={(event) => setAttributeForm((prev) => ({ ...prev, slug: event.target.value }))} />
 
-        <label>
-          المسار المختصر
-          <input
-            value={attributeForm.slug}
-            onChange={(event) =>
-              setAttributeForm((prev) => ({ ...prev, slug: event.target.value }))
-            }
-          />
-        </label>
-
-        <div className="list compact-list">
+        <Box sx={{ display: 'grid', gap: 0.8 }}>
           {attributes.map((attribute) => (
-            <article key={attribute.id} className="list-item">
-              <p>
+            <Paper key={attribute.id} variant="outlined" sx={{ p: 1 }}>
+              <Typography variant="body2">
                 <strong>{attribute.name}</strong> ({attribute.slug})
-              </p>
-              <p>{attribute.values?.length ?? 0} قيمة</p>
-              <button onClick={() => selectAttribute(attribute)}>اختيار</button>
-            </article>
+              </Typography>
+              <Typography variant="body2">{attribute.values?.length ?? 0} قيمة</Typography>
+              <Button sx={{ mt: 0.6 }} variant="outlined" onClick={() => selectAttribute(attribute)}>اختيار</Button>
+            </Paper>
           ))}
-          {attributes.length === 0 ? <p className="hint">لا توجد خصائص محملة.</p> : null}
-        </div>
-      </article>
+          {attributes.length === 0 ? <Typography color="text.secondary">لا توجد خصائص محملة.</Typography> : null}
+        </Box>
+      </Paper>
 
-      <article className="card">
-        <h3>قيم الخصائص</h3>
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
+        <Typography variant="h6">قيم الخصائص</Typography>
         {selectedAttribute ? (
-          <p>
+          <Typography>
             الخاصية المحددة: <strong>{selectedAttribute.name}</strong>
-          </p>
+          </Typography>
         ) : (
-          <p className="hint">اختر خاصية لإدارة القيم.</p>
+          <Typography color="text.secondary">اختر خاصية لإدارة القيم.</Typography>
         )}
 
-        <div className="actions">
-          <button className="primary" onClick={() => createValue().catch(() => undefined)}>
-            إنشاء قيمة
-          </button>
-          <button onClick={() => updateValue().catch(() => undefined)}>تحديث القيمة</button>
-          <button className="danger" onClick={() => deleteValue().catch(() => undefined)}>
-            حذف القيمة
-          </button>
-        </div>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+          <Button variant="contained" onClick={() => createValue().catch(() => undefined)}>إنشاء قيمة</Button>
+          <Button variant="outlined" onClick={() => updateValue().catch(() => undefined)}>تحديث القيمة</Button>
+          <Button color="error" variant="outlined" onClick={() => deleteValue().catch(() => undefined)}>حذف القيمة</Button>
+        </Stack>
 
-        <label>
-          القيمة
-          <input
-            value={valueForm.value}
-            onChange={(event) => setValueForm((prev) => ({ ...prev, value: event.target.value }))}
-          />
-        </label>
+        <TextField label="القيمة" value={valueForm.value} onChange={(event) => setValueForm((prev) => ({ ...prev, value: event.target.value }))} />
+        <TextField label="المسار المختصر" value={valueForm.slug} onChange={(event) => setValueForm((prev) => ({ ...prev, slug: event.target.value }))} />
 
-        <label>
-          المسار المختصر
-          <input
-            value={valueForm.slug}
-            onChange={(event) => setValueForm((prev) => ({ ...prev, slug: event.target.value }))}
-          />
-        </label>
-
-        <div className="list compact-list">
+        <Box sx={{ display: 'grid', gap: 0.8 }}>
           {(selectedAttribute?.values ?? []).map((value) => (
-            <article key={value.id} className="list-item">
-              <p>
+            <Paper key={value.id} variant="outlined" sx={{ p: 1 }}>
+              <Typography variant="body2">
                 <strong>{value.value}</strong> ({value.slug})
-              </p>
-              <button onClick={() => selectValue(value)}>اختيار</button>
-            </article>
+              </Typography>
+              <Button sx={{ mt: 0.6 }} variant="outlined" onClick={() => selectValue(value)}>اختيار</Button>
+            </Paper>
           ))}
-          {(selectedAttribute?.values ?? []).length === 0 ? (
-            <p className="hint">لا توجد قيم للخاصية المحددة.</p>
-          ) : null}
-        </div>
-      </article>
+          {(selectedAttribute?.values ?? []).length === 0 ? <Typography color="text.secondary">لا توجد قيم للخاصية المحددة.</Typography> : null}
+        </Box>
+      </Paper>
 
-      <article className="card">
-        <h3>ربط الخصائص بالتصنيف</h3>
-        <label>
-          التصنيف
-          <select
-            value={selectedCategoryId}
-            onChange={(event) => loadCategoryAttributes(event.target.value).catch(() => undefined)}
-          >
-            <option value="">اختر تصنيفاً</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </label>
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1, gridColumn: { xs: 'auto', lg: '1 / -1' } }}>
+        <Typography variant="h6">ربط الخصائص بالتصنيف</Typography>
+        <TextField
+          select
+          label="التصنيف"
+          value={selectedCategoryId}
+          onChange={(event) => loadCategoryAttributes(event.target.value).catch(() => undefined)}
+        >
+          <MenuItem value="">اختر تصنيفاً</MenuItem>
+          {categories.map((category) => (
+            <MenuItem key={category.id} value={category.id}>
+              {category.name}
+            </MenuItem>
+          ))}
+        </TextField>
 
-        <div className="inline-check-grid">
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' } }}>
           {attributes.map((attribute) => (
-            <label key={attribute.id} className="inline-check">
-              <input
-                type="checkbox"
-                checked={selectedCategoryAttributeIds.includes(attribute.id)}
-                onChange={(event) => toggleCategoryAttribute(attribute.id, event.target.checked)}
-              />
-              {attribute.name}
-            </label>
+            <FormControlLabel
+              key={attribute.id}
+              control={
+                <Checkbox
+                  checked={selectedCategoryAttributeIds.includes(attribute.id)}
+                  onChange={(event) => toggleCategoryAttribute(attribute.id, event.target.checked)}
+                />
+              }
+              label={attribute.name}
+            />
           ))}
-        </div>
+        </Box>
 
-        <button className="primary" onClick={() => saveCategoryAttributes().catch(() => undefined)}>
+        <Button variant="contained" sx={{ width: 'fit-content' }} onClick={() => saveCategoryAttributes().catch(() => undefined)}>
           حفظ الربط
-        </button>
-      </article>
+        </Button>
+      </Paper>
 
-      {message ? <p className="status-message">{message}</p> : null}
-    </section>
+      {message ? <Alert severity="info">{message}</Alert> : null}
+    </Box>
   );
 }
 

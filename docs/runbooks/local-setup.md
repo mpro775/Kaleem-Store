@@ -20,6 +20,26 @@ npm run seed:run
 npm run dev --workspace @kaleem/api
 ```
 
+### Owner Registration OTP (Email)
+
+- Registration now uses OTP verification before account creation:
+  - `POST /auth/register-owner/start`
+  - `POST /auth/register-owner/verify`
+  - `POST /auth/register-owner/resend-otp`
+- Local default email mode is log-only (`EMAIL_DELIVERY_MODE=log`) and prints OTP in API logs.
+- To send real emails via SMTP (recommended for your official mailbox):
+  - `EMAIL_DELIVERY_MODE=smtp`
+  - `EMAIL_FROM=info@kaleemstores.com`
+  - `SMTP_HOST=smtp.hostinger.com`
+  - `SMTP_PORT=465`
+  - `SMTP_SECURE=true`
+  - `SMTP_USER=info@kaleemstores.com`
+  - `SMTP_PASS=<mailbox-password-or-app-password>`
+- To send real emails via Resend:
+  - `EMAIL_DELIVERY_MODE=resend`
+  - `EMAIL_FROM=<verified-sender@example.com>`
+  - `RESEND_API_KEY=<api-key>`
+
 ## Storefront Development (Phase 2)
 
 ```bash

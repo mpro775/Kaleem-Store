@@ -1,3 +1,5 @@
+import { Box, Button, Paper, Stack, Typography } from '@mui/material';
+
 interface PlatformConsoleProps {
   onBackHome: () => void;
   onMerchantLogin: () => void;
@@ -63,148 +65,188 @@ const footerColumns = [
 
 export function PlatformConsole({ onBackHome, onMerchantLogin }: PlatformConsoleProps) {
   return (
-    <section className="marketing-page platform-page" dir="rtl">
-      <header className="marketing-header panel platform-header">
-        <div className="marketing-brand-block">
-          <p className="eyebrow">Kaleem Platform</p>
-          <h1>الصفحة التعريفية لإدارة المنصة</h1>
-          <p>
-            هذه الصفحة تقدم نظرة واضحة واحترافية عن دور إدارة المنصة، مع تركيز على المحتوى
-            التعريفي وتجربة هبوط كاملة بهيدر وفوتر، بدون تصميم يشبه لوحات التحكم ذات السيدبار.
-          </p>
-        </div>
+    <Box component="section" dir="rtl" sx={{ display: 'grid', gap: 1.2 }}>
+      <Paper
+        variant="outlined"
+        sx={{
+          p: { xs: 1.2, md: 2 },
+          borderRadius: 3,
+          display: 'grid',
+          gap: 1,
+          gridTemplateColumns: { xs: '1fr', xl: '1.4fr auto auto' },
+          alignItems: 'center',
+        }}
+      >
+        <Box>
+          <Typography variant="caption" sx={{ color: 'secondary.main', fontWeight: 700 }}>
+            Kaleem Platform
+          </Typography>
+          <Typography variant="h4" sx={{ mt: 0.35 }}>
+            الصفحة التعريفية لإدارة المنصة
+          </Typography>
+          <Typography color="text.secondary" sx={{ mt: 0.6 }}>
+            هذه الصفحة تقدم نظرة واضحة واحترافية عن دور إدارة المنصة، مع تركيز على المحتوى التعريفي
+            وتجربة هبوط كاملة بهيدر وفوتر، بدون تصميم يشبه لوحات التحكم ذات السيدبار.
+          </Typography>
+        </Box>
 
-        <nav className="marketing-nav" aria-label="روابط الصفحة التعريفية">
-          <a href="#capabilities">القدرات</a>
-          <a href="#workflow">آلية العمل</a>
-          <a href="#contact">الخطوة التالية</a>
-        </nav>
+        <Stack direction={{ xs: 'row', xl: 'column' }} spacing={1}>
+          <Button component="a" href="#capabilities" variant="text">القدرات</Button>
+          <Button component="a" href="#workflow" variant="text">آلية العمل</Button>
+          <Button component="a" href="#contact" variant="text">الخطوة التالية</Button>
+        </Stack>
 
-        <div className="marketing-header-actions">
-          <button type="button" onClick={onBackHome}>
-            الرجوع للرئيسية
-          </button>
-          <button className="primary" type="button" onClick={onMerchantLogin}>
-            دخول التاجر
-          </button>
-        </div>
-      </header>
+        <Stack direction={{ xs: 'column', sm: 'row', xl: 'column' }} spacing={1}>
+          <Button variant="outlined" onClick={onBackHome}>الرجوع للرئيسية</Button>
+          <Button variant="contained" onClick={onMerchantLogin}>دخول التاجر</Button>
+        </Stack>
+      </Paper>
 
-      <section className="marketing-hero panel">
-        <div className="marketing-hero-copy">
-          <p className="eyebrow">Admin Landing</p>
-          <h2>واجهة تعريفية احترافية لفريق الإدارة بدل شكل لوحة التحكم التقليدي</h2>
-          <p>
-            تم تصميم الصفحة لتكون مقروءة وسهلة التصفح على الجوال وسطح المكتب، وتعرض قيمة بوابة
-            الإدارة بشكل تسويقي واضح قبل الانتقال إلى أي إجراءات تشغيلية.
-          </p>
+      <Paper
+        variant="outlined"
+        sx={{
+          p: { xs: 1.2, md: 2 },
+          borderRadius: 3,
+          background:
+            'radial-gradient(circle at top right, rgba(164, 152, 203, 0.22), transparent 35%), linear-gradient(135deg, rgba(28, 79, 79, 0.98), rgba(24, 63, 92, 0.96))',
+          color: '#fff',
+        }}
+      >
+        <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', lg: '1.2fr 0.8fr' } }}>
+          <Box>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.85)', fontWeight: 700 }}>
+              Admin Landing
+            </Typography>
+            <Typography variant="h5" sx={{ mt: 0.4, color: '#fff' }}>
+              واجهة تعريفية احترافية لفريق الإدارة بدل شكل لوحة التحكم التقليدي
+            </Typography>
+            <Typography sx={{ mt: 0.6, color: 'rgba(255,255,255,0.86)' }}>
+              تم تصميم الصفحة لتكون مقروءة وسهلة التصفح على الجوال وسطح المكتب، وتعرض قيمة بوابة
+              الإدارة بشكل تسويقي واضح قبل الانتقال إلى أي إجراءات تشغيلية.
+            </Typography>
 
-          <div className="trust-metrics" aria-label="مؤشرات منصة الإدارة">
-            {platformMetrics.map((metric) => (
-              <article key={metric.label} className="trust-metric-card">
-                <strong>{metric.value}</strong>
-                <span>{metric.label}</span>
-                <p>{metric.description}</p>
-              </article>
+            <Box sx={{ mt: 1, display: 'grid', gap: 0.8, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' } }}>
+              {platformMetrics.map((metric) => (
+                <Paper
+                  key={metric.label}
+                  sx={{ p: 1, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
+                >
+                  <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 800 }}>
+                    {metric.value}
+                  </Typography>
+                  <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.95)' }}>
+                    {metric.label}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.82)', mt: 0.35 }}>
+                    {metric.description}
+                  </Typography>
+                </Paper>
+              ))}
+            </Box>
+          </Box>
+
+          <Box sx={{ display: 'grid', gap: 0.8 }}>
+            {capabilities.slice(0, 2).map((item) => (
+              <Paper key={item.title} sx={{ p: 1, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.9)' }}>
+                <Typography variant="subtitle1">{item.title}</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.4 }}>
+                  {item.description}
+                </Typography>
+              </Paper>
             ))}
-          </div>
-        </div>
+          </Box>
+        </Box>
+      </Paper>
 
-        <aside className="marketing-showcase" aria-label="عرض قدرات الإدارة">
-          {capabilities.slice(0, 2).map((item) => (
-            <article key={item.title} className="showcase-card">
-              <h4>{item.title}</h4>
-              <p>{item.description}</p>
-            </article>
-          ))}
-        </aside>
-      </section>
-
-      <section id="capabilities" className="marketing-section panel">
-        <div className="section-heading centered">
-          <p className="eyebrow">قدرات الإدارة</p>
-          <h3>كل ما تحتاجه إدارة المنصة في عرض واحد واضح</h3>
-        </div>
-
-        <div className="marketing-card-grid large">
+      <Paper id="capabilities" variant="outlined" sx={{ p: { xs: 1.2, md: 2 }, borderRadius: 3 }}>
+        <Box sx={{ textAlign: 'center', mb: 1.2 }}>
+          <Typography variant="caption" sx={{ color: 'secondary.main', fontWeight: 700 }}>
+            قدرات الإدارة
+          </Typography>
+          <Typography variant="h5">كل ما تحتاجه إدارة المنصة في عرض واحد واضح</Typography>
+        </Box>
+        <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' } }}>
           {capabilities.map((item) => (
-            <article key={item.title} className="marketing-card marketing-card-feature">
-              <div className="marketing-card-icon" aria-hidden="true">
-                <span />
-              </div>
-              <h4>{item.title}</h4>
-              <p>{item.description}</p>
-            </article>
+            <Paper key={item.title} variant="outlined" sx={{ p: 1.2, borderRadius: 2 }}>
+              <Typography variant="h6">{item.title}</Typography>
+              <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+                {item.description}
+              </Typography>
+            </Paper>
           ))}
-        </div>
-      </section>
+        </Box>
+      </Paper>
 
-      <section id="workflow" className="marketing-section panel">
-        <div className="section-heading">
-          <p className="eyebrow">آلية العمل</p>
-          <h3>تدفق إداري مختصر من المراجعة حتى التنفيذ</h3>
-        </div>
-
-        <div className="journey-grid">
+      <Paper id="workflow" variant="outlined" sx={{ p: { xs: 1.2, md: 2 }, borderRadius: 3 }}>
+        <Box sx={{ mb: 1.2 }}>
+          <Typography variant="caption" sx={{ color: 'secondary.main', fontWeight: 700 }}>
+            آلية العمل
+          </Typography>
+          <Typography variant="h5">تدفق إداري مختصر من المراجعة حتى التنفيذ</Typography>
+        </Box>
+        <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' } }}>
           {adminSteps.map((step) => (
-            <article key={step.step} className="journey-card">
-              <span className="journey-step">{step.step}</span>
-              <h4>{step.title}</h4>
-              <p>{step.description}</p>
-            </article>
+            <Paper key={step.step} variant="outlined" sx={{ p: 1.2, borderRadius: 2 }}>
+              <Box sx={{ display: 'inline-flex', minWidth: 36, justifyContent: 'center', px: 0.75, py: 0.35, borderRadius: 99, bgcolor: 'primary.main', color: '#fff', fontWeight: 700, mb: 0.65 }}>
+                {step.step}
+              </Box>
+              <Typography variant="h6">{step.title}</Typography>
+              <Typography color="text.secondary" sx={{ mt: 0.45 }}>{step.description}</Typography>
+            </Paper>
           ))}
-        </div>
-      </section>
+        </Box>
+      </Paper>
 
-      <section id="contact" className="marketing-cta panel">
-        <div>
-          <p className="eyebrow">الانتقال السريع</p>
-          <h3>اختر المسار المناسب بعد الاطلاع على الصفحة التعريفية</h3>
-          <p>
-            يمكنك الرجوع للصفحة الرئيسية أو الانتقال مباشرة إلى دخول التاجر. تم إبقاء التجربة
-            بسيطة وبدون عناصر جانبية مشتتة.
-          </p>
-        </div>
+      <Paper id="contact" variant="outlined" sx={{ p: { xs: 1.2, md: 2 }, borderRadius: 3, background: 'linear-gradient(135deg, #fafaff, #f3e8ff)' }}>
+        <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', md: '1.2fr auto' }, alignItems: 'center' }}>
+          <Box>
+            <Typography variant="caption" sx={{ color: 'secondary.main', fontWeight: 700 }}>
+              الانتقال السريع
+            </Typography>
+            <Typography variant="h5">اختر المسار المناسب بعد الاطلاع على الصفحة التعريفية</Typography>
+            <Typography color="text.secondary" sx={{ mt: 0.6 }}>
+              يمكنك الرجوع للصفحة الرئيسية أو الانتقال مباشرة إلى دخول التاجر. تم إبقاء التجربة بسيطة
+              وبدون عناصر جانبية مشتتة.
+            </Typography>
+          </Box>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+            <Button variant="outlined" onClick={onBackHome}>الذهاب للرئيسية</Button>
+            <Button variant="contained" onClick={onMerchantLogin}>الانتقال إلى تسجيل الدخول</Button>
+          </Stack>
+        </Box>
+      </Paper>
 
-        <div className="marketing-hero-actions compact">
-          <button type="button" onClick={onBackHome}>
-            الذهاب للرئيسية
-          </button>
-          <button className="primary" type="button" onClick={onMerchantLogin}>
-            الانتقال إلى تسجيل الدخول
-          </button>
-        </div>
-      </section>
+      <Paper component="footer" variant="outlined" sx={{ p: { xs: 1.2, md: 2 }, borderRadius: 3, background: 'linear-gradient(135deg, #fffaf3, #f3e7d8)' }}>
+        <Box sx={{ display: 'grid', gap: 1.2, gridTemplateColumns: { xs: '1fr', lg: '0.9fr 1.3fr auto' } }}>
+          <Box>
+            <Typography variant="caption" sx={{ color: 'secondary.main', fontWeight: 700 }}>
+              Kaleem Admin
+            </Typography>
+            <Typography variant="h5">صفحة تعريفية مخصصة لإدارة المنصة</Typography>
+            <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+              هيدر واضح، محتوى منظم، وفوتر احترافي مع تجربة أخف من نمط لوحات التحكم التقليدية.
+            </Typography>
+          </Box>
 
-      <footer className="marketing-footer panel">
-        <div className="marketing-footer-brand">
-          <p className="eyebrow">Kaleem Admin</p>
-          <h3>صفحة تعريفية مخصصة لإدارة المنصة</h3>
-          <p>هيدر واضح، محتوى منظم، وفوتر احترافي مع تجربة أخف من نمط لوحات التحكم التقليدية.</p>
-        </div>
+          <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' } }}>
+            {footerColumns.map((column) => (
+              <Box key={column.title}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>{column.title}</Typography>
+                <Box component="ul" sx={{ m: 0, mt: 0.8, pl: 2, display: 'grid', gap: 0.5 }}>
+                  {column.links.map((link) => (
+                    <Box component="li" key={link}>{link}</Box>
+                  ))}
+                </Box>
+              </Box>
+            ))}
+          </Box>
 
-        <div className="marketing-footer-grid">
-          {footerColumns.map((column) => (
-            <div key={column.title} className="footer-column">
-              <strong>{column.title}</strong>
-              <ul>
-                {column.links.map((link) => (
-                  <li key={link}>{link}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-
-        <div className="marketing-footer-actions">
-          <button type="button" onClick={onBackHome}>
-            الرئيسية
-          </button>
-          <button className="primary" type="button" onClick={onMerchantLogin}>
-            دخول التاجر
-          </button>
-        </div>
-      </footer>
-    </section>
+          <Stack direction={{ xs: 'column', sm: 'row', lg: 'column' }} spacing={1}>
+            <Button variant="outlined" onClick={onBackHome}>الرئيسية</Button>
+            <Button variant="contained" onClick={onMerchantLogin}>دخول التاجر</Button>
+          </Stack>
+        </Box>
+      </Paper>
+    </Box>
   );
 }

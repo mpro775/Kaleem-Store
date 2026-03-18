@@ -1,4 +1,16 @@
 import { useEffect, useState } from 'react';
+import {
+  Alert,
+  Box,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  FormGroup,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
 import type { MerchantRequester } from '../merchant-dashboard';
 import type { WebhookDelivery, WebhookEndpoint } from '../types';
 
@@ -118,76 +130,76 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
   }
 
   return (
-    <article className="card">
-      <h3>الويب هوكس</h3>
-      <label>
-        اسم نقطة النهاية
-        <input
-          value={form.name}
-          onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-        />
-      </label>
-      <label>
-        رابط نقطة النهاية
-        <input
-          value={form.url}
-          onChange={(event) => setForm((prev) => ({ ...prev, url: event.target.value }))}
-          placeholder="https://example.com/webhooks"
-        />
-      </label>
-      <label>
-        الأحداث
-        <select
-          multiple
-          value={form.events}
-          onChange={(event) => {
-            const selected = Array.from(event.target.selectedOptions).map((option) => option.value);
-            setForm((prev) => ({ ...prev, events: selected }));
-          }}
-        >
+    <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
+      <Typography variant="h6">الويب هوكس</Typography>
+      <TextField label="اسم نقطة النهاية" value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} />
+      <TextField
+        label="رابط نقطة النهاية"
+        value={form.url}
+        onChange={(event) => setForm((prev) => ({ ...prev, url: event.target.value }))}
+        placeholder="https://example.com/webhooks"
+      />
+
+      <Box>
+        <Typography variant="subtitle2" sx={{ mb: 0.6 }}>الأحداث</Typography>
+        <FormGroup sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0,1fr))' } }}>
           {EVENT_OPTIONS.map((eventType) => (
-            <option key={eventType} value={eventType}>
-              {eventType}
-            </option>
+            <FormControlLabel
+              key={eventType}
+              control={
+                <Checkbox
+                  checked={form.events.includes(eventType)}
+                  onChange={(event) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      events: event.target.checked
+                        ? [...prev.events, eventType]
+                        : prev.events.filter((row) => row !== eventType),
+                    }));
+                  }}
+                />
+              }
+              label={eventType}
+            />
           ))}
-        </select>
-      </label>
+        </FormGroup>
+      </Box>
 
-      <div className="actions">
-        <button onClick={() => loadAll().catch(() => undefined)} disabled={loading}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+        <Button variant="outlined" onClick={() => loadAll().catch(() => undefined)} disabled={loading}>
           إعادة تحميل
-        </button>
-        <button className="primary" onClick={() => createEndpoint().catch(() => undefined)} disabled={loading}>
+        </Button>
+        <Button variant="contained" onClick={() => createEndpoint().catch(() => undefined)} disabled={loading}>
           إضافة نقطة نهاية
-        </button>
-        <button onClick={() => triggerTestEvent().catch(() => undefined)} disabled={loading}>
+        </Button>
+        <Button variant="outlined" onClick={() => triggerTestEvent().catch(() => undefined)} disabled={loading}>
           تشغيل حدث اختباري
-        </button>
-        <button onClick={() => retryPending().catch(() => undefined)} disabled={loading}>
+        </Button>
+        <Button variant="outlined" onClick={() => retryPending().catch(() => undefined)} disabled={loading}>
           إعادة محاولة المعلق
-        </button>
-      </div>
+        </Button>
+      </Stack>
 
-      <h4>نقاط النهاية</h4>
-      <ul>
+      <Typography variant="subtitle1">نقاط النهاية</Typography>
+      <Box component="ul" sx={{ m: 0, pl: 2, display: 'grid', gap: 0.5 }}>
         {endpoints.map((endpoint) => (
-          <li key={endpoint.id}>
+          <Box component="li" key={endpoint.id}>
             <strong>{endpoint.name}</strong> - {endpoint.url} - الأحداث: {endpoint.events.join(', ')}
-          </li>
+          </Box>
         ))}
-      </ul>
+      </Box>
 
-      <h4>آخر عمليات الإرسال</h4>
-      <ul>
+      <Typography variant="subtitle1">آخر عمليات الإرسال</Typography>
+      <Box component="ul" sx={{ m: 0, pl: 2, display: 'grid', gap: 0.5 }}>
         {deliveries.map((delivery) => (
-          <li key={delivery.id}>
+          <Box component="li" key={delivery.id}>
             {delivery.eventType} - الحالة {delivery.responseStatus ?? 'قيد الانتظار'} - المحاولات{' '}
             {delivery.attemptNumber}
-          </li>
+          </Box>
         ))}
-      </ul>
+      </Box>
 
-      {message ? <p className="status-message">{message}</p> : null}
-    </article>
+      {message ? <Alert severity="info">{message}</Alert> : null}
+    </Paper>
   );
 }

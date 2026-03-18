@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Alert, Box, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import type { MerchantRequester } from '../merchant-dashboard';
 import type { Order, OrderDetail, OrderStatus } from '../types';
 
@@ -74,89 +75,83 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
   }
 
   return (
-    <section className="card-grid">
-      <article className="card">
-        <h3>الطلبات</h3>
-        <div className="actions">
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-            <option value="">كل الحالات</option>
+    <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, minmax(0, 1fr))' } }}>
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
+        <Typography variant="h6">الطلبات</Typography>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
+          <TextField select label="الحالة" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+            <MenuItem value="">كل الحالات</MenuItem>
             {statusOptions.map((status) => (
-              <option key={status} value={status}>
+              <MenuItem key={status} value={status}>
                 {status}
-              </option>
+              </MenuItem>
             ))}
-          </select>
-            <input
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="ابحث برمز الطلب"
-            />
-          <button onClick={() => loadOrders().catch(() => undefined)}>تحميل</button>
-        </div>
+          </TextField>
+          <TextField label="ابحث برمز الطلب" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} />
+          <Button variant="outlined" onClick={() => loadOrders().catch(() => undefined)}>تحميل</Button>
+        </Stack>
 
-        <div className="list">
+        <Box sx={{ display: 'grid', gap: 0.8 }}>
           {orders.map((order) => (
-            <article key={order.id} className="list-item">
-              <h4>{order.orderCode}</h4>
-              <p>
+            <Paper key={order.id} variant="outlined" sx={{ p: 1 }}>
+              <Typography variant="subtitle1">{order.orderCode}</Typography>
+              <Typography variant="body2" sx={{ mt: 0.4 }}>
                 {order.status} - {order.total} {order.currencyCode}
-              </p>
-                <button onClick={() => loadOrderDetail(order.id).catch(() => undefined)}>
+              </Typography>
+              <Button sx={{ mt: 0.6 }} variant="outlined" onClick={() => loadOrderDetail(order.id).catch(() => undefined)}>
                 التفاصيل
-                </button>
-            </article>
+              </Button>
+            </Paper>
           ))}
-          {orders.length === 0 ? <p className="hint">لا توجد طلبات محملة.</p> : null}
-        </div>
-      </article>
+          {orders.length === 0 ? <Typography color="text.secondary">لا توجد طلبات محملة.</Typography> : null}
+        </Box>
+      </Paper>
 
-      <article className="card">
-        <h3>تفاصيل الطلب</h3>
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
+        <Typography variant="h6">تفاصيل الطلب</Typography>
         {orderDetail ? (
           <>
-            <p>
+            <Typography>
               <strong>{orderDetail.orderCode}</strong> - {orderDetail.status}
-            </p>
-            <p>
+            </Typography>
+            <Typography>
               الإجمالي: {orderDetail.total} {orderDetail.currencyCode}
-            </p>
+            </Typography>
 
-            <label>
-              الحالة التالية
-              <select
-                value={nextStatus}
-                onChange={(event) => setNextStatus(event.target.value as OrderStatus)}
-              >
-                {statusOptions.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              ملاحظة
-              <input value={statusNote} onChange={(event) => setStatusNote(event.target.value)} />
-            </label>
-            <button className="primary" onClick={() => updateOrderStatus().catch(() => undefined)}>
+            <TextField
+              select
+              label="الحالة التالية"
+              value={nextStatus}
+              onChange={(event) => setNextStatus(event.target.value as OrderStatus)}
+            >
+              {statusOptions.map((status) => (
+                <MenuItem key={status} value={status}>
+                  {status}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField label="ملاحظة" value={statusNote} onChange={(event) => setStatusNote(event.target.value)} />
+            <Button variant="contained" onClick={() => updateOrderStatus().catch(() => undefined)}>
               تحديث الحالة
-            </button>
+            </Button>
 
             {orderDetail.payment && (
               <>
-                <h4>الدفع</h4>
-                <div className="payment-info">
-                  <p>
+                <Typography variant="subtitle1" sx={{ mt: 0.6 }}>
+                  الدفع
+                </Typography>
+                <Box>
+                  <Typography variant="body2">
                     <strong>الطريقة:</strong> {orderDetail.payment.method}
-                  </p>
-                  <p>
+                  </Typography>
+                  <Typography variant="body2">
                     <strong>الحالة:</strong> {orderDetail.payment.status}
-                  </p>
-                  <p>
+                  </Typography>
+                  <Typography variant="body2">
                     <strong>المبلغ:</strong> {orderDetail.payment.amount}
-                  </p>
+                  </Typography>
                   {orderDetail.payment.receiptUrl && (
-                    <p>
+                    <Typography variant="body2">
                       <a
                         href={orderDetail.payment.receiptUrl}
                         target="_blank"
@@ -164,43 +159,47 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
                       >
                         عرض الإيصال
                       </a>
-                    </p>
+                    </Typography>
                   )}
-                </div>
+                </Box>
               </>
             )}
 
-            <h4>العناصر</h4>
-            <div className="list compact-list">
+            <Typography variant="subtitle1" sx={{ mt: 0.6 }}>
+              العناصر
+            </Typography>
+            <Box sx={{ display: 'grid', gap: 0.8 }}>
               {orderDetail.items.map((item) => (
-                <article key={item.id} className="list-item">
-                  <p>
+                <Paper key={item.id} variant="outlined" sx={{ p: 1 }}>
+                  <Typography variant="body2">
                     {item.title} x {item.quantity}
-                  </p>
-                  <p>{item.lineTotal}</p>
-                </article>
+                  </Typography>
+                  <Typography variant="body2">{item.lineTotal}</Typography>
+                </Paper>
               ))}
-            </div>
+            </Box>
 
-            <h4>سجل الحالة</h4>
-            <div className="list compact-list">
+            <Typography variant="subtitle1" sx={{ mt: 0.6 }}>
+              سجل الحالة
+            </Typography>
+            <Box sx={{ display: 'grid', gap: 0.8 }}>
               {orderDetail.timeline.map((entry, index) => (
-                <article key={`${entry.to}-${entry.createdAt}-${index}`} className="list-item">
-                  <p>
+                <Paper key={`${entry.to}-${entry.createdAt}-${index}`} variant="outlined" sx={{ p: 1 }}>
+                  <Typography variant="body2">
                     {entry.from ?? 'لا يوجد'} {'->'} {entry.to}
-                  </p>
-                  <p>{entry.note ?? 'بدون ملاحظة'}</p>
-                </article>
+                  </Typography>
+                  <Typography variant="body2">{entry.note ?? 'بدون ملاحظة'}</Typography>
+                </Paper>
               ))}
-            </div>
+            </Box>
           </>
         ) : (
-          <p className="hint">اختر طلباً لعرض التفاصيل.</p>
+          <Typography color="text.secondary">اختر طلباً لعرض التفاصيل.</Typography>
         )}
-      </article>
+      </Paper>
 
-      {message ? <p className="status-message">{message}</p> : null}
-    </section>
+      {message ? <Alert severity="info">{message}</Alert> : null}
+    </Box>
   );
 }
 

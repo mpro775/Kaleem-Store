@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Alert, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material';
 import type { MerchantRequester } from '../merchant-dashboard';
 import type {
   InventoryVariantSnapshot,
@@ -99,112 +100,78 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
   }
 
   return (
-    <section className="card-grid">
-      <article className="card">
-        <h3>التحكم بالمخزون</h3>
-        <div className="actions">
-          <button onClick={() => loadInventoryData().catch(() => undefined)}>تحميل</button>
-        </div>
+    <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, minmax(0, 1fr))' } }}>
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
+        <Typography variant="h6">التحكم بالمخزون</Typography>
+        <Button variant="outlined" onClick={() => loadInventoryData().catch(() => undefined)}>تحميل</Button>
 
-        <h4>تعديل مخزون يدوي</h4>
-        <label>
-          معرّف المتغير
-          <input
-            value={adjustVariantId}
-            onChange={(event) => setAdjustVariantId(event.target.value)}
-          />
-        </label>
-        <label>
-          فرق الكمية
-          <input
-            type="number"
-            step={1}
-            value={adjustDelta}
-            onChange={(event) => setAdjustDelta(event.target.value)}
-          />
-        </label>
-        <label>
-          ملاحظة
-          <input value={adjustNote} onChange={(event) => setAdjustNote(event.target.value)} />
-        </label>
-        <button className="primary" onClick={() => adjustInventory().catch(() => undefined)}>
+        <Typography variant="subtitle1">تعديل مخزون يدوي</Typography>
+        <TextField label="معرّف المتغير" value={adjustVariantId} onChange={(event) => setAdjustVariantId(event.target.value)} />
+        <TextField label="فرق الكمية" type="number" inputProps={{ step: 1 }} value={adjustDelta} onChange={(event) => setAdjustDelta(event.target.value)} />
+        <TextField label="ملاحظة" value={adjustNote} onChange={(event) => setAdjustNote(event.target.value)} />
+        <Button variant="contained" onClick={() => adjustInventory().catch(() => undefined)}>
           تطبيق التعديل
-        </button>
+        </Button>
 
-        <h4>حد انخفاض المخزون</h4>
-        <label>
-          معرّف المتغير
-          <input
-            value={thresholdVariantId}
-            onChange={(event) => setThresholdVariantId(event.target.value)}
-          />
-        </label>
-        <label>
-          الحد
-          <input
-            type="number"
-            min={0}
-            step={1}
-            value={thresholdValue}
-            onChange={(event) => setThresholdValue(event.target.value)}
-          />
-        </label>
-        <button onClick={() => updateThreshold().catch(() => undefined)}>تحديث الحد</button>
+        <Typography variant="subtitle1" sx={{ mt: 0.5 }}>حد انخفاض المخزون</Typography>
+        <TextField label="معرّف المتغير" value={thresholdVariantId} onChange={(event) => setThresholdVariantId(event.target.value)} />
+        <TextField label="الحد" type="number" inputProps={{ min: 0, step: 1 }} value={thresholdValue} onChange={(event) => setThresholdValue(event.target.value)} />
+        <Button variant="outlined" onClick={() => updateThreshold().catch(() => undefined)}>تحديث الحد</Button>
 
-        {message ? <p className="status-message">{message}</p> : null}
-      </article>
+        {message ? <Alert severity="info">{message}</Alert> : null}
+      </Paper>
 
-      <article className="card">
-        <h3>تنبيهات انخفاض المخزون</h3>
-        <div className="list compact-list">
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2 }}>
+        <Typography variant="h6">تنبيهات انخفاض المخزون</Typography>
+        <Box sx={{ mt: 1, display: 'grid', gap: 0.8 }}>
           {alerts.map((alert) => (
-            <article key={alert.variantId} className="list-item">
-              <p>
+            <Paper key={alert.variantId} variant="outlined" sx={{ p: 1 }}>
+              <Typography variant="body2">
                 {alert.productTitle} / {alert.variantTitle}
-              </p>
-              <p>
+              </Typography>
+              <Typography variant="body2">
                 SKU {alert.sku} - المخزون {alert.stockQuantity} - الحد {alert.lowStockThreshold}
-              </p>
-              <p>
+              </Typography>
+              <Typography variant="body2">
                 المحجوز {alert.reservedQuantity} - المتاح {alert.availableQuantity}
-              </p>
-            </article>
+              </Typography>
+            </Paper>
           ))}
-          {alerts.length === 0 ? <p className="hint">لا توجد تنبيهات انخفاض مخزون.</p> : null}
-        </div>
-      </article>
+          {alerts.length === 0 ? <Typography color="text.secondary">لا توجد تنبيهات انخفاض مخزون.</Typography> : null}
+        </Box>
+      </Paper>
 
-      <article className="card">
-        <h3>آخر الحركات</h3>
-        <div className="list compact-list">
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2 }}>
+        <Typography variant="h6">آخر الحركات</Typography>
+        <Box sx={{ mt: 1, display: 'grid', gap: 0.8 }}>
           {movements.map((movement) => (
-            <article key={movement.id} className="list-item">
-              <p>
+            <Paper key={movement.id} variant="outlined" sx={{ p: 1 }}>
+              <Typography variant="body2">
                 {movement.movementType} ({movement.qtyDelta}) - {movement.sku}
-              </p>
-              <p>{movement.note ?? 'بدون ملاحظة'}</p>
-            </article>
+              </Typography>
+              <Typography variant="body2">{movement.note ?? 'بدون ملاحظة'}</Typography>
+            </Paper>
           ))}
-          {movements.length === 0 ? <p className="hint">لا توجد حركات حتى الآن.</p> : null}
-        </div>
-      </article>
+          {movements.length === 0 ? <Typography color="text.secondary">لا توجد حركات حتى الآن.</Typography> : null}
+        </Box>
+      </Paper>
 
-      <article className="card">
-        <h3>الحجوزات النشطة</h3>
-        <div className="list compact-list">
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2 }}>
+        <Typography variant="h6">الحجوزات النشطة</Typography>
+        <Box sx={{ mt: 1, display: 'grid', gap: 0.8 }}>
           {reservations.map((reservation) => (
-            <article key={reservation.id} className="list-item">
-              <p>
+            <Paper key={reservation.id} variant="outlined" sx={{ p: 1 }}>
+              <Typography variant="body2">
                 {reservation.sku} - الكمية {reservation.quantity}
-              </p>
-              <p>
+              </Typography>
+              <Typography variant="body2">
                 {reservation.status} - الطلب {reservation.orderId}
-              </p>
-            </article>
+              </Typography>
+            </Paper>
           ))}
-          {reservations.length === 0 ? <p className="hint">لا توجد حجوزات.</p> : null}
-        </div>
-      </article>
-    </section>
+          {reservations.length === 0 ? <Typography color="text.secondary">لا توجد حجوزات.</Typography> : null}
+        </Box>
+      </Paper>
+    </Box>
   );
 }

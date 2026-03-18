@@ -59,5 +59,37 @@ export const envValidationSchema = Joi.object({
   AUTH_MAX_ATTEMPTS: Joi.number().integer().min(3).max(20).default(5),
   AUTH_LOCKOUT_DURATION_MS: Joi.number().integer().min(60_000).max(3600_000).default(900_000),
   AUTH_WINDOW_MS: Joi.number().integer().min(60_000).max(3600_000).default(900_000),
+  AUTH_OTP_SECRET: Joi.string().min(24).default('kaleem-local-owner-registration-otp-secret-change-me'),
+  AUTH_OTP_TTL_MINUTES: Joi.number().integer().min(3).max(30).default(10),
+  AUTH_OTP_MAX_VERIFY_ATTEMPTS: Joi.number().integer().min(3).max(10).default(5),
+  AUTH_OTP_RESEND_COOLDOWN_SECONDS: Joi.number().integer().min(30).max(600).default(60),
+  AUTH_OTP_MAX_RESEND_COUNT: Joi.number().integer().min(1).max(20).default(5),
+  EMAIL_DELIVERY_MODE: Joi.string().valid('log', 'resend', 'smtp').default('log'),
+  EMAIL_FROM: Joi.string().email({ tlds: { allow: false } }).default('no-reply@kaleem.store'),
+  SMTP_HOST: Joi.when('EMAIL_DELIVERY_MODE', {
+    is: 'smtp',
+    then: Joi.string().trim().required(),
+    otherwise: Joi.string().allow('').default(''),
+  }),
+  SMTP_PORT: Joi.when('EMAIL_DELIVERY_MODE', {
+    is: 'smtp',
+    then: Joi.number().integer().min(1).max(65535).required(),
+    otherwise: Joi.number().integer().min(1).max(65535).default(465),
+  }),
+  SMTP_SECURE: Joi.boolean().default(true),
+  SMTP_USER: Joi.when('EMAIL_DELIVERY_MODE', {
+    is: 'smtp',
+    then: Joi.string().trim().required(),
+    otherwise: Joi.string().allow('').default(''),
+  }),
+  SMTP_PASS: Joi.when('EMAIL_DELIVERY_MODE', {
+    is: 'smtp',
+    then: Joi.string().required(),
+    otherwise: Joi.string().allow('').default(''),
+  }),
+  RESEND_API_BASE_URL: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .default('https://api.resend.com'),
+  RESEND_API_KEY: Joi.string().allow('').default(''),
   WEBHOOK_SECRET: Joi.string().min(16).default('kaleem-local-webhook-secret'),
 });

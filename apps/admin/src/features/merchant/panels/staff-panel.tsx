@@ -1,4 +1,15 @@
 import { useState, useEffect } from 'react';
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  MenuItem,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
 import type { MerchantRequester } from '../merchant-dashboard';
 import type { UserProfile, StaffInvite, StoreRole } from '../types';
 
@@ -142,151 +153,102 @@ export function StaffPanel({ request }: StaffPanelProps) {
   }
 
   return (
-    <section className="card-grid">
-      <article className="card">
-        <h3>دعوة عضو فريق</h3>
-        <div className="actions">
-          <button onClick={() => setShowInviteForm(!showInviteForm)}>
+    <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, minmax(0, 1fr))' } }}>
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
+        <Typography variant="h6">دعوة عضو فريق</Typography>
+        <Button variant="outlined" onClick={() => setShowInviteForm(!showInviteForm)}>
             {showInviteForm ? 'إلغاء' : 'دعوة جديدة'}
-          </button>
-        </div>
+        </Button>
 
         {showInviteForm && (
-          <div className="form-section">
-            <label>
-              البريد الإلكتروني
-              <input
-                type="email"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder="staff@example.com"
-              />
-            </label>
-
-            <label>
-              الاسم الكامل
-              <input
-                value={inviteFullName}
-                onChange={(e) => setInviteFullName(e.target.value)}
-                placeholder="محمد أحمد"
-              />
-            </label>
-
-            <label>
-              الدور
-              <select
-                value={inviteRole}
-                onChange={(e) => setInviteRole(e.target.value as StoreRole)}
-              >
-                <option value="staff">موظف</option>
-                <option value="owner">مالك</option>
-              </select>
-            </label>
-
-            <label>
-              الصلاحيات (تفصل بفاصلة)
-              <input
-                value={invitePermissions}
-                onChange={(e) => setInvitePermissions(e.target.value)}
-                placeholder="products:read, products:write"
-              />
-            </label>
-
-            <button className="primary" onClick={() => sendInvite().catch(() => undefined)}>
+          <Box sx={{ display: 'grid', gap: 1 }}>
+            <TextField type="email" label="البريد الإلكتروني" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="staff@example.com" />
+            <TextField label="الاسم الكامل" value={inviteFullName} onChange={(e) => setInviteFullName(e.target.value)} placeholder="محمد أحمد" />
+            <TextField select label="الدور" value={inviteRole} onChange={(e) => setInviteRole(e.target.value as StoreRole)}>
+              <MenuItem value="staff">موظف</MenuItem>
+              <MenuItem value="owner">مالك</MenuItem>
+            </TextField>
+            <TextField label="الصلاحيات (تفصل بفاصلة)" value={invitePermissions} onChange={(e) => setInvitePermissions(e.target.value)} placeholder="products:read, products:write" />
+            <Button variant="contained" onClick={() => sendInvite().catch(() => undefined)}>
               إرسال الدعوة
-            </button>
-          </div>
+            </Button>
+          </Box>
         )}
-      </article>
+      </Paper>
 
-      <article className="card">
-        <h3>الدعوات المعلقة</h3>
-        <div className="list">
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2 }}>
+        <Typography variant="h6">الدعوات المعلقة</Typography>
+        <Box sx={{ mt: 1, display: 'grid', gap: 0.8 }}>
           {invites.map((invite) => (
-            <article key={invite.id} className="list-item">
-              <h4>{invite.fullName}</h4>
-              <p>{invite.email}</p>
-              <p>
+            <Paper key={invite.id} variant="outlined" sx={{ p: 1 }}>
+              <Typography variant="subtitle1">{invite.fullName}</Typography>
+              <Typography variant="body2">{invite.email}</Typography>
+              <Typography variant="body2">
                 {invite.role} | تنتهي: {new Date(invite.expiresAt).toLocaleDateString()}
-              </p>
-            </article>
+              </Typography>
+            </Paper>
           ))}
-          {invites.length === 0 ? <p className="hint">لا توجد دعوات معلقة.</p> : null}
-        </div>
-      </article>
+          {invites.length === 0 ? <Typography color="text.secondary">لا توجد دعوات معلقة.</Typography> : null}
+        </Box>
+      </Paper>
 
-      <article className="card">
-        <h3>تعديل المستخدم</h3>
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
+        <Typography variant="h6">تعديل المستخدم</Typography>
         {selectedUserId ? (
           <>
-            <label>
-              الدور
-              <select value={editRole} onChange={(e) => setEditRole(e.target.value as StoreRole)}>
-                <option value="owner">مالك</option>
-                <option value="staff">موظف</option>
-              </select>
-            </label>
+            <TextField select label="الدور" value={editRole} onChange={(e) => setEditRole(e.target.value as StoreRole)}>
+              <MenuItem value="owner">مالك</MenuItem>
+              <MenuItem value="staff">موظف</MenuItem>
+            </TextField>
 
-            <label>
-              الصلاحيات (تفصل بفاصلة)
-              <input
-                value={editPermissions}
-                onChange={(e) => setEditPermissions(e.target.value)}
-                placeholder="products:read, products:write"
-              />
-            </label>
+            <TextField label="الصلاحيات (تفصل بفاصلة)" value={editPermissions} onChange={(e) => setEditPermissions(e.target.value)} placeholder="products:read, products:write" />
 
-            <div className="actions">
-                <button className="primary" onClick={() => updateRole().catch(() => undefined)}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <Button variant="contained" onClick={() => updateRole().catch(() => undefined)}>
                 تحديث الدور
-                </button>
-              <button onClick={() => setSelectedUserId('')}>إلغاء</button>
-            </div>
+              </Button>
+              <Button variant="outlined" onClick={() => setSelectedUserId('')}>إلغاء</Button>
+            </Stack>
           </>
         ) : (
-          <p className="hint">اختر مستخدماً من القائمة للتعديل.</p>
+          <Typography color="text.secondary">اختر مستخدماً من القائمة للتعديل.</Typography>
         )}
-      </article>
+      </Paper>
 
-      <article className="card">
-        <h3>قائمة الفريق</h3>
-        <div className="actions">
-          <button onClick={() => loadUsers().catch(() => undefined)}>تحديث</button>
-        </div>
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
+        <Typography variant="h6">قائمة الفريق</Typography>
+        <Button variant="outlined" onClick={() => loadUsers().catch(() => undefined)}>تحديث</Button>
 
-        {message ? <p className="status-message success">{message}</p> : null}
-        {error ? <p className="status-message error">{error}</p> : null}
+        {message ? <Alert severity="success">{message}</Alert> : null}
+        {error ? <Alert severity="error">{error}</Alert> : null}
 
-        <div className="list">
+        <Box sx={{ display: 'grid', gap: 0.8 }}>
           {users.map((user) => (
-            <article key={user.id} className="list-item">
-              <div className="list-item-header">
-                <h4>{user.fullName}</h4>
-                {user.isActive === false && <span className="badge disabled">معطل</span>}
-              </div>
-              <p>{user.email}</p>
-              <p>
+            <Paper key={user.id} variant="outlined" sx={{ p: 1 }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="subtitle1">{user.fullName}</Typography>
+                {user.isActive === false && <Chip label="معطل" size="small" color="default" />}
+              </Stack>
+              <Typography variant="body2">{user.email}</Typography>
+              <Typography variant="body2">
                 {user.role} / {user.permissions.join(', ') || 'بدون صلاحيات'}
-              </p>
-              <div className="list-item-actions">
-                <button onClick={() => selectUser(user)}>تعديل</button>
+              </Typography>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 0.7 }}>
+                <Button variant="outlined" onClick={() => selectUser(user)}>تعديل</Button>
                 {user.isActive !== false ? (
-                  <button
-                    className="danger"
-                    onClick={() => disableUser(user.id).catch(() => undefined)}
-                  >
+                  <Button color="error" variant="outlined" onClick={() => disableUser(user.id).catch(() => undefined)}>
                     تعطيل
-                  </button>
+                  </Button>
                 ) : (
-                  <button onClick={() => enableUser(user.id).catch(() => undefined)}>تفعيل</button>
+                  <Button variant="outlined" onClick={() => enableUser(user.id).catch(() => undefined)}>تفعيل</Button>
                 )}
-              </div>
-            </article>
+              </Stack>
+            </Paper>
           ))}
-          {users.length === 0 ? <p className="hint">لا يوجد مستخدمون.</p> : null}
-        </div>
-      </article>
-    </section>
+          {users.length === 0 ? <Typography color="text.secondary">لا يوجد مستخدمون.</Typography> : null}
+        </Box>
+      </Paper>
+    </Box>
   );
 }
 

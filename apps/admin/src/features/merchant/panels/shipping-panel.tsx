@@ -1,4 +1,15 @@
 import { useState } from 'react';
+import {
+  Alert,
+  Box,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
 import type { MerchantRequester } from '../merchant-dashboard';
 import type { ShippingZone } from '../types';
 
@@ -95,82 +106,48 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
   }
 
   return (
-    <section className="card-grid">
-      <article className="card">
-        <h3>مناطق الشحن</h3>
-        <div className="actions">
-          <button onClick={() => loadZones().catch(() => undefined)}>تحميل</button>
-          <button className="primary" onClick={() => createZone().catch(() => undefined)}>
+    <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, minmax(0, 1fr))' } }}>
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
+        <Typography variant="h6">مناطق الشحن</Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+          <Button variant="outlined" onClick={() => loadZones().catch(() => undefined)}>تحميل</Button>
+          <Button variant="contained" onClick={() => createZone().catch(() => undefined)}>
             إنشاء
-          </button>
-          <button onClick={() => updateZone().catch(() => undefined)}>تحديث</button>
-          <button className="danger" onClick={() => deleteZone().catch(() => undefined)}>
+          </Button>
+          <Button variant="outlined" onClick={() => updateZone().catch(() => undefined)}>تحديث</Button>
+          <Button color="error" variant="outlined" onClick={() => deleteZone().catch(() => undefined)}>
             حذف
-          </button>
-        </div>
+          </Button>
+        </Stack>
 
-        <label>
-          الاسم
-          <input
-            value={form.name}
-            onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-          />
-        </label>
-        <label>
-          المدينة
-          <input
-            value={form.city}
-            onChange={(event) => setForm((prev) => ({ ...prev, city: event.target.value }))}
-          />
-        </label>
-        <label>
-          المنطقة
-          <input
-            value={form.area}
-            onChange={(event) => setForm((prev) => ({ ...prev, area: event.target.value }))}
-          />
-        </label>
-        <label>
-          الرسوم
-          <input
-            type="number"
-            min={0}
-            step={0.01}
-            value={form.fee}
-            onChange={(event) => setForm((prev) => ({ ...prev, fee: event.target.value }))}
-          />
-        </label>
-        <label className="inline-check">
-          <input
-            type="checkbox"
-            checked={form.isActive}
-            onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
-          />
-          نشط
-        </label>
+        <TextField label="الاسم" value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} />
+        <TextField label="المدينة" value={form.city} onChange={(event) => setForm((prev) => ({ ...prev, city: event.target.value }))} />
+        <TextField label="المنطقة" value={form.area} onChange={(event) => setForm((prev) => ({ ...prev, area: event.target.value }))} />
+        <TextField label="الرسوم" type="number" inputProps={{ min: 0, step: 0.01 }} value={form.fee} onChange={(event) => setForm((prev) => ({ ...prev, fee: event.target.value }))} />
+        <FormControlLabel control={<Checkbox checked={form.isActive} onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))} />} label="نشط" />
 
-        {message ? <p className="status-message">{message}</p> : null}
-      </article>
+        {message ? <Alert severity="info">{message}</Alert> : null}
+      </Paper>
 
-      <article className="card">
-        <h3>قائمة المناطق</h3>
-        <div className="list">
+      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
+        <Typography variant="h6">قائمة المناطق</Typography>
+        <Box sx={{ display: 'grid', gap: 0.8 }}>
           {zones.map((zone) => (
-            <article key={zone.id} className="list-item">
-              <h4>{zone.name}</h4>
-              <p>
+            <Paper key={zone.id} variant="outlined" sx={{ p: 1 }}>
+              <Typography variant="subtitle1">{zone.name}</Typography>
+              <Typography variant="body2" sx={{ mt: 0.4 }}>
                 {zone.city ?? 'أي مدينة'} / {zone.area ?? 'أي منطقة'}
-              </p>
-              <p>
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 0.4 }}>
                 الرسوم: {zone.fee} - {zone.isActive ? 'نشط' : 'غير نشط'}
-              </p>
-              <button onClick={() => selectZone(zone)}>تعديل</button>
-            </article>
+              </Typography>
+              <Button sx={{ mt: 0.6 }} variant="outlined" onClick={() => selectZone(zone)}>تعديل</Button>
+            </Paper>
           ))}
-          {zones.length === 0 ? <p className="hint">لا توجد مناطق محملة.</p> : null}
-        </div>
-      </article>
-    </section>
+          {zones.length === 0 ? <Typography color="text.secondary">لا توجد مناطق محملة.</Typography> : null}
+        </Box>
+      </Paper>
+    </Box>
   );
 }
 
