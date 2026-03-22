@@ -9,7 +9,22 @@ import {
   Stack,
   TextField,
   Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Divider,
+  CircularProgress,
+  Grid,
 } from '@mui/material';
+import PeopleIcon from '@mui/icons-material/People';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import BlockIcon from '@mui/icons-material/Block';
+import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
+
 import type { MerchantRequester } from '../merchant-dashboard';
 import type { UserProfile, StaffInvite, StoreRole } from '../types';
 
@@ -20,8 +35,9 @@ interface StaffPanelProps {
 export function StaffPanel({ request }: StaffPanelProps) {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [invites, setInvites] = useState<StaffInvite[]>([]);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [message, setMessage] = useState({ text: '', type: 'info' as 'info' | 'success' | 'error' });
 
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -34,38 +50,35 @@ export function StaffPanel({ request }: StaffPanelProps) {
   const [editPermissions, setEditPermissions] = useState('');
 
   useEffect(() => {
-    loadUsers().catch(() => undefined);
-    loadInvites().catch(() => undefined);
+    loadAll().catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function loadUsers(): Promise<void> {
-    setError('');
+  async function loadAll(): Promise<void> {
+    setLoading(true);
+    setMessage({ text: '', type: 'info' });
     try {
-      const data = await request<UserProfile[]>('/users', { method: 'GET' });
-      setUsers(data ?? []);
+      const [usersData, invitesData] = await Promise.all([
+        request<UserProfile[]>('/users', { method: 'GET' }),
+        request<StaffInvite[]>('/users/invites', { method: 'GET' })
+      ]);
+      setUsers(usersData ?? []);
+      setInvites(invitesData ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذر تحميل المستخدمين');
-    }
-  }
-
-  async function loadInvites(): Promise<void> {
-    setError('');
-    try {
-      const data = await request<StaffInvite[]>('/users/invites', { method: 'GET' });
-      setInvites(data ?? []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذر تحميل الدعوات');
+      setMessage({ text: err instanceof Error ? err.message : 'تعذر تحميل بيانات الفريق', type: 'error' });
+    } finally {
+      setLoading(false);
     }
   }
 
   async function sendInvite(): Promise<void> {
-    setError('');
-    setMessage('');
+    setMessage({ text: '', type: 'info' });
     if (!inviteEmail || !inviteFullName) {
-      setError('البريد الإلكتروني والاسم الكامل مطلوبان');
+      setMessage({ text: 'البريد الإلكتروني والاسم الكامل مطلوبان', type: 'error' });
       return;
     }
 
+    setActionLoading(true);
     try {
       const result = await request<StaffInvite>('/users/invite', {
         method: 'POST',
@@ -77,31 +90,29 @@ export function StaffPanel({ request }: StaffPanelProps) {
         }),
       });
       if (result) {
-        setMessage(`تم إرسال دعوة إلى ${result.email}`);
         if (result.inviteToken) {
-          setMessage(
-            `تم إرسال الدعوة. شارك هذا الرابط: ${window.location.origin}/accept-invite?token=${result.inviteToken}`,
-          );
+          setMessage({ text: `تم إرسال الدعوة بنجاح. شارك الرابط: ${window.location.origin}/accept-invite?token=${result.inviteToken}`, type: 'success' });
+        } else {
+          setMessage({ text: `تم إرسال دعوة إلى ${result.email} بنجاح.`, type: 'success' });
         }
       }
       setInviteEmail('');
       setInviteFullName('');
       setInvitePermissions('');
       setShowInviteForm(false);
-      await loadInvites();
+      await loadAll();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذر إرسال الدعوة');
+      setMessage({ text: err instanceof Error ? err.message : 'تعذر إرسال الدعوة', type: 'error' });
+    } finally {
+      setActionLoading(false);
     }
   }
 
   async function updateRole(): Promise<void> {
-    if (!selectedUserId) {
-      setError('اختر مستخدماً أولاً');
-      return;
-    }
+    if (!selectedUserId) return;
 
-    setError('');
-    setMessage('');
+    setActionLoading(true);
+    setMessage({ text: '', type: 'info' });
     try {
       await request(`/users/${selectedUserId}/role`, {
         method: 'PATCH',
@@ -110,39 +121,29 @@ export function StaffPanel({ request }: StaffPanelProps) {
           permissions: parsePermissions(editPermissions),
         }),
       });
-      await loadUsers();
-      setMessage('تم تحديث دور المستخدم');
+      await loadAll();
+      setMessage({ text: 'تم تحديث صلاحيات المستخدم بنجاح', type: 'success' });
       setSelectedUserId('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذر تحديث دور المستخدم');
+      setMessage({ text: err instanceof Error ? err.message : 'تعذر تحديث دور المستخدم', type: 'error' });
+    } finally {
+      setActionLoading(false);
     }
   }
 
-  async function disableUser(userId: string): Promise<void> {
-    setError('');
-    setMessage('');
+  async function toggleUserStatus(userId: string, currentIsActive: boolean): Promise<void> {
+    setActionLoading(true);
+    setMessage({ text: '', type: 'info' });
     try {
-      await request(`/users/${userId}/disable`, {
+      await request(`/users/${userId}/${currentIsActive ? 'disable' : 'enable'}`, {
         method: 'PATCH',
       });
-      await loadUsers();
-      setMessage('تم تعطيل المستخدم');
+      await loadAll();
+      setMessage({ text: `تم ${currentIsActive ? 'إيقاف' : 'تفعيل'} المستخدم بنجاح`, type: 'success' });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذر تعطيل المستخدم');
-    }
-  }
-
-  async function enableUser(userId: string): Promise<void> {
-    setError('');
-    setMessage('');
-    try {
-      await request(`/users/${userId}/enable`, {
-        method: 'PATCH',
-      });
-      await loadUsers();
-      setMessage('تم تفعيل المستخدم');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذر تفعيل المستخدم');
+      setMessage({ text: err instanceof Error ? err.message : 'تعذر تغيير حالة المستخدم', type: 'error' });
+    } finally {
+      setActionLoading(false);
     }
   }
 
@@ -150,104 +151,190 @@ export function StaffPanel({ request }: StaffPanelProps) {
     setSelectedUserId(user.id);
     setEditRole(user.role);
     setEditPermissions(user.permissions.join(', '));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   return (
-    <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, minmax(0, 1fr))' } }}>
-      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
-        <Typography variant="h6">دعوة عضو فريق</Typography>
-        <Button variant="outlined" onClick={() => setShowInviteForm(!showInviteForm)}>
-            {showInviteForm ? 'إلغاء' : 'دعوة جديدة'}
-        </Button>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1, flexWrap: 'wrap', gap: 2 }}>
+        <Box>
+          <Typography variant="h4" fontWeight={800} gutterBottom>
+            فريق العمل
+          </Typography>
+          <Typography color="text.secondary">
+            قم بإدارة وصول الموظفين وتخصيص الصلاحيات المناسبة لكل دور.
+          </Typography>
+        </Box>
+        <Stack direction="row" spacing={1.5}>
+          <Button 
+            variant="outlined" 
+            onClick={() => loadAll().catch(() => undefined)}
+            disabled={loading}
+          >
+            تحديث القائمة
+          </Button>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            startIcon={<PersonAddIcon />} 
+            onClick={() => setShowInviteForm(!showInviteForm)}
+            size="large"
+            sx={{ borderRadius: 2 }}
+            disableElevation
+          >
+            {showInviteForm ? 'إلغاء' : 'دعوة عضو جديد'}
+          </Button>
+        </Stack>
+      </Box>
 
-        {showInviteForm && (
-          <Box sx={{ display: 'grid', gap: 1 }}>
-            <TextField type="email" label="البريد الإلكتروني" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="staff@example.com" />
-            <TextField label="الاسم الكامل" value={inviteFullName} onChange={(e) => setInviteFullName(e.target.value)} placeholder="محمد أحمد" />
-            <TextField select label="الدور" value={inviteRole} onChange={(e) => setInviteRole(e.target.value as StoreRole)}>
-              <MenuItem value="staff">موظف</MenuItem>
-              <MenuItem value="owner">مالك</MenuItem>
-            </TextField>
-            <TextField label="الصلاحيات (تفصل بفاصلة)" value={invitePermissions} onChange={(e) => setInvitePermissions(e.target.value)} placeholder="products:read, products:write" />
-            <Button variant="contained" onClick={() => sendInvite().catch(() => undefined)}>
-              إرسال الدعوة
-            </Button>
+      {message.text && (
+        <Alert severity={message.type} sx={{ borderRadius: 2 }}>{message.text}</Alert>
+      )}
+
+      {/* Invite Form or Edit Form */}
+      {(showInviteForm || selectedUserId) && (
+        <Paper elevation={0} sx={{ p: { xs: 3, md: 4 }, borderRadius: 4, border: '1px solid', borderColor: selectedUserId ? 'secondary.main' : 'primary.main', bgcolor: selectedUserId ? 'secondary.50' : 'primary.50' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+            {selectedUserId ? <AdminPanelSettingsIcon color="secondary" /> : <PersonAddIcon color="primary" />}
+            <Typography variant="h6" fontWeight={800} color={selectedUserId ? "secondary.dark" : "primary.dark"}>
+              {selectedUserId ? 'تعديل صلاحيات المستخدم' : 'إرسال دعوة انضمام لفريق العمل'}
+            </Typography>
           </Box>
-        )}
-      </Paper>
+          
+          <Stack spacing={3}>
+            {showInviteForm && !selectedUserId && (
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3 }}>
+                <Box>
+                  <TextField type="email" label="البريد الإلكتروني" fullWidth value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="staff@example.com" sx={{ bgcolor: 'background.paper' }} />
+                </Box>
+                <Box>
+                  <TextField label="الاسم الكامل" fullWidth value={inviteFullName} onChange={(e) => setInviteFullName(e.target.value)} placeholder="محمد أحمد" sx={{ bgcolor: 'background.paper' }} />
+                </Box>
+              </Box>
+            )}
 
-      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2 }}>
-        <Typography variant="h6">الدعوات المعلقة</Typography>
-        <Box sx={{ mt: 1, display: 'grid', gap: 0.8 }}>
-          {invites.map((invite) => (
-            <Paper key={invite.id} variant="outlined" sx={{ p: 1 }}>
-              <Typography variant="subtitle1">{invite.fullName}</Typography>
-              <Typography variant="body2">{invite.email}</Typography>
-              <Typography variant="body2">
-                {invite.role} | تنتهي: {new Date(invite.expiresAt).toLocaleDateString()}
-              </Typography>
-            </Paper>
-          ))}
-          {invites.length === 0 ? <Typography color="text.secondary">لا توجد دعوات معلقة.</Typography> : null}
-        </Box>
-      </Paper>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 2fr' }, gap: 3 }}>
+              <Box>
+                <TextField select label="الدور (Role)" fullWidth value={selectedUserId ? editRole : inviteRole} onChange={(e) => selectedUserId ? setEditRole(e.target.value as StoreRole) : setInviteRole(e.target.value as StoreRole)} sx={{ bgcolor: 'background.paper' }}>
+                  <MenuItem value="staff">موظف (Staff)</MenuItem>
+                  <MenuItem value="owner">مالك (Owner)</MenuItem>
+                </TextField>
+              </Box>
+              <Box>
+                <TextField label="الصلاحيات المخصصة (تفصل بفاصلة)" fullWidth value={selectedUserId ? editPermissions : invitePermissions} onChange={(e) => selectedUserId ? setEditPermissions(e.target.value) : setInvitePermissions(e.target.value)} placeholder="مثال: products:read, orders:write" helperText="اتركها فارغة أو ضع * للوصول الكامل" sx={{ bgcolor: 'background.paper' }} dir="ltr" />
+              </Box>
+            </Box>
 
-      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
-        <Typography variant="h6">تعديل المستخدم</Typography>
-        {selectedUserId ? (
-          <>
-            <TextField select label="الدور" value={editRole} onChange={(e) => setEditRole(e.target.value as StoreRole)}>
-              <MenuItem value="owner">مالك</MenuItem>
-              <MenuItem value="staff">موظف</MenuItem>
-            </TextField>
+            <Box sx={{ display: 'flex', gap: 1.5, pt: 1 }}>
+              {selectedUserId ? (
+                <>
+                  <Button variant="contained" color="secondary" onClick={() => updateRole().catch(() => undefined)} disabled={actionLoading} disableElevation sx={{ px: 4 }}>حفظ الصلاحيات</Button>
+                  <Button variant="outlined" color="inherit" onClick={() => setSelectedUserId('')}>إلغاء التعديل</Button>
+                </>
+              ) : (
+                <Button variant="contained" color="primary" onClick={() => sendInvite().catch(() => undefined)} disabled={actionLoading} disableElevation sx={{ px: 4 }}>إرسال الدعوة عبر البريد</Button>
+              )}
+            </Box>
+          </Stack>
+        </Paper>
+      )}
 
-            <TextField label="الصلاحيات (تفصل بفاصلة)" value={editPermissions} onChange={(e) => setEditPermissions(e.target.value)} placeholder="products:read, products:write" />
-
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-              <Button variant="contained" onClick={() => updateRole().catch(() => undefined)}>
-                تحديث الدور
-              </Button>
-              <Button variant="outlined" onClick={() => setSelectedUserId('')}>إلغاء</Button>
-            </Stack>
-          </>
-        ) : (
-          <Typography color="text.secondary">اختر مستخدماً من القائمة للتعديل.</Typography>
-        )}
-      </Paper>
-
-      <Paper variant="outlined" sx={{ p: 1.2, borderRadius: 2, display: 'grid', gap: 1 }}>
-        <Typography variant="h6">قائمة الفريق</Typography>
-        <Button variant="outlined" onClick={() => loadUsers().catch(() => undefined)}>تحديث</Button>
-
-        {message ? <Alert severity="success">{message}</Alert> : null}
-        {error ? <Alert severity="error">{error}</Alert> : null}
-
-        <Box sx={{ display: 'grid', gap: 0.8 }}>
-          {users.map((user) => (
-            <Paper key={user.id} variant="outlined" sx={{ p: 1 }}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography variant="subtitle1">{user.fullName}</Typography>
-                {user.isActive === false && <Chip label="معطل" size="small" color="default" />}
-              </Stack>
-              <Typography variant="body2">{user.email}</Typography>
-              <Typography variant="body2">
-                {user.role} / {user.permissions.join(', ') || 'بدون صلاحيات'}
-              </Typography>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 0.7 }}>
-                <Button variant="outlined" onClick={() => selectUser(user)}>تعديل</Button>
-                {user.isActive !== false ? (
-                  <Button color="error" variant="outlined" onClick={() => disableUser(user.id).catch(() => undefined)}>
-                    تعطيل
-                  </Button>
+      {/* Users and Invites Lists */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '3fr 1fr' }, gap: 3 }}>
+        
+        {/* Active Staff */}
+        <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden', height: 'fit-content' }}>
+          <Box sx={{ p: 2, bgcolor: 'background.default', borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
+            <PeopleIcon color="action" />
+            <Typography variant="subtitle1" fontWeight={800}>المستخدمين الحاليين ({users.length})</Typography>
+          </Box>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 700 }}>المستخدم</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>الدور والصلاحيات</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>الحالة</TableCell>
+                  <TableCell align="left" sx={{ fontWeight: 700 }}>الإجراءات</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {loading ? (
+                  <TableRow><TableCell colSpan={4} align="center" sx={{ py: 3 }}><CircularProgress size={24} /></TableCell></TableRow>
+                ) : users.length === 0 ? (
+                  <TableRow><TableCell colSpan={4} align="center" sx={{ py: 3 }}><Typography color="text.secondary">لا يوجد مستخدمون.</Typography></TableCell></TableRow>
                 ) : (
-                  <Button variant="outlined" onClick={() => enableUser(user.id).catch(() => undefined)}>تفعيل</Button>
+                  users.map((user) => (
+                    <TableRow key={user.id} hover>
+                      <TableCell>
+                        <Typography variant="subtitle2" fontWeight={700}>{user.fullName}</Typography>
+                        <Typography variant="caption" color="text.secondary" display="block">{user.email}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip size="small" label={user.role === 'owner' ? 'المالك' : 'موظف'} color={user.role === 'owner' ? 'primary' : 'default'} variant="outlined" sx={{ mb: 0.5 }} />
+                        <Typography variant="caption" color="text.secondary" display="block" sx={{ maxWidth: 200 }} noWrap>
+                          {user.permissions.join(', ') || 'صلاحيات افتراضية'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        {user.isActive !== false ? (
+                          <Chip size="small" label="مفعل" color="success" />
+                        ) : (
+                          <Chip size="small" label="موقوف" color="error" />
+                        )}
+                      </TableCell>
+                      <TableCell align="left">
+                        <Stack direction="row" spacing={1} justifyContent="flex-end">
+                          <Button size="small" variant="outlined" startIcon={<AdminPanelSettingsIcon />} onClick={() => selectUser(user)} disabled={actionLoading}>
+                            صلاحيات
+                          </Button>
+                          <Button 
+                            size="small" 
+                            variant="outlined" 
+                            color={user.isActive !== false ? 'error' : 'success'} 
+                            startIcon={user.isActive !== false ? <BlockIcon /> : <VerifiedUserIcon />} 
+                            onClick={() => toggleUserStatus(user.id, user.isActive !== false).catch(() => undefined)} 
+                            disabled={actionLoading}
+                          >
+                            {user.isActive !== false ? 'إيقاف' : 'تفعيل'}
+                          </Button>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+
+        {/* Pending Invites */}
+        <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden', height: 'fit-content' }}>
+          <Box sx={{ p: 2, bgcolor: 'background.default', borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
+            <PersonAddIcon color="action" />
+            <Typography variant="subtitle1" fontWeight={800}>دعوات بانتظار القبول ({invites.length})</Typography>
+          </Box>
+          <Box sx={{ p: 2 }}>
+            {invites.length === 0 ? (
+              <Typography color="text.secondary" variant="body2" textAlign="center" py={4}>لا توجد دعوات معلقة.</Typography>
+            ) : (
+              <Stack spacing={2}>
+                {invites.map((invite) => (
+                  <Box key={invite.id} sx={{ p: 1.5, borderRadius: 2, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
+                    <Typography variant="subtitle2" fontWeight={700}>{invite.fullName}</Typography>
+                    <Typography variant="caption" color="text.secondary" display="block" mb={1}>{invite.email}</Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Chip size="small" label={invite.role} />
+                      <Typography variant="caption" color="error">تنتهي: {new Date(invite.expiresAt).toLocaleDateString('ar-EG')}</Typography>
+                    </Box>
+                  </Box>
+                ))}
               </Stack>
-            </Paper>
-          ))}
-          {users.length === 0 ? <Typography color="text.secondary">لا يوجد مستخدمون.</Typography> : null}
-        </Box>
-      </Paper>
+            )}
+          </Box>
+        </Paper>
+
+      </Box>
     </Box>
   );
 }
