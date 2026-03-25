@@ -19,8 +19,14 @@ export interface CategoryResponse {
   storeId: string;
   parentId: string | null;
   name: string;
+  nameAr: string | null;
+  nameEn: string | null;
   slug: string;
   description: string | null;
+  descriptionAr: string | null;
+  descriptionEn: string | null;
+  mediaAssetId: string | null;
+  imageUrl: string | null;
   sortOrder: number;
   isActive: boolean;
 }
@@ -40,14 +46,20 @@ export class CategoriesService {
     const slug = this.resolveSlug(input.name, input.slug);
     await this.ensureSlugAvailable(currentUser.storeId, slug);
     await this.validateParentCategory(currentUser.storeId, input.parentId ?? null);
+    await this.validateMediaAsset(currentUser.storeId, input.mediaAssetId ?? null);
 
     const category = await this.categoriesRepository.create({
       id: uuidv4(),
       storeId: currentUser.storeId,
       parentId: input.parentId ?? null,
       name: input.name.trim(),
+      nameAr: input.nameAr?.trim() ?? null,
+      nameEn: input.nameEn?.trim() ?? null,
       slug,
       description: input.description?.trim() ?? null,
+      descriptionAr: input.descriptionAr?.trim() ?? null,
+      descriptionEn: input.descriptionEn?.trim() ?? null,
+      mediaAssetId: input.mediaAssetId ?? null,
       sortOrder: input.sortOrder ?? 0,
       isActive: input.isActive ?? true,
     });
@@ -85,9 +97,11 @@ export class CategoriesService {
 
     const nextSlug = await this.resolveUpdatedSlug(currentUser.storeId, categoryId, existing, input);
     const parentId = await this.resolveUpdatedParentId(currentUser.storeId, categoryId, existing, input);
+    const mediaAssetId = input.mediaAssetId !== undefined ? (input.mediaAssetId ?? null) : existing.media_asset_id;
+    await this.validateMediaAsset(currentUser.storeId, mediaAssetId);
 
     const updated = await this.categoriesRepository.update(
-      this.buildUpdatePayload(currentUser.storeId, categoryId, existing, input, nextSlug, parentId),
+      this.buildUpdatePayload(currentUser.storeId, categoryId, existing, input, nextSlug, parentId, mediaAssetId),
     );
 
     if (!updated) {
@@ -135,14 +149,20 @@ export class CategoriesService {
     input: UpdateCategoryDto,
     nextSlug: string,
     parentId: string | null,
+    mediaAssetId: string | null,
   ) {
     return {
       storeId,
       categoryId,
       parentId,
       name: input.name?.trim() ?? existing.name,
+      nameAr: input.nameAr?.trim() ?? existing.name_ar,
+      nameEn: input.nameEn?.trim() ?? existing.name_en,
       slug: nextSlug,
       description: input.description?.trim() ?? existing.description,
+      descriptionAr: input.descriptionAr?.trim() ?? existing.description_ar,
+      descriptionEn: input.descriptionEn?.trim() ?? existing.description_en,
+      mediaAssetId,
       sortOrder: input.sortOrder ?? existing.sort_order,
       isActive: input.isActive ?? existing.is_active,
     };
@@ -204,6 +224,17 @@ export class CategoriesService {
     }
   }
 
+  private async validateMediaAsset(storeId: string, mediaAssetId: string | null): Promise<void> {
+    if (!mediaAssetId) {
+      return;
+    }
+
+    const media = await this.categoriesRepository.findMediaAssetById(storeId, mediaAssetId);
+    if (!media) {
+      throw new BadRequestException('Media asset not found in this store');
+    }
+  }
+
   private async logCategoryAction(
     action: string,
     currentUser: AuthUser,
@@ -228,8 +259,14 @@ export class CategoriesService {
       storeId: record.store_id,
       parentId: record.parent_id,
       name: record.name,
+      nameAr: record.name_ar,
+      nameEn: record.name_en,
       slug: record.slug,
       description: record.description,
+      descriptionAr: record.description_ar,
+      descriptionEn: record.description_en,
+      mediaAssetId: record.media_asset_id,
+      imageUrl: record.image_url,
       sortOrder: record.sort_order,
       isActive: record.is_active,
     };

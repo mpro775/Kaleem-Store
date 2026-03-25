@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import './globals.css';
+import { CustomerAuthProvider } from '../lib/customer-auth-context';
+import { WishlistProvider } from '../lib/wishlist-context';
+import { HeaderAuth } from '../components/header-auth';
 
 export const metadata: Metadata = {
   title: {
@@ -13,7 +16,16 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body className="app-body">{children}</body>
+      <body className="app-body">
+        <CustomerAuthProvider>
+          <WishlistProvider>
+            <div className="store-header-bar">
+              <HeaderAuth />
+            </div>
+            {children}
+          </WishlistProvider>
+        </CustomerAuthProvider>
+      </body>
     </html>
   );
 }

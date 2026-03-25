@@ -48,4 +48,8 @@ export class CheckoutDto {
 
   @IsIn(PAYMENT_METHODS)
   paymentMethod!: PaymentMethod;
+
+  @IsOptional()
+  @IsString()
+  customerAccessToken?: string;
 }

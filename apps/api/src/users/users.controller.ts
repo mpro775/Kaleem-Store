@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { PERMISSIONS } from '../auth/constants/permission.constants';
@@ -15,11 +15,13 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { InviteStaffDto } from './dto/invite-staff.dto';
 import { RequestPasswordResetDto, ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import {
   UsersService,
   type UserProfileResponse,
   type InviteResponse,
   type InviteValidationResponse,
+  type SessionResponse,
 } from './users.service';
 
 @ApiTags('users')
@@ -104,6 +106,92 @@ export class UsersController {
     @Req() request: Request,
   ): Promise<void> {
     return this.usersService.changePassword(currentUser, body, getRequestContext(request));
+  }
+
+  @Get(':userId')
+  @RequirePermissions(PERMISSIONS.usersRead)
+  @ApiOkResponse({ description: 'Get user by ID' })
+  async getUser(
+    @CurrentUser() currentUser: AuthUser,
+    @Param('userId') userId: string,
+  ): Promise<UserProfileResponse> {
+    return this.usersService.getUserById(currentUser, userId);
+  }
+
+  @Patch('me')
+  @RequirePermissions(PERMISSIONS.usersRead)
+  @ApiOkResponse({ description: 'Update current user profile' })
+  async updateProfile(
+    @CurrentUser() currentUser: AuthUser,
+    @Body() body: UpdateProfileDto,
+    @Req() request: Request,
+  ): Promise<UserProfileResponse> {
+    return this.usersService.updateProfile(currentUser, body, getRequestContext(request));
+  }
+
+  @Delete(':userId')
+  @RequirePermissions(PERMISSIONS.usersWrite)
+  @ApiOkResponse({ description: 'Delete a user from the store' })
+  async deleteUser(
+    @CurrentUser() currentUser: AuthUser,
+    @Param('userId') userId: string,
+    @Req() request: Request,
+  ): Promise<void> {
+    return this.usersService.deleteUser(currentUser, userId, getRequestContext(request));
+  }
+
+  @Delete('invites/:inviteId')
+  @RequirePermissions(PERMISSIONS.usersWrite)
+  @ApiOkResponse({ description: 'Cancel a pending invite' })
+  async cancelInvite(
+    @CurrentUser() currentUser: AuthUser,
+    @Param('inviteId') inviteId: string,
+    @Req() request: Request,
+  ): Promise<void> {
+    return this.usersService.cancelInvite(currentUser, inviteId, getRequestContext(request));
+  }
+
+  @Post('invites/:inviteId/resend')
+  @RequirePermissions(PERMISSIONS.usersWrite)
+  @ApiOkResponse({ description: 'Resend an invite' })
+  async resendInvite(
+    @CurrentUser() currentUser: AuthUser,
+    @Param('inviteId') inviteId: string,
+    @Req() request: Request,
+  ): Promise<InviteResponse> {
+    return this.usersService.resendInvite(currentUser, inviteId, getRequestContext(request));
+  }
+
+  @Get('sessions')
+  @RequirePermissions(PERMISSIONS.usersRead)
+  @ApiOkResponse({ description: 'List active sessions for current user' })
+  async listSessions(@CurrentUser() currentUser: AuthUser): Promise<SessionResponse[]> {
+    return this.usersService.listSessions(currentUser);
+  }
+
+  @Post('sessions/:sessionId/revoke')
+  @RequirePermissions(PERMISSIONS.usersRead)
+  @ApiOkResponse({ description: 'Revoke a specific session' })
+  async revokeSession(
+    @CurrentUser() currentUser: AuthUser,
+    @Param('sessionId') sessionId: string,
+    @Req() request: Request,
+  ): Promise<void> {
+    return this.usersService.revokeSession(currentUser, sessionId, getRequestContext(request));
+  }
+
+  @Post('sessions/revoke-all')
+  @RequirePermissions(PERMISSIONS.usersRead)
+  @ApiOkResponse({ description: 'Revoke all other sessions' })
+  async revokeAllOtherSessions(
+    @CurrentUser() currentUser: AuthUser,
+    @Req() request: Request,
+  ): Promise<{ revokedCount: number }> {
+    const revokedCount = await this.usersService.revokeAllOtherSessions(
+      currentUser,
+      getRequestContext(request),
+    );
+    return { revokedCount };
   }
 }
 

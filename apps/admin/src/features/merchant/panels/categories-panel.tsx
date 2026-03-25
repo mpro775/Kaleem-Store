@@ -26,9 +26,11 @@ import EditNoteIcon from '@mui/icons-material/EditNote';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import ImageIcon from '@mui/icons-material/Image';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 
 import type { MerchantRequester } from '../merchant-dashboard';
-import type { Category } from '../types';
+import type { Category, MediaAsset, PresignedMediaUpload } from '../types';
 
 interface CategoriesPanelProps {
   request: MerchantRequester;
@@ -41,6 +43,10 @@ const emptyForm = {
   parentId: '',
   sortOrder: '0',
   isActive: true,
+  nameAr: '',
+  nameEn: '',
+  descriptionAr: '',
+  descriptionEn: '',
 };
 
 export function CategoriesPanel({ request }: CategoriesPanelProps) {
@@ -50,7 +56,10 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [message, setMessage] = useState({ text: '', type: 'info' as 'info' | 'success' | 'error' });
+  const [formMediaAssetId, setFormMediaAssetId] = useState<string | null>(null);
+  const [formImageUrl, setFormImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     loadCategories().catch(() => undefined);
@@ -73,6 +82,8 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
   function handleCreateNew() {
     setSelectedId('');
     setForm(emptyForm);
+    setFormMediaAssetId(null);
+    setFormImageUrl(null);
     setMessage({ text: '', type: 'info' });
     setViewMode('detail');
   }
@@ -88,7 +99,7 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
     try {
       await request('/categories', {
         method: 'POST',
-        body: JSON.stringify(buildCategoryPayload(form)),
+        body: JSON.stringify(buildCategoryPayload(form, formMediaAssetId, false)),
       });
       setForm(emptyForm);
       await loadCategories();
@@ -108,7 +119,7 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
     try {
       await request(`/categories/${selectedId}`, {
         method: 'PUT',
-        body: JSON.stringify(buildCategoryPayload(form)),
+        body: JSON.stringify(buildCategoryPayload(form, formMediaAssetId, true)),
       });
       await loadCategories();
       setMessage({ text: 'تم تحديث التصنيف بنجاح', type: 'success' });
@@ -130,6 +141,8 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
       });
       setSelectedId('');
       setForm(emptyForm);
+      setFormMediaAssetId(null);
+      setFormImageUrl(null);
       await loadCategories();
       setMessage({ text: 'تم حذف التصنيف بنجاح', type: 'success' });
       setViewMode('list');
@@ -149,8 +162,36 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
       parentId: category.parentId ?? '',
       sortOrder: String(category.sortOrder),
       isActive: category.isActive,
+      nameAr: category.nameAr ?? '',
+      nameEn: category.nameEn ?? '',
+      descriptionAr: category.descriptionAr ?? '',
+      descriptionEn: category.descriptionEn ?? '',
     });
+    setFormMediaAssetId(category.mediaAssetId);
+    setFormImageUrl(category.imageUrl);
     setViewMode('detail');
+  }
+
+  async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>): Promise<void> {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    setMessage({ text: '', type: 'info' });
+    try {
+      const asset = await uploadMediaAsset(request, file);
+      setFormMediaAssetId(asset.id);
+      setFormImageUrl(asset.url);
+    } catch (error) {
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر رفع الصورة', type: 'error' });
+    } finally {
+      setUploadingImage(false);
+      event.target.value = '';
+    }
+  }
+
+  function handleRemoveImage() {
+    setFormMediaAssetId(null);
+    setFormImageUrl(null);
   }
 
   const getParentName = (parentId: string | null) => {
@@ -222,6 +263,27 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
               <Box>
                 <TextField 
+                  label="الاسم (عربي)" 
+                  fullWidth 
+                  value={form.nameAr} 
+                  onChange={(event) => setForm((prev) => ({ ...prev, nameAr: event.target.value }))} 
+                  dir="rtl"
+                />
+              </Box>
+              <Box>
+                <TextField 
+                  label="Name (English)" 
+                  fullWidth 
+                  value={form.nameEn} 
+                  onChange={(event) => setForm((prev) => ({ ...prev, nameEn: event.target.value }))} 
+                  dir="ltr"
+                />
+              </Box>
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+              <Box>
+                <TextField 
                   label="المسار المختصر (Slug)" 
                   fullWidth 
                   value={form.slug} 
@@ -250,10 +312,51 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
               onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))} 
             />
 
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+              <Box>
+                <TextField 
+                  label="الوصف (عربي)" 
+                  fullWidth 
+                  multiline 
+                  minRows={3} 
+                  value={form.descriptionAr} 
+                  onChange={(event) => setForm((prev) => ({ ...prev, descriptionAr: event.target.value }))} 
+                  dir="rtl"
+                />
+              </Box>
+              <Box>
+                <TextField 
+                  label="Description (English)" 
+                  fullWidth 
+                  multiline 
+                  minRows={3} 
+                  value={form.descriptionEn} 
+                  onChange={(event) => setForm((prev) => ({ ...prev, descriptionEn: event.target.value }))} 
+                  dir="ltr"
+                />
+              </Box>
+            </Box>
+
             <FormControlLabel 
               control={<Checkbox checked={form.isActive} onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))} />} 
               label={<Typography fontWeight={600}>تفعيل التصنيف وظهوره في المتجر</Typography>} 
             />
+
+            <Box sx={{ bgcolor: 'background.default', p: 3, borderRadius: 3, border: '1px dashed', borderColor: 'divider' }}>
+              <Typography variant="subtitle2" fontWeight={700} mb={2}>صورة التصنيف</Typography>
+              {formImageUrl && (
+                <Box sx={{ mb: 2, position: 'relative', display: 'inline-block' }}>
+                  <Box component="img" src={formImageUrl} alt="صورة التصنيف" sx={{ width: 160, height: 160, objectFit: 'cover', borderRadius: 2, border: '1px solid', borderColor: 'divider' }} />
+                  <Button size="small" color="error" onClick={handleRemoveImage} sx={{ mt: 1 }}>إزالة الصورة</Button>
+                </Box>
+              )}
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Button variant="outlined" component="label" startIcon={<CloudUploadIcon />} disabled={uploadingImage}>
+                  {uploadingImage ? 'جارِ الرفع...' : formImageUrl ? 'تغيير الصورة' : 'رفع صورة'}
+                  <input type="file" accept="image/*" hidden onChange={(e) => handleImageUpload(e).catch(() => undefined)} />
+                </Button>
+              </Stack>
+            </Box>
 
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 2 }}>
               <Button 
@@ -313,6 +416,7 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
           <Table>
             <TableHead sx={{ bgcolor: 'background.default' }}>
               <TableRow>
+                <TableCell sx={{ fontWeight: 700 }}>الصورة</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>اسم التصنيف</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>المسار المختصر</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>التصنيف الأب</TableCell>
@@ -324,19 +428,28 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
               ) : categories.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
                     <Typography color="text.secondary">لا توجد تصنيفات مضافة.</Typography>
                   </TableCell>
                 </TableRow>
               ) : (
                 categories.map((category) => (
                   <TableRow key={category.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                    <TableCell>
+                      {category.imageUrl ? (
+                        <Box component="img" src={category.imageUrl} alt={category.name} sx={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 1 }} />
+                      ) : (
+                        <Box sx={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default', borderRadius: 1 }}>
+                          <ImageIcon fontSize="small" color="disabled" />
+                        </Box>
+                      )}
+                    </TableCell>
                     <TableCell sx={{ fontWeight: 700 }}>{category.name}</TableCell>
                     <TableCell dir="ltr" align="right">
                       <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
@@ -386,7 +499,11 @@ function buildCategoryPayload(form: {
   parentId: string;
   sortOrder: string;
   isActive: boolean;
-}) {
+  nameAr: string;
+  nameEn: string;
+  descriptionAr: string;
+  descriptionEn: string;
+}, mediaAssetId: string | null, isUpdate: boolean) {
   const payload: {
     name: string;
     slug?: string;
@@ -394,15 +511,30 @@ function buildCategoryPayload(form: {
     parentId?: string;
     sortOrder: number;
     isActive: boolean;
+    nameAr?: string;
+    nameEn?: string;
+    descriptionAr?: string;
+    descriptionEn?: string;
+    mediaAssetId?: string | null;
   } = {
     name: form.name.trim(),
     sortOrder: Number(form.sortOrder || '0'),
     isActive: form.isActive,
   };
 
+  if (isUpdate) {
+    payload.mediaAssetId = mediaAssetId;
+  } else if (mediaAssetId) {
+    payload.mediaAssetId = mediaAssetId;
+  }
+
   const slug = form.slug.trim();
   const description = form.description.trim();
   const parentId = form.parentId.trim();
+  const nameAr = form.nameAr.trim();
+  const nameEn = form.nameEn.trim();
+  const descriptionAr = form.descriptionAr.trim();
+  const descriptionEn = form.descriptionEn.trim();
 
   if (slug) {
     payload.slug = slug;
@@ -413,6 +545,72 @@ function buildCategoryPayload(form: {
   if (parentId) {
     payload.parentId = parentId;
   }
+  if (nameAr) {
+    payload.nameAr = nameAr;
+  }
+  if (nameEn) {
+    payload.nameEn = nameEn;
+  }
+  if (descriptionAr) {
+    payload.descriptionAr = descriptionAr;
+  }
+  if (descriptionEn) {
+    payload.descriptionEn = descriptionEn;
+  }
 
   return payload;
+}
+
+async function uploadMediaAsset(request: MerchantRequester, file: File): Promise<MediaAsset> {
+  const presigned = await request<PresignedMediaUpload>('/media/presign-upload', {
+    method: 'POST',
+    body: JSON.stringify({
+      fileName: file.name,
+      contentType: file.type,
+      fileSizeBytes: file.size,
+    }),
+  });
+
+  if (!presigned) {
+    throw new Error('تعذر الحصول على رابط الرفع الموقّع');
+  }
+
+  const uploadResponse = await fetch(presigned.uploadUrl, {
+    method: 'PUT',
+    headers: presigned.uploadHeaders,
+    body: file,
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error('فشل رفع الوسائط المباشر');
+  }
+
+  const etag = uploadResponse.headers.get('etag') ?? undefined;
+  const confirmPayload: {
+    objectKey: string;
+    fileName: string;
+    contentType: string;
+    fileSizeBytes: number;
+    etag?: string;
+  } = {
+    objectKey: presigned.objectKey,
+    fileName: file.name,
+    contentType: file.type,
+    fileSizeBytes: file.size,
+  };
+
+  if (etag) {
+    confirmPayload.etag = etag;
+  }
+
+  const mediaAsset = await request<MediaAsset>('/media/confirm', {
+    method: 'POST',
+    body: JSON.stringify(confirmPayload),
+  });
+
+  if (!mediaAsset) {
+    throw new Error('تعذر تأكيد الوسائط المرفوعة');
+  }
+
+  return mediaAsset;
 }

@@ -63,6 +63,7 @@ export async function checkout(input: {
   couponCode?: string;
   note?: string;
   paymentMethod: 'cod' | 'transfer';
+  customerAccessToken?: string;
 }): Promise<CheckoutResponse> {
   const idempotencyKey = generateIdempotencyKey();
   return fetchJson('/sf/checkout', {

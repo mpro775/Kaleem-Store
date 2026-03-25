@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AttributesModule } from '../attributes/attributes.module';
 import { CategoriesModule } from '../categories/categories.module';
+import { CustomersModule } from '../customers/customers.module';
 import { IdempotencyModule } from '../idempotency/idempotency.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { OrdersModule } from '../orders/orders.module';
@@ -30,6 +31,7 @@ import { StorefrontService } from './storefront.service';
     WebhooksModule,
     SaasModule,
     IdempotencyModule,
+    CustomersModule,
   ],
   controllers: [StorefrontController, PublicStoreController],
   providers: [StorefrontService, StoreResolverService],

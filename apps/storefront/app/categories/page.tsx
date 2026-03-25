@@ -3,6 +3,11 @@ import Link from 'next/link';
 import { listCategories, listFilterAttributes, listProducts } from '../../lib/storefront-server';
 import type { StorefrontFilterAttribute } from '../../lib/types';
 
+function bilingual(ar: string | null | undefined, en: string | null | undefined, fallback: string): string {
+  if (ar && en) return `${ar} / ${en}`;
+  return ar ?? en ?? fallback;
+}
+
 export const dynamic = 'force-dynamic';
 
 interface CategoriesPageProps {
@@ -68,7 +73,7 @@ function CategoryTabs({
   categories,
   selectedCategory,
 }: {
-  categories: Array<{ id: string; slug: string; name: string }>;
+  categories: Array<{ id: string; slug: string; name: string; nameAr: string | null; nameEn: string | null; imageUrl: string | null }>;
   selectedCategory: string | undefined;
 }) {
   return (
@@ -82,7 +87,16 @@ function CategoryTabs({
           href={`/categories?category=${encodeURIComponent(category.slug)}`}
           className={selectedCategory === category.slug ? 'tab active' : 'tab'}
         >
-          {category.name}
+          {category.imageUrl ? (
+            <Image
+              src={category.imageUrl}
+              alt={bilingual(category.nameAr, category.nameEn, category.name)}
+              width={20}
+              height={20}
+              className="category-tab-icon"
+            />
+          ) : null}
+          {bilingual(category.nameAr, category.nameEn, category.name)}
         </Link>
       ))}
     </section>
@@ -140,7 +154,7 @@ function AttributeFiltersPanel({
       <h3>Filter by attributes</h3>
       {attributes.map((attribute) => (
         <fieldset key={attribute.id} className="panel">
-          <legend>{attribute.name}</legend>
+          <legend>{bilingual(attribute.nameAr, attribute.nameEn, attribute.name)}</legend>
           <div className="stack-md">
             {attribute.values.map((value) => (
               <label key={value.id} className="inline-check">
@@ -150,7 +164,7 @@ function AttributeFiltersPanel({
                   value={value.slug}
                   defaultChecked={Boolean(selectedFilters[attribute.slug]?.includes(value.slug))}
                 />
-                {value.value}
+                {bilingual(value.valueAr, value.valueEn, value.value)}
               </label>
             ))}
           </div>
@@ -175,8 +189,13 @@ function ProductsGrid({
     id: string;
     slug: string;
     title: string;
+    titleAr: string | null;
+    titleEn: string | null;
     primaryImageUrl: string | null;
     priceFrom: number | null;
+    isFeatured: boolean;
+    ratingAvg: number;
+    ratingCount: number;
   }>;
 }) {
   if (products.length === 0) {
@@ -195,15 +214,23 @@ function ProductsGrid({
             {product.primaryImageUrl ? (
               <Image
                 src={product.primaryImageUrl}
-                alt={product.title}
+                alt={bilingual(product.titleAr, product.titleEn, product.title)}
                 fill
                 sizes="(max-width: 768px) 100vw, 280px"
               />
             ) : (
               <div className="image-fallback">No image</div>
             )}
+            {product.isFeatured ? <span className="badge-featured">مميز</span> : null}
           </div>
-          <strong>{product.title}</strong>
+          <strong>{bilingual(product.titleAr, product.titleEn, product.title)}</strong>
+          {product.ratingCount > 0 ? (
+            <span className="product-rating-sm">
+              {'★'.repeat(Math.min(Math.round(product.ratingAvg), 5))}
+              {'☆'.repeat(Math.max(5 - Math.round(product.ratingAvg), 0))}
+              {' '}({product.ratingCount})
+            </span>
+          ) : null}
           <span>
             {product.priceFrom ? `From ${product.priceFrom.toFixed(2)}` : 'Price on request'}
           </span>

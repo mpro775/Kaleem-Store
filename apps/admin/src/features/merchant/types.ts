@@ -47,6 +47,12 @@ export interface Category {
   description: string | null;
   sortOrder: number;
   isActive: boolean;
+  nameAr: string | null;
+  nameEn: string | null;
+  descriptionAr: string | null;
+  descriptionEn: string | null;
+  mediaAssetId: string | null;
+  imageUrl: string | null;
 }
 
 export type ProductStatus = 'draft' | 'active' | 'archived';
@@ -64,6 +70,8 @@ export interface ProductVariant {
   attributes: Record<string, string>;
   attributeValueIds: string[];
   isDefault: boolean;
+  titleAr: string | null;
+  titleEn: string | null;
 }
 
 export type InventoryMovementType = 'adjustment' | 'sale' | 'return' | 'restock';
@@ -150,6 +158,25 @@ export interface Product {
   status: ProductStatus;
   variants?: ProductVariant[];
   images?: ProductImage[];
+  titleAr: string | null;
+  titleEn: string | null;
+  descriptionAr: string | null;
+  descriptionEn: string | null;
+  brand: string | null;
+  weight: number | null;
+  dimensions: { length?: number; width?: number; height?: number } | null;
+  costPrice: number | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  tags: string[];
+  isFeatured: boolean;
+  isTaxable: boolean;
+  taxRate: number;
+  minOrderQuantity: number;
+  maxOrderQuantity: number | null;
+  publishedAt: string | null;
+  ratingAvg: number;
+  ratingCount: number;
 }
 
 export interface ProductListResponse {
@@ -270,6 +297,12 @@ export interface ShippingZone {
   area: string | null;
   fee: number;
   isActive: boolean;
+  nameAr: string | null;
+  nameEn: string | null;
+  cityAr: string | null;
+  cityEn: string | null;
+  areaAr: string | null;
+  areaEn: string | null;
 }
 
 export type DiscountType = 'percent' | 'fixed';
@@ -301,6 +334,8 @@ export interface Offer {
   startsAt: string | null;
   endsAt: string | null;
   isActive: boolean;
+  nameAr: string | null;
+  nameEn: string | null;
 }
 
 export type AdvancedOfferType = 'bxgy' | 'bundle' | 'tiered_discount';
@@ -316,6 +351,10 @@ export interface AdvancedOffer {
   endsAt: string | null;
   isActive: boolean;
   priority: number;
+  nameAr: string | null;
+  nameEn: string | null;
+  descriptionAr: string | null;
+  descriptionEn: string | null;
 }
 
 export interface ThemeState {
@@ -384,6 +423,8 @@ export interface AttributeValue {
   attributeId: string;
   value: string;
   slug: string;
+  valueAr: string | null;
+  valueEn: string | null;
 }
 
 export interface Attribute {
@@ -392,6 +433,8 @@ export interface Attribute {
   name: string;
   slug: string;
   values?: AttributeValue[];
+  nameAr: string | null;
+  nameEn: string | null;
 }
 
 export interface CategoryAttributes {

@@ -13,6 +13,8 @@ export interface AttributeRecord {
   id: string;
   store_id: string;
   name: string;
+  name_ar: string | null;
+  name_en: string | null;
   slug: string;
 }
 
@@ -21,11 +23,15 @@ export interface AttributeValueRecord {
   store_id: string;
   attribute_id: string;
   value: string;
+  value_ar: string | null;
+  value_en: string | null;
   slug: string;
 }
 
 export interface AttributeValueWithAttributeRecord extends AttributeValueRecord {
   attribute_name: string;
+  attribute_name_ar: string | null;
+  attribute_name_en: string | null;
   attribute_slug: string;
 }
 
@@ -37,6 +43,9 @@ export interface VariantAttributeSelectionRecord {
   value_slug: string;
 }
 
+const ATTRIBUTE_COLUMNS = 'id, store_id, name, name_ar, name_en, slug';
+const ATTRIBUTE_VALUE_COLUMNS = 'id, store_id, attribute_id, value, value_ar, value_en, slug';
+
 @Injectable()
 export class AttributesRepository {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -44,10 +53,10 @@ export class AttributesRepository {
   async listAttributes(storeId: string, q?: string): Promise<AttributeRecord[]> {
     const result = await this.databaseService.db.query<AttributeRecord>(
       `
-        SELECT id, store_id, name, slug
+        SELECT ${ATTRIBUTE_COLUMNS}
         FROM attributes
         WHERE store_id = $1
-          AND ($2::text IS NULL OR name ILIKE '%' || $2 || '%' OR slug ILIKE '%' || $2 || '%')
+          AND ($2::text IS NULL OR name ILIKE '%' || $2 || '%' OR name_ar ILIKE '%' || $2 || '%' OR name_en ILIKE '%' || $2 || '%' OR slug ILIKE '%' || $2 || '%')
         ORDER BY name ASC
       `,
       [storeId, q ?? null],
@@ -63,7 +72,7 @@ export class AttributesRepository {
 
     const result = await this.databaseService.db.query<AttributeRecord>(
       `
-        SELECT id, store_id, name, slug
+        SELECT ${ATTRIBUTE_COLUMNS}
         FROM attributes
         WHERE store_id = $1
           AND id = ANY($2::uuid[])
@@ -78,7 +87,7 @@ export class AttributesRepository {
   async findAttributeById(storeId: string, attributeId: string): Promise<AttributeRecord | null> {
     const result = await this.databaseService.db.query<AttributeRecord>(
       `
-        SELECT id, store_id, name, slug
+        SELECT ${ATTRIBUTE_COLUMNS}
         FROM attributes
         WHERE store_id = $1
           AND id = $2
@@ -93,7 +102,7 @@ export class AttributesRepository {
   async findAttributeBySlug(storeId: string, slug: string): Promise<AttributeRecord | null> {
     const result = await this.databaseService.db.query<AttributeRecord>(
       `
-        SELECT id, store_id, name, slug
+        SELECT ${ATTRIBUTE_COLUMNS}
         FROM attributes
         WHERE store_id = $1
           AND slug = $2
@@ -108,15 +117,17 @@ export class AttributesRepository {
   async createAttribute(input: {
     storeId: string;
     name: string;
+    nameAr: string | null;
+    nameEn: string | null;
     slug: string;
   }): Promise<AttributeRecord> {
     const result = await this.databaseService.db.query<AttributeRecord>(
       `
-        INSERT INTO attributes (id, store_id, name, slug)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id, store_id, name, slug
+        INSERT INTO attributes (id, store_id, name, name_ar, name_en, slug)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING ${ATTRIBUTE_COLUMNS}
       `,
-      [uuidv4(), input.storeId, input.name, input.slug],
+      [uuidv4(), input.storeId, input.name, input.nameAr, input.nameEn, input.slug],
     );
 
     return result.rows[0] as AttributeRecord;
@@ -126,19 +137,23 @@ export class AttributesRepository {
     storeId: string;
     attributeId: string;
     name: string;
+    nameAr: string | null;
+    nameEn: string | null;
     slug: string;
   }): Promise<AttributeRecord | null> {
     const result = await this.databaseService.db.query<AttributeRecord>(
       `
         UPDATE attributes
         SET name = $3,
-            slug = $4,
+            name_ar = $4,
+            name_en = $5,
+            slug = $6,
             updated_at = NOW()
         WHERE store_id = $1
           AND id = $2
-        RETURNING id, store_id, name, slug
+        RETURNING ${ATTRIBUTE_COLUMNS}
       `,
-      [input.storeId, input.attributeId, input.name, input.slug],
+      [input.storeId, input.attributeId, input.name, input.nameAr, input.nameEn, input.slug],
     );
 
     return result.rows[0] ?? null;
@@ -164,11 +179,11 @@ export class AttributesRepository {
   ): Promise<AttributeValueRecord[]> {
     const result = await this.databaseService.db.query<AttributeValueRecord>(
       `
-        SELECT id, store_id, attribute_id, value, slug
+        SELECT ${ATTRIBUTE_VALUE_COLUMNS}
         FROM attribute_values
         WHERE store_id = $1
           AND attribute_id = $2
-          AND ($3::text IS NULL OR value ILIKE '%' || $3 || '%' OR slug ILIKE '%' || $3 || '%')
+          AND ($3::text IS NULL OR value ILIKE '%' || $3 || '%' OR value_ar ILIKE '%' || $3 || '%' OR value_en ILIKE '%' || $3 || '%' OR slug ILIKE '%' || $3 || '%')
         ORDER BY value ASC
       `,
       [storeId, attributeId, q ?? null],
@@ -187,7 +202,7 @@ export class AttributesRepository {
 
     const result = await this.databaseService.db.query<AttributeValueRecord>(
       `
-        SELECT id, store_id, attribute_id, value, slug
+        SELECT ${ATTRIBUTE_VALUE_COLUMNS}
         FROM attribute_values
         WHERE store_id = $1
           AND attribute_id = ANY($2::uuid[])
@@ -205,7 +220,7 @@ export class AttributesRepository {
   ): Promise<AttributeValueRecord | null> {
     const result = await this.databaseService.db.query<AttributeValueRecord>(
       `
-        SELECT id, store_id, attribute_id, value, slug
+        SELECT ${ATTRIBUTE_VALUE_COLUMNS}
         FROM attribute_values
         WHERE store_id = $1
           AND id = $2
@@ -224,7 +239,7 @@ export class AttributesRepository {
   ): Promise<AttributeValueRecord | null> {
     const result = await this.databaseService.db.query<AttributeValueRecord>(
       `
-        SELECT id, store_id, attribute_id, value, slug
+        SELECT ${ATTRIBUTE_VALUE_COLUMNS}
         FROM attribute_values
         WHERE store_id = $1
           AND attribute_id = $2
@@ -241,15 +256,17 @@ export class AttributesRepository {
     storeId: string;
     attributeId: string;
     value: string;
+    valueAr: string | null;
+    valueEn: string | null;
     slug: string;
   }): Promise<AttributeValueRecord> {
     const result = await this.databaseService.db.query<AttributeValueRecord>(
       `
-        INSERT INTO attribute_values (id, store_id, attribute_id, value, slug)
-        VALUES ($1, $2, $3, $4, $5)
-        RETURNING id, store_id, attribute_id, value, slug
+        INSERT INTO attribute_values (id, store_id, attribute_id, value, value_ar, value_en, slug)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING ${ATTRIBUTE_VALUE_COLUMNS}
       `,
-      [uuidv4(), input.storeId, input.attributeId, input.value, input.slug],
+      [uuidv4(), input.storeId, input.attributeId, input.value, input.valueAr, input.valueEn, input.slug],
     );
 
     return result.rows[0] as AttributeValueRecord;
@@ -259,19 +276,23 @@ export class AttributesRepository {
     storeId: string;
     valueId: string;
     value: string;
+    valueAr: string | null;
+    valueEn: string | null;
     slug: string;
   }): Promise<AttributeValueRecord | null> {
     const result = await this.databaseService.db.query<AttributeValueRecord>(
       `
         UPDATE attribute_values
         SET value = $3,
-            slug = $4,
+            value_ar = $4,
+            value_en = $5,
+            slug = $6,
             updated_at = NOW()
         WHERE store_id = $1
           AND id = $2
-        RETURNING id, store_id, attribute_id, value, slug
+        RETURNING ${ATTRIBUTE_VALUE_COLUMNS}
       `,
-      [input.storeId, input.valueId, input.value, input.slug],
+      [input.storeId, input.valueId, input.value, input.valueAr, input.valueEn, input.slug],
     );
 
     return result.rows[0] ?? null;
@@ -347,8 +368,12 @@ export class AttributesRepository {
           av.store_id,
           av.attribute_id,
           av.value,
+          av.value_ar,
+          av.value_en,
           av.slug,
           a.name AS attribute_name,
+          a.name_ar AS attribute_name_ar,
+          a.name_en AS attribute_name_en,
           a.slug AS attribute_slug
         FROM attribute_values av
         INNER JOIN attributes a

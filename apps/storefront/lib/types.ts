@@ -25,16 +25,25 @@ export interface StorefrontCategory {
   slug: string;
   description: string | null;
   parentId: string | null;
+  nameAr: string | null;
+  nameEn: string | null;
+  descriptionAr: string | null;
+  descriptionEn: string | null;
+  imageUrl: string | null;
 }
 
 export interface StorefrontFilterAttribute {
   id: string;
   name: string;
   slug: string;
+  nameAr: string | null;
+  nameEn: string | null;
   values: Array<{
     id: string;
     value: string;
     slug: string;
+    valueAr: string | null;
+    valueEn: string | null;
   }>;
 }
 
@@ -46,6 +55,23 @@ export interface StorefrontProduct {
   categoryId: string | null;
   primaryImageUrl: string | null;
   priceFrom: number | null;
+  titleAr: string | null;
+  titleEn: string | null;
+  descriptionAr: string | null;
+  descriptionEn: string | null;
+  brand: string | null;
+  weight: number | null;
+  dimensions: { length?: number; width?: number; height?: number } | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  tags: string[];
+  isFeatured: boolean;
+  isTaxable: boolean;
+  taxRate: number;
+  minOrderQuantity: number;
+  maxOrderQuantity: number | null;
+  ratingAvg: number;
+  ratingCount: number;
 }
 
 export interface StorefrontProductsResponse {
@@ -64,6 +90,8 @@ export interface ProductVariant {
   stockQuantity: number;
   isDefault: boolean;
   attributes: Record<string, string>;
+  titleAr: string | null;
+  titleEn: string | null;
 }
 
 export interface ProductImage {

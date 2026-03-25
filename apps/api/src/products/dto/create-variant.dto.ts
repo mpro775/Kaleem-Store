@@ -16,6 +16,16 @@ export class CreateVariantDto {
   @MaxLength(120)
   title!: string;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  titleAr?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  titleEn?: string;
+
   @IsString()
   @MaxLength(80)
   sku!: string;

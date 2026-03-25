@@ -6,6 +6,11 @@ import { addCartItem } from '../lib/storefront-client';
 import { getCartIdFromStorage, saveCartIdToStorage } from '../lib/cart-storage';
 import type { ProductVariant } from '../lib/types';
 
+function bilingual(ar: string | null | undefined, en: string | null | undefined, fallback: string): string {
+  if (ar && en) return `${ar} / ${en}`;
+  return ar ?? en ?? fallback;
+}
+
 interface ProductPurchaseCardProps {
   variants: ProductVariant[];
 }
@@ -66,7 +71,7 @@ function ProductPurchaseForm({ variants }: ProductPurchaseCardProps) {
       >
         {variants.map((variant) => (
           <option key={variant.id} value={variant.id}>
-            {variant.title} - {variant.price.toFixed(2)}
+            {bilingual(variant.titleAr, variant.titleEn, variant.title)} - {variant.price.toFixed(2)}
           </option>
         ))}
       </select>

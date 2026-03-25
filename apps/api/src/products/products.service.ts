@@ -33,6 +33,8 @@ export interface ProductVariantResponse {
   id: string;
   productId: string;
   title: string;
+  titleAr: string | null;
+  titleEn: string | null;
   sku: string;
   barcode: string | null;
   price: number;
@@ -59,11 +61,30 @@ export interface ProductResponse {
   storeId: string;
   categoryId: string | null;
   title: string;
+  titleAr: string | null;
+  titleEn: string | null;
   slug: string;
   description: string | null;
+  descriptionAr: string | null;
+  descriptionEn: string | null;
   status: ProductStatus;
   variants?: ProductVariantResponse[];
   images?: ProductImageResponse[];
+  brand: string | null;
+  weight: number | null;
+  dimensions: { length?: number; width?: number; height?: number } | null;
+  costPrice: number | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  tags: string[];
+  isFeatured: boolean;
+  isTaxable: boolean;
+  taxRate: number;
+  minOrderQuantity: number;
+  maxOrderQuantity: number | null;
+  publishedAt: string | null;
+  ratingAvg: number;
+  ratingCount: number;
 }
 
 export interface ProductListResponse {
@@ -100,9 +121,25 @@ export class ProductsService {
       storeId: currentUser.storeId,
       categoryId: input.categoryId ?? null,
       title: input.title.trim(),
+      titleAr: input.titleAr ?? null,
+      titleEn: input.titleEn ?? null,
       slug,
       description: input.description?.trim() ?? null,
+      descriptionAr: input.descriptionAr ?? null,
+      descriptionEn: input.descriptionEn ?? null,
       status: input.status ?? 'draft',
+      brand: input.brand?.trim() ?? null,
+      weight: input.weight ?? null,
+      dimensions: input.dimensions ?? null,
+      costPrice: input.costPrice ?? null,
+      seoTitle: input.seoTitle?.trim() ?? null,
+      seoDescription: input.seoDescription?.trim() ?? null,
+      tags: input.tags ?? [],
+      isFeatured: input.isFeatured ?? false,
+      isTaxable: input.isTaxable ?? true,
+      taxRate: input.taxRate ?? 0,
+      minOrderQuantity: input.minOrderQuantity ?? 1,
+      maxOrderQuantity: input.maxOrderQuantity ?? null,
     });
 
     await this.logProductAction('products.created', currentUser, product.id, context);
@@ -177,13 +214,33 @@ export class ProductsService {
       productId,
       categoryId,
       title: input.title?.trim() ?? existing.title,
+      titleAr: input.titleAr ?? existing.title_ar,
+      titleEn: input.titleEn ?? existing.title_en,
       slug,
       description: input.description?.trim() ?? existing.description,
+      descriptionAr: input.descriptionAr ?? existing.description_ar,
+      descriptionEn: input.descriptionEn ?? existing.description_en,
       status: input.status ?? existing.status,
+      brand: input.brand?.trim() ?? existing.brand,
+      weight: input.weight ?? (existing.weight ? Number(existing.weight) : null),
+      dimensions: input.dimensions ?? existing.dimensions,
+      costPrice: input.costPrice ?? (existing.cost_price ? Number(existing.cost_price) : null),
+      seoTitle: input.seoTitle?.trim() ?? existing.seo_title,
+      seoDescription: input.seoDescription?.trim() ?? existing.seo_description,
+      tags: input.tags ?? existing.tags,
+      isFeatured: input.isFeatured ?? existing.is_featured,
+      isTaxable: input.isTaxable ?? existing.is_taxable,
+      taxRate: input.taxRate ?? Number(existing.tax_rate),
+      minOrderQuantity: input.minOrderQuantity ?? existing.min_order_quantity,
+      maxOrderQuantity: input.maxOrderQuantity ?? existing.max_order_quantity,
     });
 
     if (!updated) {
       throw new NotFoundException('Product not found');
+    }
+
+    if (input.status === 'active' && existing.status !== 'active') {
+      await this.productsRepository.setPublishedAt(currentUser.storeId, productId);
     }
 
     await this.logProductAction('products.updated', currentUser, productId, context);
@@ -271,6 +328,8 @@ export class ProductsService {
       productId: input.productId,
       storeId: input.storeId,
       title: input.payload.title.trim(),
+      titleAr: input.payload.titleAr ?? null,
+      titleEn: input.payload.titleEn ?? null,
       sku: input.payload.sku.trim(),
       barcode: input.payload.barcode?.trim() ?? null,
       price: input.payload.price,
@@ -480,9 +539,28 @@ export class ProductsService {
       storeId: record.store_id,
       categoryId: record.category_id,
       title: record.title,
+      titleAr: record.title_ar,
+      titleEn: record.title_en,
       slug: record.slug,
       description: record.description,
+      descriptionAr: record.description_ar,
+      descriptionEn: record.description_en,
       status: record.status,
+      brand: record.brand,
+      weight: record.weight ? Number(record.weight) : null,
+      dimensions: record.dimensions,
+      costPrice: record.cost_price ? Number(record.cost_price) : null,
+      seoTitle: record.seo_title,
+      seoDescription: record.seo_description,
+      tags: record.tags,
+      isFeatured: record.is_featured,
+      isTaxable: record.is_taxable,
+      taxRate: Number(record.tax_rate),
+      minOrderQuantity: record.min_order_quantity,
+      maxOrderQuantity: record.max_order_quantity,
+      publishedAt: record.published_at,
+      ratingAvg: Number(record.rating_avg),
+      ratingCount: record.rating_count,
     };
   }
 
@@ -494,6 +572,8 @@ export class ProductsService {
       id: record.id,
       productId: record.product_id,
       title: record.title,
+      titleAr: record.title_ar,
+      titleEn: record.title_en,
       sku: record.sku,
       barcode: record.barcode,
       price: Number(record.price),

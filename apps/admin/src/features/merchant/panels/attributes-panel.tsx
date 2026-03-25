@@ -38,11 +38,15 @@ interface AttributesPanelProps {
 const attributeFormDefault = {
   name: '',
   slug: '',
+  nameAr: '',
+  nameEn: '',
 };
 
 const valueFormDefault = {
   value: '',
   slug: '',
+  valueAr: '',
+  valueEn: '',
 };
 
 export function AttributesPanel({ request }: AttributesPanelProps) {
@@ -268,6 +272,8 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
     setAttributeForm({
       name: attribute.name,
       slug: attribute.slug,
+      nameAr: (attribute as any).nameAr ?? '',
+      nameEn: (attribute as any).nameEn ?? '',
     });
     setViewMode('detail');
   }
@@ -277,6 +283,8 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
     setValueForm({
       value: value.value,
       slug: value.slug,
+      valueAr: (value as any).valueAr ?? '',
+      valueEn: (value as any).valueEn ?? '',
     });
   }
 
@@ -343,6 +351,20 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
                   required
                 />
                 <TextField 
+                  label="الاسم (عربي)" 
+                  fullWidth 
+                  value={attributeForm.nameAr} 
+                  onChange={(event) => setAttributeForm((prev) => ({ ...prev, nameAr: event.target.value }))} 
+                  dir="rtl"
+                />
+                <TextField 
+                  label="Name (English)" 
+                  fullWidth 
+                  value={attributeForm.nameEn} 
+                  onChange={(event) => setAttributeForm((prev) => ({ ...prev, nameEn: event.target.value }))} 
+                  dir="ltr"
+                />
+                <TextField 
                   label="المسار المختصر (Slug)" 
                   fullWidth 
                   value={attributeForm.slug} 
@@ -376,6 +398,8 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
                 </Typography>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
                   <TextField size="small" label="القيمة (مثال: أحمر)" fullWidth value={valueForm.value} onChange={(event) => setValueForm((prev) => ({ ...prev, value: event.target.value }))} />
+                  <TextField size="small" label="القيمة (عربي)" fullWidth value={valueForm.valueAr} onChange={(event) => setValueForm((prev) => ({ ...prev, valueAr: event.target.value }))} dir="rtl" />
+                  <TextField size="small" label="Value (English)" fullWidth value={valueForm.valueEn} onChange={(event) => setValueForm((prev) => ({ ...prev, valueEn: event.target.value }))} dir="ltr" />
                   <TextField size="small" label="Slug (مثال: red)" fullWidth value={valueForm.slug} onChange={(event) => setValueForm((prev) => ({ ...prev, slug: event.target.value }))} dir="ltr" />
                   <Button 
                     variant={selectedValueId ? "contained" : "outlined"} 
@@ -566,7 +590,7 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
 }
 
 function buildAttributePayload(form: typeof attributeFormDefault) {
-  const payload: { name: string; slug?: string } = {
+  const payload: { name: string; slug?: string; nameAr?: string; nameEn?: string } = {
     name: form.name.trim(),
   };
 
@@ -575,17 +599,37 @@ function buildAttributePayload(form: typeof attributeFormDefault) {
     payload.slug = slug;
   }
 
+  const nameAr = form.nameAr.trim();
+  if (nameAr) {
+    payload.nameAr = nameAr;
+  }
+
+  const nameEn = form.nameEn.trim();
+  if (nameEn) {
+    payload.nameEn = nameEn;
+  }
+
   return payload;
 }
 
 function buildValuePayload(form: typeof valueFormDefault) {
-  const payload: { value: string; slug?: string } = {
+  const payload: { value: string; slug?: string; valueAr?: string; valueEn?: string } = {
     value: form.value.trim(),
   };
 
   const slug = form.slug.trim();
   if (slug) {
     payload.slug = slug;
+  }
+
+  const valueAr = form.valueAr.trim();
+  if (valueAr) {
+    payload.valueAr = valueAr;
+  }
+
+  const valueEn = form.valueEn.trim();
+  if (valueEn) {
+    payload.valueEn = valueEn;
   }
 
   return payload;

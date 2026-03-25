@@ -11,6 +11,7 @@ import {
   type StorefrontFilterAttributeResponse,
 } from '../attributes/attributes.service';
 import { CategoriesRepository } from '../categories/categories.repository';
+import { CustomersService } from '../customers/customers.service';
 import { IdempotencyService } from '../idempotency/idempotency.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { OutboxService } from '../messaging/outbox.service';
@@ -46,18 +47,40 @@ import type { ThemeQueryDto } from './dto/theme-query.dto';
 export interface StorefrontProductResponse {
   id: string;
   title: string;
+  titleAr: string | null;
+  titleEn: string | null;
   slug: string;
   description: string | null;
+  descriptionAr: string | null;
+  descriptionEn: string | null;
   categoryId: string | null;
   primaryImageUrl: string | null;
   priceFrom: number | null;
+  brand: string | null;
+  weight: number | null;
+  dimensions: { length?: number; width?: number; height?: number } | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  tags: string[];
+  isFeatured: boolean;
+  isTaxable: boolean;
+  taxRate: number;
+  minOrderQuantity: number;
+  maxOrderQuantity: number | null;
+  ratingAvg: number;
+  ratingCount: number;
 }
 
 export interface StorefrontCategoryResponse {
   id: string;
   name: string;
+  nameAr: string | null;
+  nameEn: string | null;
   slug: string;
   description: string | null;
+  descriptionAr: string | null;
+  descriptionEn: string | null;
+  imageUrl: string | null;
   parentId: string | null;
 }
 
@@ -142,6 +165,7 @@ interface ParsedProductsQuery extends StorefrontCategoryFilterInput {
   limit: number;
   q?: string;
   attrs?: Record<string, string[]>;
+  isFeatured?: boolean;
 }
 
 @Injectable()
@@ -161,6 +185,7 @@ export class StorefrontService {
     private readonly outboxService: OutboxService,
     private readonly storesRepository: StoresRepository,
     private readonly webhooksService: WebhooksService,
+    private readonly customersService: CustomersService,
   ) {}
 
   async getStore(request: Request) {
@@ -200,8 +225,13 @@ export class StorefrontService {
     return categories.map((category) => ({
       id: category.id,
       name: category.name,
+      nameAr: category.name_ar,
+      nameEn: category.name_en,
       slug: category.slug,
       description: category.description,
+      descriptionAr: category.description_ar,
+      descriptionEn: category.description_en,
+      imageUrl: category.image_url,
       parentId: category.parent_id,
     }));
   }
@@ -243,6 +273,7 @@ export class StorefrontService {
       q: query.q?.trim(),
       categoryId,
       status: 'active',
+      isFeatured: query.isFeatured,
       attributeFilters,
       limit,
       offset: (page - 1) * limit,
@@ -489,11 +520,28 @@ export class StorefrontService {
     return {
       id: row.id,
       title: row.title,
+      titleAr: row.title_ar,
+      titleEn: row.title_en,
       slug: row.slug,
       description: row.description,
+      descriptionAr: row.description_ar,
+      descriptionEn: row.description_en,
       categoryId: row.category_id,
       primaryImageUrl: listingMeta.primaryImageUrl,
       priceFrom: listingMeta.priceFrom,
+      brand: row.brand,
+      weight: row.weight ? Number(row.weight) : null,
+      dimensions: row.dimensions,
+      seoTitle: row.seo_title,
+      seoDescription: row.seo_description,
+      tags: row.tags,
+      isFeatured: row.is_featured,
+      isTaxable: row.is_taxable,
+      taxRate: Number(row.tax_rate),
+      minOrderQuantity: row.min_order_quantity,
+      maxOrderQuantity: row.max_order_quantity,
+      ratingAvg: Number(row.rating_avg),
+      ratingCount: row.rating_count,
     };
   }
 
@@ -501,6 +549,8 @@ export class StorefrontService {
     return {
       id: variant.id,
       title: variant.title,
+      titleAr: variant.title_ar,
+      titleEn: variant.title_en,
       sku: variant.sku,
       price: Number(variant.price),
       compareAtPrice: variant.compare_at_price ? Number(variant.compare_at_price) : null,
@@ -572,12 +622,20 @@ export class StorefrontService {
     const q = this.readSingleQueryString(request, 'q');
     const categoryId = this.readSingleQueryString(request, 'categoryId');
     const categorySlug = this.readSingleQueryString(request, 'categorySlug');
+    const isFeaturedRaw = this.readSingleQueryString(request, 'isFeatured');
 
     if (categoryId && !this.isUuidV4(categoryId)) {
       throw new BadRequestException('categoryId must be a valid UUID');
     }
     if (categorySlug && !this.isSlug(categorySlug)) {
       throw new BadRequestException('categorySlug is invalid');
+    }
+
+    let isFeatured: boolean | undefined;
+    if (isFeaturedRaw === 'true') {
+      isFeatured = true;
+    } else if (isFeaturedRaw === 'false') {
+      isFeatured = false;
     }
 
     const attrs = this.mergeAttributeFilterSources(
@@ -591,6 +649,7 @@ export class StorefrontService {
       ...(q ? { q } : {}),
       ...(categoryId ? { categoryId } : {}),
       ...(categorySlug ? { categorySlug } : {}),
+      ...(isFeatured !== undefined ? { isFeatured } : {}),
       ...(attrs ? { attrs } : {}),
     };
   }
@@ -932,6 +991,19 @@ export class StorefrontService {
     storeId: string,
     input: CheckoutDto,
   ): Promise<string> {
+    // If customer is logged in, use their customer_id from the session
+    if (input.customerAccessToken) {
+      try {
+        const payload = await this.customersService.verifyAccessToken(input.customerAccessToken);
+        if (payload.storeId === storeId) {
+          return payload.sub; // Return customer_id from token
+        }
+      } catch {
+        // Token invalid or expired, fall through to guest checkout
+      }
+    }
+
+    // Guest checkout: find or create by phone
     return this.ordersRepository.findOrCreateCustomer(db, {
       storeId,
       fullName: input.customerName.trim(),

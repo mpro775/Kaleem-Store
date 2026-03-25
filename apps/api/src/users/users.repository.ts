@@ -37,6 +37,18 @@ export interface PasswordResetRecord {
   created_at: Date;
 }
 
+export interface SessionRecord {
+  id: string;
+  store_user_id: string;
+  store_id: string;
+  ip_address: string | null;
+  user_agent: string | null;
+  last_seen_at: Date | null;
+  created_at: Date;
+  expires_at: Date;
+  revoked_at: Date | null;
+}
+
 @Injectable()
 export class UsersRepository {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -307,5 +319,147 @@ export class UsersRepository {
       [storeId],
     );
     return result.rows;
+  }
+
+  async findInviteById(inviteId: string, storeId: string): Promise<StaffInviteRecord | null> {
+    const result = await this.databaseService.db.query<StaffInviteRecord>(
+      `
+        SELECT id, store_id, email, full_name, role, permissions, token_hash, expires_at,
+               accepted_at, accepted_by_user_id, invited_by_user_id, created_at
+        FROM staff_invites
+        WHERE id = $1 AND store_id = $2
+        LIMIT 1
+      `,
+      [inviteId, storeId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async deleteInviteById(inviteId: string, storeId: string): Promise<boolean> {
+    const result = await this.databaseService.db.query(
+      `
+        DELETE FROM staff_invites
+        WHERE id = $1 AND store_id = $2 AND accepted_at IS NULL
+      `,
+      [inviteId, storeId],
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async updateInviteToken(input: {
+    inviteId: string;
+    tokenHash: string;
+    expiresAt: Date;
+  }): Promise<void> {
+    await this.databaseService.db.query(
+      `
+        UPDATE staff_invites
+        SET token_hash = $2,
+            expires_at = $3,
+            updated_at = NOW()
+        WHERE id = $1
+      `,
+      [input.inviteId, input.tokenHash, input.expiresAt],
+    );
+  }
+
+  async updateProfile(input: {
+    userId: string;
+    fullName?: string;
+    phone?: string;
+  }): Promise<UserProfileRecord | null> {
+    const updates: string[] = [];
+    const values: unknown[] = [];
+    let paramIndex = 1;
+
+    if (input.fullName !== undefined) {
+      updates.push(`full_name = $${paramIndex++}`);
+      values.push(input.fullName);
+    }
+    if (input.phone !== undefined) {
+      updates.push(`phone = $${paramIndex++}`);
+      values.push(input.phone);
+    }
+
+    if (updates.length === 0) {
+      return this.findById(input.userId);
+    }
+
+    updates.push(`updated_at = NOW()`);
+    values.push(input.userId);
+
+    const result = await this.databaseService.db.query<UserProfileRecord>(
+      `
+        UPDATE store_users
+        SET ${updates.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING id, store_id, email, full_name, role, permissions, is_active
+      `,
+      values,
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async deleteUser(userId: string, storeId: string): Promise<boolean> {
+    const result = await this.databaseService.db.query(
+      `
+        DELETE FROM store_users
+        WHERE id = $1 AND store_id = $2 AND role != 'owner'
+      `,
+      [userId, storeId],
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async listSessionsByUser(userId: string): Promise<SessionRecord[]> {
+    const result = await this.databaseService.db.query<SessionRecord>(
+      `
+        SELECT id, store_user_id, store_id, ip_address, user_agent, last_seen_at,
+               created_at, expires_at, revoked_at
+        FROM sessions
+        WHERE store_user_id = $1
+        ORDER BY created_at DESC
+      `,
+      [userId],
+    );
+    return result.rows;
+  }
+
+  async findSessionByIdAndUser(sessionId: string, userId: string): Promise<SessionRecord | null> {
+    const result = await this.databaseService.db.query<SessionRecord>(
+      `
+        SELECT id, store_user_id, store_id, ip_address, user_agent, last_seen_at,
+               created_at, expires_at, revoked_at
+        FROM sessions
+        WHERE id = $1 AND store_user_id = $2
+        LIMIT 1
+      `,
+      [sessionId, userId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async revokeSessionById(sessionId: string, userId: string): Promise<boolean> {
+    const result = await this.databaseService.db.query(
+      `
+        UPDATE sessions
+        SET revoked_at = NOW(), updated_at = NOW()
+        WHERE id = $1 AND store_user_id = $2 AND revoked_at IS NULL
+      `,
+      [sessionId, userId],
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async revokeAllSessionsExcept(userId: string, exceptSessionId: string): Promise<number> {
+    const result = await this.databaseService.db.query(
+      `
+        UPDATE sessions
+        SET revoked_at = NOW(), updated_at = NOW()
+        WHERE store_user_id = $1 AND id != $2 AND revoked_at IS NULL
+      `,
+      [userId, exceptSessionId],
+    );
+    return result.rowCount ?? 0;
   }
 }

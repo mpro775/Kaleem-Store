@@ -3,6 +3,11 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import type { StorefrontCategory, StorefrontProduct } from '../lib/types';
 
+function bilingual(ar: string | null | undefined, en: string | null | undefined, fallback: string): string {
+  if (ar && en) return `${ar} / ${en}`;
+  return ar ?? en ?? fallback;
+}
+
 interface ThemeSectionsProps {
   storeName: string;
   sections: unknown[];
@@ -140,8 +145,18 @@ function CategoriesSection({ categories }: { categories: StorefrontCategory[] })
             href={`/categories?category=${encodeURIComponent(category.slug)}`}
             className="category-card"
           >
-            <strong>{category.name}</strong>
-            <span>{category.description ?? 'Explore the latest products'}</span>
+            {category.imageUrl ? (
+              <div className="category-image-shell">
+                <Image
+                  src={category.imageUrl}
+                  alt={bilingual(category.nameAr, category.nameEn, category.name)}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 320px"
+                />
+              </div>
+            ) : null}
+            <strong>{bilingual(category.nameAr, category.nameEn, category.name)}</strong>
+            <span>{bilingual(category.descriptionAr, category.descriptionEn, category.description ?? 'Explore the latest products')}</span>
           </Link>
         ))}
       </div>
@@ -164,15 +179,16 @@ function FeaturedProductsSection({ products }: { products: StorefrontProduct[] }
               {product.primaryImageUrl ? (
                 <Image
                   src={product.primaryImageUrl}
-                  alt={product.title}
+                  alt={bilingual(product.titleAr, product.titleEn, product.title)}
                   fill
                   sizes="(max-width: 768px) 100vw, 320px"
                 />
               ) : (
                 <div className="image-fallback">No image</div>
               )}
+              {product.isFeatured ? <span className="badge-featured">مميز</span> : null}
             </div>
-            <strong>{product.title}</strong>
+            <strong>{bilingual(product.titleAr, product.titleEn, product.title)}</strong>
             <span>
               {product.priceFrom ? `From ${product.priceFrom.toFixed(2)}` : 'Price on request'}
             </span>

@@ -22,6 +22,10 @@ import {
   InputAdornment,
   CircularProgress,
   Grid,
+  Switch,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import AddIcon from '@mui/icons-material/Add';
@@ -31,6 +35,8 @@ import InventoryIcon from '@mui/icons-material/Inventory';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import ImageIcon from '@mui/icons-material/Image';
 import StyleIcon from '@mui/icons-material/Style';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import StarIcon from '@mui/icons-material/Star';
 
 import type { MerchantRequester } from '../merchant-dashboard';
 import type {
@@ -54,6 +60,10 @@ const productFormDefault = {
   description: '',
   categoryId: '',
   status: 'draft' as ProductStatus,
+  titleAr: '',
+  titleEn: '',
+  descriptionAr: '',
+  descriptionEn: '',
 };
 
 function createVariantFormDefault() {
@@ -67,6 +77,8 @@ function createVariantFormDefault() {
     lowStockThreshold: '0',
     selectedValueByAttributeId: {} as Record<string, string>,
     isDefault: false,
+    titleAr: '',
+    titleEn: '',
   };
 }
 
@@ -102,6 +114,21 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
   const [imageForm, setImageForm] = useState(imageFormDefault);
   const [imageFile, setImageFile] = useState<File | null>(null);
   
+  const [formBrand, setFormBrand] = useState('');
+  const [formWeight, setFormWeight] = useState('');
+  const [formCostPrice, setFormCostPrice] = useState('');
+  const [formSeoTitle, setFormSeoTitle] = useState('');
+  const [formSeoDescription, setFormSeoDescription] = useState('');
+  const [formDimensionsLength, setFormDimensionsLength] = useState('');
+  const [formDimensionsWidth, setFormDimensionsWidth] = useState('');
+  const [formDimensionsHeight, setFormDimensionsHeight] = useState('');
+  const [formTags, setFormTags] = useState('');
+  const [formIsFeatured, setFormIsFeatured] = useState(false);
+  const [formIsTaxable, setFormIsTaxable] = useState(false);
+  const [formTaxRate, setFormTaxRate] = useState('');
+  const [formMinOrderQuantity, setFormMinOrderQuantity] = useState('');
+  const [formMaxOrderQuantity, setFormMaxOrderQuantity] = useState('');
+
   const [loading, setLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -148,7 +175,26 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
           description: data.description ?? '',
           categoryId: data.categoryId ?? '',
           status: data.status,
+          titleAr: (data as any).titleAr ?? '',
+          titleEn: (data as any).titleEn ?? '',
+          descriptionAr: (data as any).descriptionAr ?? '',
+          descriptionEn: (data as any).descriptionEn ?? '',
         });
+        const d = data as any;
+        setFormBrand(d.brand ?? '');
+        setFormWeight(d.weight != null ? String(d.weight) : '');
+        setFormCostPrice(d.costPrice != null ? String(d.costPrice) : '');
+        setFormSeoTitle(d.seoTitle ?? '');
+        setFormSeoDescription(d.seoDescription ?? '');
+        setFormDimensionsLength(d.dimensions?.length != null ? String(d.dimensions.length) : '');
+        setFormDimensionsWidth(d.dimensions?.width != null ? String(d.dimensions.width) : '');
+        setFormDimensionsHeight(d.dimensions?.height != null ? String(d.dimensions.height) : '');
+        setFormTags(Array.isArray(d.tags) ? d.tags.join(', ') : '');
+        setFormIsFeatured(Boolean(d.isFeatured));
+        setFormIsTaxable(Boolean(d.isTaxable));
+        setFormTaxRate(d.taxRate != null ? String(d.taxRate) : '');
+        setFormMinOrderQuantity(d.minOrderQuantity != null ? String(d.minOrderQuantity) : '');
+        setFormMaxOrderQuantity(d.maxOrderQuantity != null ? String(d.maxOrderQuantity) : '');
       }
     } catch (error) {
       setMessage({ text: error instanceof Error ? error.message : 'تعذر تحميل تفاصيل المنتج', type: 'error' });
@@ -165,6 +211,20 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
     setVariantForm(createVariantFormDefault());
     setImageForm(imageFormDefault);
     setImageFile(null);
+    setFormBrand('');
+    setFormWeight('');
+    setFormCostPrice('');
+    setFormSeoTitle('');
+    setFormSeoDescription('');
+    setFormDimensionsLength('');
+    setFormDimensionsWidth('');
+    setFormDimensionsHeight('');
+    setFormTags('');
+    setFormIsFeatured(false);
+    setFormIsTaxable(false);
+    setFormTaxRate('');
+    setFormMinOrderQuantity('');
+    setFormMaxOrderQuantity('');
     setMessage({ text: '', type: 'info' });
     setViewMode('detail');
   }
@@ -180,7 +240,13 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
     try {
       const created = await request<Product>('/products', {
         method: 'POST',
-        body: JSON.stringify(buildProductPayload(productForm)),
+        body: JSON.stringify(buildProductPayload(productForm, {
+          brand: formBrand, weight: formWeight, costPrice: formCostPrice,
+          seoTitle: formSeoTitle, seoDescription: formSeoDescription,
+          dimensionsLength: formDimensionsLength, dimensionsWidth: formDimensionsWidth, dimensionsHeight: formDimensionsHeight,
+          tags: formTags, isFeatured: formIsFeatured, isTaxable: formIsTaxable, taxRate: formTaxRate,
+          minOrderQuantity: formMinOrderQuantity, maxOrderQuantity: formMaxOrderQuantity,
+        })),
       });
       if (created) {
         setMessage({ text: 'تم إنشاء المنتج بنجاح. يمكنك الآن إضافة متغيرات وصور.', type: 'success' });
@@ -201,7 +267,13 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
     try {
       await request(`/products/${selectedProduct.id}`, {
         method: 'PUT',
-        body: JSON.stringify(buildProductPayload(productForm)),
+        body: JSON.stringify(buildProductPayload(productForm, {
+          brand: formBrand, weight: formWeight, costPrice: formCostPrice,
+          seoTitle: formSeoTitle, seoDescription: formSeoDescription,
+          dimensionsLength: formDimensionsLength, dimensionsWidth: formDimensionsWidth, dimensionsHeight: formDimensionsHeight,
+          tags: formTags, isFeatured: formIsFeatured, isTaxable: formIsTaxable, taxRate: formTaxRate,
+          minOrderQuantity: formMinOrderQuantity, maxOrderQuantity: formMaxOrderQuantity,
+        })),
       });
       await loadCatalog();
       await loadProductDetails(selectedProduct.id);
@@ -282,6 +354,8 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
       lowStockThreshold: String(variant.lowStockThreshold),
       selectedValueByAttributeId: buildVariantValueSelection(attributes, variant.attributeValueIds),
       isDefault: variant.isDefault,
+      titleAr: (variant as any).titleAr ?? '',
+      titleEn: (variant as any).titleEn ?? '',
     });
     setMessage({ text: 'تم تحميل بيانات المتغير للتعديل', type: 'info' });
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
@@ -363,13 +437,31 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
               <Stack spacing={3}>
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 3 }}>
                   <Box>
-                    <TextField 
-                      label="اسم المنتج" 
-                      fullWidth 
-                      value={productForm.title} 
-                      onChange={(event) => setProductForm((prev) => ({ ...prev, title: event.target.value }))} 
-                      required
-                    />
+                    <Stack spacing={2}>
+                      <TextField 
+                        label="اسم المنتج" 
+                        fullWidth 
+                        value={productForm.title} 
+                        onChange={(event) => setProductForm((prev) => ({ ...prev, title: event.target.value }))} 
+                        required
+                      />
+                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                        <TextField 
+                          label="الاسم (عربي)" 
+                          fullWidth 
+                          value={productForm.titleAr} 
+                          onChange={(event) => setProductForm((prev) => ({ ...prev, titleAr: event.target.value }))} 
+                          dir="rtl"
+                        />
+                        <TextField 
+                          label="Title (English)" 
+                          fullWidth 
+                          value={productForm.titleEn} 
+                          onChange={(event) => setProductForm((prev) => ({ ...prev, titleEn: event.target.value }))} 
+                          dir="ltr"
+                        />
+                      </Box>
+                    </Stack>
                   </Box>
                   <Box>
                     <TextField 
@@ -423,6 +515,90 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                   value={productForm.description} 
                   onChange={(event) => setProductForm((prev) => ({ ...prev, description: event.target.value }))} 
                 />
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                  <TextField 
+                    label="الوصف (عربي)" 
+                    fullWidth 
+                    multiline 
+                    minRows={3} 
+                    value={productForm.descriptionAr} 
+                    onChange={(event) => setProductForm((prev) => ({ ...prev, descriptionAr: event.target.value }))} 
+                    dir="rtl"
+                  />
+                  <TextField 
+                    label="Description (English)" 
+                    fullWidth 
+                    multiline 
+                    minRows={3} 
+                    value={productForm.descriptionEn} 
+                    onChange={(event) => setProductForm((prev) => ({ ...prev, descriptionEn: event.target.value }))} 
+                    dir="ltr"
+                  />
+                </Box>
+
+                {/* Additional Information Accordion */}
+                <Accordion disableGutters elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, '&:before': { display: 'none' } }}>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Typography fontWeight={700}>معلومات إضافية</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <Stack spacing={3}>
+                      {/* قسم العلامة التجارية والوزن */}
+                      <Typography variant="subtitle2" fontWeight={700}>العلامة التجارية والوزن</Typography>
+                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2 }}>
+                        <TextField size="small" label="العلامة التجارية" fullWidth value={formBrand} onChange={(e) => setFormBrand(e.target.value)} />
+                        <TextField size="small" label="الوزن (كجم)" type="number" fullWidth value={formWeight} onChange={(e) => setFormWeight(e.target.value)} />
+                        <TextField size="small" label="سعر التكلفة" type="number" fullWidth value={formCostPrice} onChange={(e) => setFormCostPrice(e.target.value)} />
+                      </Box>
+
+                      {/* قسم الأبعاد */}
+                      <Typography variant="subtitle2" fontWeight={700}>الأبعاد</Typography>
+                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2 }}>
+                        <TextField size="small" label="الطول (سم)" type="number" fullWidth value={formDimensionsLength} onChange={(e) => setFormDimensionsLength(e.target.value)} />
+                        <TextField size="small" label="العرض (سم)" type="number" fullWidth value={formDimensionsWidth} onChange={(e) => setFormDimensionsWidth(e.target.value)} />
+                        <TextField size="small" label="الارتفاع (سم)" type="number" fullWidth value={formDimensionsHeight} onChange={(e) => setFormDimensionsHeight(e.target.value)} />
+                      </Box>
+
+                      {/* قسم SEO */}
+                      <Typography variant="subtitle2" fontWeight={700}>تحسين محركات البحث (SEO)</Typography>
+                      <Stack spacing={2}>
+                        <TextField size="small" label="عنوان SEO" fullWidth value={formSeoTitle} onChange={(e) => setFormSeoTitle(e.target.value)} />
+                        <TextField size="small" label="وصف SEO" fullWidth multiline minRows={2} value={formSeoDescription} onChange={(e) => setFormSeoDescription(e.target.value)} />
+                      </Stack>
+
+                      {/* قسم الكلمات المفتاحية */}
+                      <Typography variant="subtitle2" fontWeight={700}>الكلمات المفتاحية</Typography>
+                      <TextField size="small" label="الكلمات المفتاحية (مفصولة بفواصل)" fullWidth value={formTags} onChange={(e) => setFormTags(e.target.value)} helperText="مثال: إلكترونيات, هواتف, ذكي" />
+
+                      {/* قسم الخيارات */}
+                      <Typography variant="subtitle2" fontWeight={700}>الخيارات</Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                        <FormControlLabel control={<Switch checked={formIsFeatured} onChange={(e) => setFormIsFeatured(e.target.checked)} />} label="منتج مميز" />
+                        <FormControlLabel control={<Switch checked={formIsTaxable} onChange={(e) => setFormIsTaxable(e.target.checked)} />} label="خاضع للضريبة" />
+                      </Box>
+                      {formIsTaxable && (
+                        <TextField size="small" label="نسبة الضريبة (%)" type="number" fullWidth value={formTaxRate} onChange={(e) => setFormTaxRate(e.target.value)} sx={{ maxWidth: 300 }} />
+                      )}
+                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, maxWidth: 600 }}>
+                        <TextField size="small" label="الحد الأدنى للطلب" type="number" fullWidth value={formMinOrderQuantity} onChange={(e) => setFormMinOrderQuantity(e.target.value)} />
+                        <TextField size="small" label="الحد الأقصى للطلب" type="number" fullWidth value={formMaxOrderQuantity} onChange={(e) => setFormMaxOrderQuantity(e.target.value)} />
+                      </Box>
+
+                      {/* قسم التقييم (عرض فقط) */}
+                      {selectedProduct && (selectedProduct as any).ratingAvg != null && (
+                        <>
+                          <Typography variant="subtitle2" fontWeight={700}>التقييم (عرض فقط)</Typography>
+                          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                            <StarIcon sx={{ color: 'warning.main' }} />
+                            <Typography variant="body2">متوسط التقييم: {(selectedProduct as any).ratingAvg?.toFixed(1) ?? '-'}</Typography>
+                            <Typography variant="body2" color="text.secondary">|</Typography>
+                            <Typography variant="body2" color="text.secondary">عدد التقييمات: {(selectedProduct as any).ratingCount ?? 0}</Typography>
+                          </Box>
+                        </>
+                      )}
+                    </Stack>
+                  </AccordionDetails>
+                </Accordion>
 
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <Button 
@@ -505,6 +681,14 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                       </Box>
                       <Box>
                         <TextField size="small" label="الباركود (اختياري)" fullWidth value={variantForm.barcode} onChange={(e) => setVariantForm({ ...variantForm, barcode: e.target.value })} />
+                      </Box>
+                    </Box>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                      <Box>
+                        <TextField size="small" label="عنوان الموديل (عربي)" fullWidth value={variantForm.titleAr} onChange={(e) => setVariantForm({ ...variantForm, titleAr: e.target.value })} dir="rtl" />
+                      </Box>
+                      <Box>
+                        <TextField size="small" label="Variant Title (English)" fullWidth value={variantForm.titleEn} onChange={(e) => setVariantForm({ ...variantForm, titleEn: e.target.value })} dir="ltr" />
                       </Box>
                     </Box>
                     
@@ -729,7 +913,10 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="subtitle2" fontWeight={700}>{product.title}</Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <Typography variant="subtitle2" fontWeight={700}>{product.title}</Typography>
+                          {(product as any).isFeatured && <StarIcon sx={{ color: 'warning.main', fontSize: 16 }} />}
+                        </Box>
                         <Typography variant="caption" color="text.secondary" dir="ltr" display="block">/{product.slug}</Typography>
                       </TableCell>
                       <TableCell>
@@ -773,21 +960,54 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
 
 // Helper functions kept exactly the same for payload construction
 
-function buildProductPayload(form: typeof productFormDefault) {
+function buildProductPayload(
+  form: typeof productFormDefault,
+  extra?: {
+    brand: string; weight: string; costPrice: string; seoTitle: string; seoDescription: string;
+    dimensionsLength: string; dimensionsWidth: string; dimensionsHeight: string;
+    tags: string; isFeatured: boolean; isTaxable: boolean; taxRate: string;
+    minOrderQuantity: string; maxOrderQuantity: string;
+  },
+) {
   const payload: {
     title: string;
     slug?: string;
     description?: string;
     categoryId?: string;
     status: ProductStatus;
+    titleAr?: string;
+    titleEn?: string;
+    descriptionAr?: string;
+    descriptionEn?: string;
+    brand?: string;
+    weight?: number;
+    costPrice?: number;
+    dimensions?: { length?: number; width?: number; height?: number };
+    tags?: string[];
+    isFeatured?: boolean;
+    isTaxable?: boolean;
+    taxRate?: number;
+    minOrderQuantity?: number;
+    maxOrderQuantity?: number;
+    seoTitle?: string;
+    seoDescription?: string;
   } = {
     title: form.title.trim(),
     status: form.status,
   };
 
+  if (extra) {
+    payload.isFeatured = extra.isFeatured;
+    payload.isTaxable = extra.isTaxable;
+  }
+
   const slug = form.slug.trim();
   const description = form.description.trim();
   const categoryId = form.categoryId.trim();
+  const titleAr = form.titleAr.trim();
+  const titleEn = form.titleEn.trim();
+  const descriptionAr = form.descriptionAr.trim();
+  const descriptionEn = form.descriptionEn.trim();
 
   if (slug) {
     payload.slug = slug;
@@ -797,6 +1017,54 @@ function buildProductPayload(form: typeof productFormDefault) {
   }
   if (categoryId) {
     payload.categoryId = categoryId;
+  }
+  if (titleAr) {
+    payload.titleAr = titleAr;
+  }
+  if (titleEn) {
+    payload.titleEn = titleEn;
+  }
+  if (descriptionAr) {
+    payload.descriptionAr = descriptionAr;
+  }
+  if (descriptionEn) {
+    payload.descriptionEn = descriptionEn;
+  }
+  if (extra) {
+    if (extra.brand.trim()) {
+      payload.brand = extra.brand.trim();
+    }
+    if (extra.weight) {
+      payload.weight = Number(extra.weight);
+    }
+    if (extra.costPrice) {
+      payload.costPrice = Number(extra.costPrice);
+    }
+    if (extra.dimensionsLength || extra.dimensionsWidth || extra.dimensionsHeight) {
+      payload.dimensions = {
+        ...(extra.dimensionsLength ? { length: Number(extra.dimensionsLength) } : {}),
+        ...(extra.dimensionsWidth ? { width: Number(extra.dimensionsWidth) } : {}),
+        ...(extra.dimensionsHeight ? { height: Number(extra.dimensionsHeight) } : {}),
+      };
+    }
+    if (extra.tags.trim()) {
+      payload.tags = extra.tags.split(',').map((t: string) => t.trim()).filter(Boolean);
+    }
+    if (extra.isTaxable && extra.taxRate) {
+      payload.taxRate = Number(extra.taxRate);
+    }
+    if (extra.minOrderQuantity) {
+      payload.minOrderQuantity = Number(extra.minOrderQuantity);
+    }
+    if (extra.maxOrderQuantity) {
+      payload.maxOrderQuantity = Number(extra.maxOrderQuantity);
+    }
+    if (extra.seoTitle.trim()) {
+      payload.seoTitle = extra.seoTitle.trim();
+    }
+    if (extra.seoDescription.trim()) {
+      payload.seoDescription = extra.seoDescription.trim();
+    }
   }
 
   return payload;
@@ -813,6 +1081,8 @@ function buildVariantPayload(form: ReturnType<typeof createVariantFormDefault>) 
     lowStockThreshold: number;
     attributeValueIds: string[];
     isDefault: boolean;
+    titleAr?: string;
+    titleEn?: string;
   } = {
     title: form.title.trim(),
     sku: form.sku.trim(),
@@ -825,12 +1095,20 @@ function buildVariantPayload(form: ReturnType<typeof createVariantFormDefault>) 
 
   const barcode = form.barcode.trim();
   const compareAtPrice = form.compareAtPrice.trim();
+  const titleAr = form.titleAr.trim();
+  const titleEn = form.titleEn.trim();
 
   if (barcode) {
     payload.barcode = barcode;
   }
   if (compareAtPrice) {
     payload.compareAtPrice = Number(compareAtPrice);
+  }
+  if (titleAr) {
+    payload.titleAr = titleAr;
+  }
+  if (titleEn) {
+    payload.titleEn = titleEn;
   }
 
   return payload;

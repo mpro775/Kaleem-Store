@@ -27,6 +27,8 @@ export interface AttributeValueResponse {
   storeId: string;
   attributeId: string;
   value: string;
+  valueAr: string | null;
+  valueEn: string | null;
   slug: string;
 }
 
@@ -34,6 +36,8 @@ export interface AttributeResponse {
   id: string;
   storeId: string;
   name: string;
+  nameAr: string | null;
+  nameEn: string | null;
   slug: string;
   values?: AttributeValueResponse[];
 }
@@ -46,10 +50,14 @@ export interface CategoryAttributesResponse {
 export interface StorefrontFilterAttributeResponse {
   id: string;
   name: string;
+  nameAr: string | null;
+  nameEn: string | null;
   slug: string;
   values: Array<{
     id: string;
     value: string;
+    valueAr: string | null;
+    valueEn: string | null;
     slug: string;
   }>;
 }
@@ -90,6 +98,8 @@ export class AttributesService {
       const created = await this.attributesRepository.createAttribute({
         storeId: currentUser.storeId,
         name: input.name.trim(),
+        nameAr: input.nameAr ?? null,
+        nameEn: input.nameEn ?? null,
         slug,
       });
 
@@ -145,6 +155,8 @@ export class AttributesService {
         storeId: currentUser.storeId,
         attributeId,
         name,
+        nameAr: input.nameAr ?? existing.name_ar ?? null,
+        nameEn: input.nameEn ?? existing.name_en ?? null,
         slug,
       });
 
@@ -200,6 +212,8 @@ export class AttributesService {
         storeId: currentUser.storeId,
         attributeId,
         value: input.value.trim(),
+        valueAr: input.valueAr ?? null,
+        valueEn: input.valueEn ?? null,
         slug,
       });
 
@@ -238,6 +252,8 @@ export class AttributesService {
         storeId: currentUser.storeId,
         valueId,
         value,
+        valueAr: input.valueAr ?? existing.value_ar ?? null,
+        valueEn: input.valueEn ?? existing.value_en ?? null,
         slug,
       });
 
@@ -484,11 +500,15 @@ export class AttributesService {
       .map((attribute) => ({
         id: attribute.id,
         name: attribute.name,
+        nameAr: attribute.name_ar,
+        nameEn: attribute.name_en,
         slug: attribute.slug,
         values:
           valuesByAttributeId.get(attribute.id)?.map((value) => ({
             id: value.id,
             value: value.value,
+            valueAr: value.valueAr,
+            valueEn: value.valueEn,
             slug: value.slug,
           })) ?? [],
       }))
@@ -598,6 +618,8 @@ export class AttributesService {
       id: attribute.id,
       storeId: attribute.store_id,
       name: attribute.name,
+      nameAr: attribute.name_ar ?? null,
+      nameEn: attribute.name_en ?? null,
       slug: attribute.slug,
       ...(values.length > 0 ? { values: values.map((value) => this.toValueResponse(value)) } : {}),
     };
@@ -609,6 +631,8 @@ export class AttributesService {
       storeId: value.store_id,
       attributeId: value.attribute_id,
       value: value.value,
+      valueAr: value.value_ar ?? null,
+      valueEn: value.value_en ?? null,
       slug: value.slug,
     };
   }
