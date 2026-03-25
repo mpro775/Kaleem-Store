@@ -229,6 +229,17 @@ export function App() {
   const isStandalonePage =
     route === 'platform' || route === 'marketing' || route === 'register' || route === 'login';
 
+  if (route === 'merchant') {
+    if (showOnboarding) {
+      return (
+        <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default', py: { xs: 4, md: 8 }, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Container maxWidth="md">{renderRouteContent(route, session)}</Container>
+        </Box>
+      );
+    }
+    return renderRouteContent(route, session);
+  }
+
   if (isStandalonePage) {
     return (
       <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default', py: { xs: 1, md: 2 } }}>

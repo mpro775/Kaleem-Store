@@ -14,11 +14,19 @@ interface MerchantRequestInput {
   onSessionExpired: () => void;
 }
 
+let activeSession: MerchantSession | null = null;
+let refreshPromise: Promise<MerchantSession | null> | null = null;
+
 export async function merchantRequestJson<T>(input: MerchantRequestInput): Promise<T | null> {
   const init = input.init ?? {};
   const options = input.options ?? {};
 
-  const initial = await executeRequest<T>(input.session, input.path, init, options);
+  // Use the most up-to-date session to prevent race conditions during React state updates
+  const currentSession = activeSession && activeSession.refreshToken !== input.session.refreshToken 
+    ? activeSession 
+    : input.session;
+
+  const initial = await executeRequest<T>(currentSession, input.path, init, options);
   if (initial.ok) {
     return initial.data;
   }
@@ -27,12 +35,14 @@ export async function merchantRequestJson<T>(input: MerchantRequestInput): Promi
     throw new Error(await resolveErrorMessage(initial.response));
   }
 
-  const refreshed = await refreshSession(input.session);
+  const refreshed = await refreshSession(currentSession);
   if (!refreshed) {
+    activeSession = null;
     input.onSessionExpired();
     throw new Error('Session expired. Please sign in again.');
   }
 
+  activeSession = refreshed;
   input.onSessionUpdate(refreshed);
 
   const retried = await executeRequest<T>(refreshed, input.path, init, options);
@@ -118,25 +128,43 @@ function shouldRefresh(status: number, options: MerchantRequestOptions): boolean
 }
 
 async function refreshSession(session: MerchantSession): Promise<MerchantSession | null> {
-  const response = await fetch(`${session.apiBaseUrl}/auth/refresh`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({ refreshToken: session.refreshToken }),
-  });
-
-  if (!response.ok) {
-    return null;
+  // If the session we are trying to refresh is older than the active one we already refreshed,
+  // we just return the active one instead of refreshing again.
+  if (activeSession && activeSession.refreshToken !== session.refreshToken) {
+    return activeSession;
   }
 
-  const payload = (await response.json()) as AuthResult;
-  return {
-    apiBaseUrl: session.apiBaseUrl,
-    accessToken: payload.accessToken,
-    refreshToken: payload.refreshToken,
-    user: payload.user,
-  };
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = (async () => {
+    try {
+      const response = await fetch(`${session.apiBaseUrl}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ refreshToken: session.refreshToken }),
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const payload = (await response.json()) as AuthResult;
+      return {
+        apiBaseUrl: session.apiBaseUrl,
+        accessToken: payload.accessToken,
+        refreshToken: payload.refreshToken,
+        user: payload.user,
+      };
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
 }
 
 async function resolveErrorMessage(response: Response): Promise<string> {
