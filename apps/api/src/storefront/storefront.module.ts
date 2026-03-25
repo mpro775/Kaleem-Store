@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AttributesModule } from '../attributes/attributes.module';
 import { CategoriesModule } from '../categories/categories.module';
 import { CustomersModule } from '../customers/customers.module';
@@ -31,7 +31,7 @@ import { StorefrontService } from './storefront.service';
     WebhooksModule,
     SaasModule,
     IdempotencyModule,
-    CustomersModule,
+    forwardRef(() => CustomersModule),
   ],
   controllers: [StorefrontController, PublicStoreController],
   providers: [StorefrontService, StoreResolverService],
