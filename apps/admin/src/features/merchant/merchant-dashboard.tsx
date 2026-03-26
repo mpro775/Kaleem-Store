@@ -465,44 +465,32 @@ function OverviewPanel({ session }: { session: MerchantSession }) {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      {/* Page Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1, flexWrap: 'wrap', gap: 2 }}>
-        <Box>
-          <Typography variant="h4" fontWeight={800} gutterBottom>
-            الرئيسية
-          </Typography>
-          <Typography color="text.secondary">
-            نظرة عامة على أداء متجرك وإحصائيات سريعة.
-          </Typography>
-        </Box>
-      </Box>
-
       {/* Stat Cards Row */}
-      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' } }}>
+      <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' } }}>
         {[
-          { title: 'إجمالي المبيعات', value: '0 ر.س', subtitle: 'اليوم', icon: <MonetizationOnIcon />, color: '#10b981' },
-          { title: 'الطلبات الجديدة', value: '0', subtitle: 'قيد الانتظار', icon: <LocalMallIcon />, color: '#6366f1' },
-          { title: 'المنتجات النشطة', value: '0', subtitle: 'من إجمالي المنتجات', icon: <InventoryIcon />, color: '#f59e0b' },
-          { title: 'زيارات المتجر', value: '0', subtitle: 'آخر 24 ساعة', icon: <VisibilityIcon />, color: '#ec4899' },
+          { title: 'إجمالي المبيعات', value: '0 ر.س', subtitle: 'اليوم', icon: <MonetizationOnIcon />, color: '#10b981', bg: '#ecfdf5' },
+          { title: 'الطلبات الجديدة', value: '0', subtitle: 'قيد الانتظار', icon: <LocalMallIcon />, color: '#6366f1', bg: '#eef2ff' },
+          { title: 'المنتجات النشطة', value: '0', subtitle: 'من إجمالي المنتجات', icon: <InventoryIcon />, color: '#f59e0b', bg: '#fffbeb' },
+          { title: 'زيارات المتجر', value: '0', subtitle: 'آخر 24 ساعة', icon: <VisibilityIcon />, color: '#ec4899', bg: '#fdf2f8' },
         ].map((stat, i) => (
           <Box key={i}>
-            <Paper elevation={0} sx={{ p: 2.5, borderRadius: 3, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
+            <Paper elevation={0} sx={{ p: 3, borderRadius: 4, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', transition: 'box-shadow 0.3s', '&:hover': { boxShadow: '0 8px 24px rgba(0,0,0,0.04)' } }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <Box>
-                  <Typography variant="body2" color="text.secondary" fontWeight={700} gutterBottom>
+                  <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>
                     {stat.title}
                   </Typography>
-                  <Typography variant="h5" fontWeight={800} sx={{ mb: 0.5, color: 'text.primary' }}>
+                  <Typography variant="h4" fontWeight={800} sx={{ mb: 0.5 }}>
                     {stat.value}
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <TrendingUpIcon sx={{ fontSize: 16, color: 'success.main' }} />
-                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                    <TrendingUpIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
+                    <Typography variant="caption" color="text.disabled">
                       {stat.subtitle}
                     </Typography>
                   </Box>
                 </Box>
-                <Box sx={{ width: 40, height: 40, borderRadius: 2, bgcolor: alpha(stat.color, 0.1), color: stat.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Box sx={{ width: 44, height: 44, borderRadius: 2.5, bgcolor: stat.bg, color: stat.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {stat.icon}
                 </Box>
               </Box>
@@ -513,16 +501,17 @@ function OverviewPanel({ session }: { session: MerchantSession }) {
 
       {/* Info & Guide Cards Row */}
       <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, minmax(0, 1fr))' } }}>
-        <Paper elevation={0} sx={{ p: 3, borderRadius: 3, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-            <StorefrontIcon color="primary" />
-            <Typography variant="h6" sx={{ fontWeight: 800 }}>معلومات المتجر</Typography>
+        <Paper elevation={0} sx={{ p: 4, borderRadius: 4, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+            <Box sx={{ width: 48, height: 48, borderRadius: '50%', bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <StorefrontIcon />
+            </Box>
+            <Typography variant="h5" sx={{ fontWeight: 800 }}>معلومات المتجر</Typography>
           </Box>
-          <Divider sx={{ mb: 3 }} />
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
               <Typography variant="caption" color="text.secondary" fontWeight={700}>معرّف المتجر (Store ID)</Typography>
-              <Typography variant="body2" sx={{ fontFamily: 'monospace', bgcolor: 'background.default', p: 1.5, borderRadius: 1.5, border: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="body1" sx={{ fontFamily: 'monospace', bgcolor: 'background.default', p: 1.5, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
                 {session.user.storeId}
               </Typography>
             </Box>
@@ -531,7 +520,7 @@ function OverviewPanel({ session }: { session: MerchantSession }) {
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
                 {session.user.permissions.length > 0 ? (
                   session.user.permissions.map((perm) => (
-                    <Box key={perm} sx={{ px: 1.5, py: 0.5, borderRadius: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.dark', fontSize: '0.75rem', fontWeight: 700, border: '1px solid', borderColor: alpha(theme.palette.primary.main, 0.2) }}>
+                    <Box key={perm} sx={{ px: 1.5, py: 0.5, borderRadius: 999, bgcolor: 'primary.main', color: 'white', fontSize: '0.75rem', fontWeight: 700 }}>
                       {perm}
                     </Box>
                   ))
@@ -543,28 +532,31 @@ function OverviewPanel({ session }: { session: MerchantSession }) {
           </Box>
         </Paper>
 
-        <Paper elevation={0} sx={{ p: 3, borderRadius: 3, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-            <DashboardIcon color="primary" />
-            <Typography variant="h6" sx={{ fontWeight: 800 }}>دليل البدء السريع</Typography>
+        <Paper elevation={0} sx={{ p: 4, borderRadius: 4, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+            <Box sx={{ width: 48, height: 48, borderRadius: '50%', bgcolor: alpha(theme.palette.secondary.main, 0.1), color: 'secondary.main', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <DashboardIcon />
+            </Box>
+            <Typography variant="h5" sx={{ fontWeight: 800 }}>دليل الاستخدام السريع</Typography>
           </Box>
-          <Divider sx={{ mb: 3 }} />
-          <Box component="ul" sx={{ m: 0, pl: 2, display: 'flex', flexDirection: 'column', gap: 2, color: 'text.secondary', '& li': { pl: 1 } }}>
+          <Box component="ul" sx={{ m: 0, pl: 2, display: 'flex', flexDirection: 'column', gap: 1.5, color: 'text.secondary', '& li': { pl: 1 } }}>
             <Box component="li">
-              <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>إعدادات المتجر الأساسية</Typography>
-              <Typography variant="caption" display="block">قم بضبط العملة، سياسات الشحن، ومعلومات التواصل.</Typography>
+              <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>قم بضبط إعدادات المتجر الأساسية (العملة، سياسات الشحن).</Typography>
             </Box>
             <Box component="li">
-              <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>إدارة المنتجات</Typography>
-              <Typography variant="caption" display="block">أضف تصنيفات المنتجات لتنظيم متجرك ثم أضف منتجاتك الأولى.</Typography>
+              <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>أضف تصنيفات المنتجات لتنظيم متجرك.</Typography>
             </Box>
             <Box component="li">
-              <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>طرق الدفع والشحن</Typography>
-              <Typography variant="caption" display="block">تأكد من تفعيل البوابات المطلوبة وتحديد مناطق التوصيل.</Typography>
+              <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>أضف منتجاتك الأولى وحدد أسعارها ومخزونها.</Typography>
             </Box>
             <Box component="li">
-              <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>المظهر والنطاق</Typography>
-              <Typography variant="caption" display="block">اختر واجهة (Theme) واربط نطاقك الخاص (Domain) لانطلاقة احترافية.</Typography>
+              <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>تأكد من ضبط طرق الشحن والدفع.</Typography>
+            </Box>
+            <Box component="li">
+              <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>اختر واجهة مناسبة (Theme) لمتجرك.</Typography>
+            </Box>
+            <Box component="li">
+              <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>اربط نطاقك الخاص (Domain) لانطلاقة احترافية.</Typography>
             </Box>
           </Box>
         </Paper>
