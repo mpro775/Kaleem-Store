@@ -282,6 +282,225 @@ export interface OrderDetail extends Order {
   } | null;
 }
 
+export interface AnalyticsOverview {
+  windowDays: number;
+  timezone: string;
+  currencyCode: string;
+  startAt: string;
+  endAt: string;
+  kpis: {
+    grossSales: number;
+    netSales: number;
+    totalOrders: number;
+    averageOrderValue: number;
+    cancellationRate: number;
+    returnRate: number;
+    approvedPaymentsAmount: number;
+    approvalRate: number;
+  };
+  ordersByStatus: Array<{ status: string; count: number }>;
+  topProducts: Array<{
+    productId: string;
+    productTitle: string;
+    unitsSold: number;
+    revenue: number;
+    shareOfNetSales: number;
+  }>;
+}
+
+export interface AnalyticsFulfillmentSla {
+  windowDays: number;
+  timezone: string;
+  startAt: string;
+  endAt: string;
+  items: Array<{
+    transition: string;
+    sampleCount: number;
+    avgMinutes: number;
+    p50Minutes: number;
+    p90Minutes: number;
+  }>;
+}
+
+export interface AnalyticsPaymentsPerformance {
+  windowDays: number;
+  timezone: string;
+  currencyCode: string;
+  startAt: string;
+  endAt: string;
+  kpis: {
+    totalPayments: number;
+    approvedPayments: number;
+    rejectedPayments: number;
+    pendingPayments: number;
+    underReviewPayments: number;
+    refundedPayments: number;
+    approvalRate: number;
+    approvedAmount: number;
+    avgReviewMinutes: number;
+    p50ReviewMinutes: number;
+    p90ReviewMinutes: number;
+  };
+}
+
+export interface AnalyticsPromotionsEfficiency {
+  windowDays: number;
+  timezone: string;
+  currencyCode: string;
+  startAt: string;
+  endAt: string;
+  kpis: {
+    grossSales: number;
+    netSales: number;
+    discountTotal: number;
+    discountedOrders: number;
+    couponOrders: number;
+    discountRate: number;
+    revenuePerDiscountUnit: number;
+    averageDiscountPerDiscountedOrder: number;
+  };
+  topCoupons: Array<{
+    couponCode: string;
+    ordersCount: number;
+    discountTotal: number;
+    netSales: number;
+  }>;
+}
+
+export interface AnalyticsInventoryHealth {
+  windowDays: number;
+  timezone: string;
+  startAt: string;
+  endAt: string;
+  kpis: {
+    totalVariants: number;
+    lowStockVariants: number;
+    outOfStockVariants: number;
+    reservedUnits: number;
+    variantsWithSales: number;
+    sellThroughRate: number;
+  };
+  lowStockItems: Array<{
+    variantId: string;
+    productId: string;
+    productTitle: string;
+    sku: string;
+    availableQuantity: number;
+    lowStockThreshold: number;
+    unitsSold: number;
+  }>;
+  slowMovingItems: Array<{
+    variantId: string;
+    productId: string;
+    productTitle: string;
+    sku: string;
+    availableQuantity: number;
+  }>;
+}
+
+export interface AnalyticsStockoutRisk {
+  windowDays: number;
+  timezone: string;
+  currencyCode: string;
+  startAt: string;
+  endAt: string;
+  items: Array<{
+    variantId: string;
+    productId: string;
+    productTitle: string;
+    sku: string;
+    availableQuantity: number;
+    unitsSold: number;
+    revenue: number;
+    avgDailyUnits: number;
+    daysOfCover: number;
+  }>;
+}
+
+export interface AnalyticsCustomersRetention {
+  windowDays: number;
+  timezone: string;
+  currencyCode: string;
+  startAt: string;
+  endAt: string;
+  kpis: {
+    activeCustomers: number;
+    newCustomers: number;
+    returningCustomers: number;
+    repeatCustomers: number;
+    repeatPurchaseRate: number;
+    averageOrdersPerCustomer: number;
+  };
+  topRepeatCustomers: Array<{
+    customerId: string;
+    fullName: string;
+    phone: string;
+    ordersInWindow: number;
+    lifetimeOrders: number;
+    netSalesInWindow: number;
+  }>;
+}
+
+export interface AnalyticsFunnelConversion {
+  windowDays: number;
+  timezone: string;
+  startAt: string;
+  endAt: string;
+  stages: Array<{
+    event: string;
+    sessions: number;
+    stepConversionRate: number;
+    fromVisitRate: number;
+  }>;
+}
+
+export interface AnalyticsSourceAttribution {
+  windowDays: number;
+  timezone: string;
+  startAt: string;
+  endAt: string;
+  items: Array<{
+    source: string;
+    medium: string;
+    campaign: string;
+    visits: number;
+    checkoutStarts: number;
+    checkouts: number;
+    visitToCheckoutRate: number;
+  }>;
+}
+
+export interface AnalyticsDataQuality {
+  windowDays: number;
+  timezone: string;
+  startAt: string;
+  endAt: string;
+  score: number;
+  status: 'healthy' | 'warning' | 'critical';
+  checks: Array<{
+    key: string;
+    value: number;
+    severity: 'ok' | 'warning' | 'critical';
+    description: string;
+  }>;
+}
+
+export interface AnalyticsAnomalyReport {
+  windowDays: number;
+  timezone: string;
+  thresholdPercent: number;
+  currentWindow: { startAt: string; endAt: string };
+  previousWindow: { startAt: string; endAt: string };
+  alerts: Array<{
+    key: 'net_sales' | 'total_orders' | 'approved_payments' | 'funnel_conversion';
+    severity: 'warning' | 'critical';
+    currentValue: number;
+    previousValue: number;
+    deltaPercent: number;
+    message: string;
+  }>;
+}
+
 export interface PaginatedOrders {
   items: Order[];
   total: number;

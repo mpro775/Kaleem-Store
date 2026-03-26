@@ -15,6 +15,8 @@ import { WebhooksModule } from '../webhooks/webhooks.module';
 import { PublicStoreController } from './public-store.controller';
 import { StoreResolverService } from './store-resolver.service';
 import { StorefrontController } from './storefront.controller';
+import { StorefrontTrackingRepository } from './storefront-tracking.repository';
+import { StorefrontTrackingService } from './storefront-tracking.service';
 import { StorefrontService } from './storefront.service';
 
 @Module({
@@ -34,7 +36,12 @@ import { StorefrontService } from './storefront.service';
     forwardRef(() => CustomersModule),
   ],
   controllers: [StorefrontController, PublicStoreController],
-  providers: [StorefrontService, StoreResolverService],
+  providers: [
+    StorefrontService,
+    StoreResolverService,
+    StorefrontTrackingRepository,
+    StorefrontTrackingService,
+  ],
   exports: [StoreResolverService],
 })
 export class StorefrontModule {}

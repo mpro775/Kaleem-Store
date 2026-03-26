@@ -1,0 +1,208 @@
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { PERMISSIONS } from '../auth/constants/permission.constants';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { AccessTokenGuard } from '../auth/guards/access-token.guard';
+import type { AuthUser } from '../auth/interfaces/auth-user.interface';
+import { RequirePermissions } from '../rbac/decorators/permissions.decorator';
+import { PermissionsGuard } from '../rbac/guards/permissions.guard';
+import { TenantGuard } from '../tenancy/guards/tenant.guard';
+import { AnalyticsGovernanceQueryDto } from './dto/analytics-governance-query.dto';
+import { AnalyticsWindowQueryDto } from './dto/analytics-window-query.dto';
+import {
+  AnalyticsService,
+  type AnalyticsAnomalyReportResponse,
+  type AnalyticsDataQualityResponse,
+  type AnalyticsOverviewResponse,
+  type CustomersRetentionResponse,
+  type FunnelConversionResponse,
+  type FulfillmentSlaResponse,
+  type InventoryHealthResponse,
+  type OrdersStatusBreakdownResponse,
+  type PaymentsPerformanceResponse,
+  type PromotionsEfficiencyResponse,
+  type SourceAttributionResponse,
+  type StockoutRiskResponse,
+  type TopSellingProductsResponse,
+} from './analytics.service';
+
+@ApiTags('analytics')
+@ApiBearerAuth()
+@Controller('analytics')
+@UseGuards(AccessTokenGuard, TenantGuard, PermissionsGuard)
+export class AnalyticsController {
+  constructor(private readonly analyticsService: AnalyticsService) {}
+
+  @Get('overview')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get merchant analytics overview' })
+  async getOverview(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<AnalyticsOverviewResponse> {
+    return this.analyticsService.getOverview(currentUser, {
+      windowDays: query.window ?? 30,
+      limit: query.limit ?? 5,
+    });
+  }
+
+  @Get('orders/status-breakdown')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get order status breakdown analytics' })
+  async getOrdersStatusBreakdown(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<OrdersStatusBreakdownResponse> {
+    return this.analyticsService.getOrdersStatusBreakdown(currentUser, query.window ?? 30);
+  }
+
+  @Get('products/top-selling')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get top-selling products for selected window' })
+  async getTopSellingProducts(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<TopSellingProductsResponse> {
+    return this.analyticsService.getTopSellingProducts(currentUser, {
+      windowDays: query.window ?? 30,
+      limit: query.limit ?? 5,
+    });
+  }
+
+  @Get('operations/fulfillment-sla')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get fulfillment SLA performance metrics' })
+  async getFulfillmentSla(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<FulfillmentSlaResponse> {
+    return this.analyticsService.getFulfillmentSla(currentUser, query.window ?? 30);
+  }
+
+  @Get('payments/performance')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get payment performance metrics' })
+  async getPaymentsPerformance(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<PaymentsPerformanceResponse> {
+    return this.analyticsService.getPaymentsPerformance(currentUser, query.window ?? 30);
+  }
+
+  @Get('promotions/efficiency')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get promotions and coupon efficiency metrics' })
+  async getPromotionsEfficiency(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<PromotionsEfficiencyResponse> {
+    return this.analyticsService.getPromotionsEfficiency(currentUser, {
+      windowDays: query.window ?? 30,
+      limit: query.limit ?? 5,
+    });
+  }
+
+  @Get('inventory/health')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get inventory health metrics and low-stock insights' })
+  async getInventoryHealth(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<InventoryHealthResponse> {
+    return this.analyticsService.getInventoryHealth(currentUser, {
+      windowDays: query.window ?? 30,
+      limit: query.limit ?? 5,
+    });
+  }
+
+  @Get('inventory/stockout-risk')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get stockout risk list based on sales velocity and current inventory' })
+  async getStockoutRisk(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<StockoutRiskResponse> {
+    return this.analyticsService.getStockoutRisk(currentUser, {
+      windowDays: query.window ?? 30,
+      limit: query.limit ?? 5,
+    });
+  }
+
+  @Get('customers/retention')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get customer retention and repeat purchase metrics' })
+  async getCustomersRetention(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<CustomersRetentionResponse> {
+    return this.analyticsService.getCustomersRetention(currentUser, {
+      windowDays: query.window ?? 30,
+      limit: query.limit ?? 5,
+    });
+  }
+
+  @Get('funnel/conversion')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get storefront conversion funnel metrics' })
+  async getFunnelConversion(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<FunnelConversionResponse> {
+    return this.analyticsService.getFunnelConversion(currentUser, query.window ?? 30);
+  }
+
+  @Get('funnel/source-attribution')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get source attribution metrics for storefront funnel' })
+  async getSourceAttribution(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<SourceAttributionResponse> {
+    return this.analyticsService.getSourceAttribution(currentUser, {
+      windowDays: query.window ?? 30,
+      limit: query.limit ?? 10,
+    });
+  }
+
+  @Get('quality/data-health')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get analytics data-quality checks and score' })
+  async getDataQuality(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<AnalyticsDataQualityResponse> {
+    return this.analyticsService.getDataQualityReport(currentUser, query.window ?? 30);
+  }
+
+  @Get('quality/anomalies')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get analytics anomaly report versus previous window' })
+  async getAnomalies(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() windowQuery: AnalyticsWindowQueryDto,
+    @Query() governanceQuery: AnalyticsGovernanceQueryDto,
+  ): Promise<AnalyticsAnomalyReportResponse> {
+    return this.analyticsService.getAnomalyReport(currentUser, {
+      windowDays: windowQuery.window ?? 30,
+      thresholdPercent: governanceQuery.anomalyThresholdPercent ?? 25,
+    });
+  }
+
+  @Post('quality/run-monitoring')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Run governance monitoring and emit critical anomaly alerts' })
+  async runMonitoring(
+    @CurrentUser() currentUser: AuthUser,
+    @Body() body: AnalyticsGovernanceQueryDto,
+    @Query() windowQuery: AnalyticsWindowQueryDto,
+  ): Promise<{
+    quality: AnalyticsDataQualityResponse;
+    anomalies: AnalyticsAnomalyReportResponse;
+    emittedAlerts: number;
+  }> {
+    return this.analyticsService.runGovernanceMonitoring(currentUser, {
+      windowDays: windowQuery.window ?? 30,
+      thresholdPercent: body.anomalyThresholdPercent ?? 25,
+    });
+  }
+}

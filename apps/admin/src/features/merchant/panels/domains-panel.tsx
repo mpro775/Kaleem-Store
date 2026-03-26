@@ -6,7 +6,7 @@ import SyncIcon from '@mui/icons-material/Sync';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
-import type { MerchantRequester } from '../merchant-dashboard';
+import type { MerchantRequester } from '../merchant-dashboard.types';
 import type { Domain } from '../types';
 
 interface DomainsPanelProps {
@@ -32,7 +32,7 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
       const data = await request<Domain[]>('/domains', { method: 'GET' });
       setDomains(data ?? []);
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحميل النطاقات', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ظ…ظٹظ„ ط§ظ„ظ†ط·ط§ظ‚ط§طھ', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -41,7 +41,7 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
   async function createDomain(): Promise<void> {
     const normalized = hostname.trim().toLowerCase();
     if (!normalized) {
-      setMessage({ text: 'اسم النطاق مطلوب', type: 'error' });
+      setMessage({ text: 'ط§ط³ظ… ط§ظ„ظ†ط·ط§ظ‚ ظ…ط·ظ„ظˆط¨', type: 'error' });
       return;
     }
 
@@ -54,9 +54,9 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
       });
       setHostname('');
       await loadDomains();
-      setMessage({ text: 'تمت إضافة النطاق بنجاح', type: 'success' });
+      setMessage({ text: 'طھظ…طھ ط¥ط¶ط§ظپط© ط§ظ„ظ†ط·ط§ظ‚ ط¨ظ†ط¬ط§ط­', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'تعذر إضافة النطاق', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط¥ط¶ط§ظپط© ط§ظ„ظ†ط·ط§ظ‚', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -66,7 +66,7 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
     setActionLoading(true);
     await callDomainAction(
       `/domains/${domainId}/verify`,
-      'تم التحقق من النطاق بنجاح',
+      'طھظ… ط§ظ„طھط­ظ‚ظ‚ ظ…ظ† ط§ظ„ظ†ط·ط§ظ‚ ط¨ظ†ط¬ط§ط­',
       request,
       setMessage,
       loadDomains,
@@ -78,7 +78,7 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
     setActionLoading(true);
     await callDomainAction(
       `/domains/${domainId}/activate`,
-      'تم تفعيل النطاق وبدء تجهيز شهادة SSL',
+      'طھظ… طھظپط¹ظٹظ„ ط§ظ„ظ†ط·ط§ظ‚ ظˆط¨ط¯ط، طھط¬ظ‡ظٹط² ط´ظ‡ط§ط¯ط© SSL',
       request,
       setMessage,
       loadDomains,
@@ -90,7 +90,7 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
     setActionLoading(true);
     await callDomainAction(
       `/domains/${domainId}/sync-ssl`,
-      'تمت مزامنة حالة SSL من المزود',
+      'طھظ…طھ ظ…ط²ط§ظ…ظ†ط© ط­ط§ظ„ط© SSL ظ…ظ† ط§ظ„ظ…ط²ظˆط¯',
       request,
       setMessage,
       loadDomains,
@@ -99,15 +99,15 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
   }
 
   async function deleteDomain(domainId: string): Promise<void> {
-    if (!window.confirm('هل أنت متأكد من حذف هذا النطاق نهائياً؟ سيتوقف المتجر عن العمل على هذا النطاق.')) return;
+    if (!window.confirm('ظ‡ظ„ ط£ظ†طھ ظ…طھط£ظƒط¯ ظ…ظ† ط­ط°ظپ ظ‡ط°ط§ ط§ظ„ظ†ط·ط§ظ‚ ظ†ظ‡ط§ط¦ظٹط§ظ‹طں ط³ظٹطھظˆظ‚ظپ ط§ظ„ظ…طھط¬ط± ط¹ظ† ط§ظ„ط¹ظ…ظ„ ط¹ظ„ظ‰ ظ‡ط°ط§ ط§ظ„ظ†ط·ط§ظ‚.')) return;
     setActionLoading(true);
     setMessage({ text: '', type: 'info' });
     try {
       await request(`/domains/${domainId}`, { method: 'DELETE' });
       await loadDomains();
-      setMessage({ text: 'تم حذف النطاق', type: 'success' });
+      setMessage({ text: 'طھظ… ط­ط°ظپ ط§ظ„ظ†ط·ط§ظ‚', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'تعذر حذف النطاق', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط­ط°ظپ ط§ظ„ظ†ط·ط§ظ‚', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -118,10 +118,10 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1, flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Typography variant="h4" fontWeight={800} gutterBottom>
-            النطاقات (الدومين)
+            ط§ظ„ظ†ط·ط§ظ‚ط§طھ (ط§ظ„ط¯ظˆظ…ظٹظ†)
           </Typography>
           <Typography color="text.secondary">
-            اربط متجرك بنطاق مخصص واعرض هويتك التجارية باحترافية.
+            ط§ط±ط¨ط· ظ…طھط¬ط±ظƒ ط¨ظ†ط·ط§ظ‚ ظ…ط®طµطµ ظˆط§ط¹ط±ط¶ ظ‡ظˆظٹطھظƒ ط§ظ„طھط¬ط§ط±ظٹط© ط¨ط§ط­طھط±ط§ظپظٹط©.
           </Typography>
         </Box>
         <Button 
@@ -129,7 +129,7 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
           onClick={() => loadDomains().catch(() => undefined)}
           disabled={loading}
         >
-          تحديث البيانات
+          طھط­ط¯ظٹط« ط§ظ„ط¨ظٹط§ظ†ط§طھ
         </Button>
       </Box>
 
@@ -141,12 +141,12 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
       <Paper elevation={0} sx={{ p: 3, borderRadius: 4, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
           <LanguageIcon color="primary" />
-          <Typography variant="h6" fontWeight={800}>ربط نطاق جديد</Typography>
+          <Typography variant="h6" fontWeight={800}>ط±ط¨ط· ظ†ط·ط§ظ‚ ط¬ط¯ظٹط¯</Typography>
         </Box>
         <Divider sx={{ mb: 3 }} />
         
         <Typography variant="body2" color="text.secondary" mb={2}>
-          أدخل اسم النطاق (مثل: shop.example.com) دون إضافة http://.
+          ط£ط¯ط®ظ„ ط§ط³ظ… ط§ظ„ظ†ط·ط§ظ‚ (ظ…ط«ظ„: shop.example.com) ط¯ظˆظ† ط¥ط¶ط§ظپط© http://.
         </Typography>
 
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="flex-start">
@@ -167,7 +167,7 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
             disableElevation
             sx={{ minWidth: 120 }}
           >
-            إضافة النطاق
+            ط¥ط¶ط§ظپط© ط§ظ„ظ†ط·ط§ظ‚
           </Button>
         </Stack>
       </Paper>
@@ -178,11 +178,11 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
           <Table>
             <TableHead sx={{ bgcolor: 'background.default' }}>
               <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>اسم النطاق</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>الحالة</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>حالة SSL</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>إعدادات DNS المطلوبة</TableCell>
-                <TableCell align="left" sx={{ fontWeight: 700 }}>الإجراءات</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>ط§ط³ظ… ط§ظ„ظ†ط·ط§ظ‚</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ط­ط§ظ„ط©</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>ط­ط§ظ„ط© SSL</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>ط¥ط¹ط¯ط§ط¯ط§طھ DNS ط§ظ„ظ…ط·ظ„ظˆط¨ط©</TableCell>
+                <TableCell align="left" sx={{ fontWeight: 700 }}>ط§ظ„ط¥ط¬ط±ط§ط،ط§طھ</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -195,7 +195,7 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
               ) : domains.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
-                    <Typography color="text.secondary">لا توجد نطاقات مخصصة مرتبطة بهذا المتجر.</Typography>
+                    <Typography color="text.secondary">ظ„ط§ طھظˆط¬ط¯ ظ†ط·ط§ظ‚ط§طھ ظ…ط®طµطµط© ظ…ط±طھط¨ط·ط© ط¨ظ‡ط°ط§ ط§ظ„ظ…طھط¬ط±.</Typography>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -205,14 +205,14 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
                       <Typography variant="subtitle2" fontWeight={700} dir="ltr">{domain.hostname}</Typography>
                       {domain.sslProvider && (
                         <Typography variant="caption" color="text.secondary">
-                          مزود SSL: {domain.sslProvider}
+                          ظ…ط²ظˆط¯ SSL: {domain.sslProvider}
                         </Typography>
                       )}
                     </TableCell>
                     <TableCell>
                       <Chip 
                         size="small" 
-                        label={domain.status === 'active' ? 'نشط' : domain.status === 'pending' ? 'بانتظار التحقق' : domain.status} 
+                        label={domain.status === 'active' ? 'ظ†ط´ط·' : domain.status === 'pending' ? 'ط¨ط§ظ†طھط¸ط§ط± ط§ظ„طھط­ظ‚ظ‚' : domain.status} 
                         color={domain.status === 'active' ? 'success' : domain.status === 'pending' ? 'warning' : 'default'}
                         sx={{ fontWeight: 700 }}
                       />
@@ -242,19 +242,19 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
                       <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ maxWidth: 200, justifyContent: 'flex-end' }}>
                         {domain.status !== 'active' && (
                           <Button size="small" variant="outlined" startIcon={<VerifiedUserIcon />} onClick={() => verifyDomain(domain.id).catch(() => undefined)} disabled={actionLoading}>
-                            تحقق
+                            طھط­ظ‚ظ‚
                           </Button>
                         )}
                         {domain.status === 'verified' && (
                           <Button size="small" variant="contained" startIcon={<PlayCircleOutlineIcon />} onClick={() => activateDomain(domain.id).catch(() => undefined)} disabled={actionLoading}>
-                            تفعيل
+                            طھظپط¹ظٹظ„
                           </Button>
                         )}
                         <Button size="small" variant="outlined" startIcon={<SyncIcon />} onClick={() => syncSsl(domain.id).catch(() => undefined)} disabled={actionLoading}>
                           SSL
                         </Button>
                         <Button size="small" color="error" variant="outlined" startIcon={<DeleteOutlineIcon />} onClick={() => deleteDomain(domain.id).catch(() => undefined)} disabled={actionLoading}>
-                          حذف
+                          ط­ط°ظپ
                         </Button>
                       </Stack>
                     </TableCell>
@@ -282,13 +282,13 @@ async function callDomainAction(
     await loadDomains();
     setMessage({ text: successMessage, type: 'success' });
   } catch (error) {
-    setMessage({ text: error instanceof Error ? error.message : 'فشلت عملية النطاق', type: 'error' });
+    setMessage({ text: error instanceof Error ? error.message : 'ظپط´ظ„طھ ط¹ظ…ظ„ظٹط© ط§ظ„ظ†ط·ط§ظ‚', type: 'error' });
   }
 }
 
 function formatSslMode(mode: Domain['sslMode'] | undefined): string {
   if (mode === 'full') {
-    return 'كامل';
+    return 'ظƒط§ظ…ظ„';
   }
-  return 'كامل (صارم)';
+  return 'ظƒط§ظ…ظ„ (طµط§ط±ظ…)';
 }

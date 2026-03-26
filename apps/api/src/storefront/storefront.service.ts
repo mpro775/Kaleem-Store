@@ -39,6 +39,7 @@ import { ThemesService } from '../themes/themes.service';
 import { StoresRepository } from '../stores/stores.repository';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { StoreResolverService } from './store-resolver.service';
+import { StorefrontTrackingService } from './storefront-tracking.service';
 import type { AddCartItemDto } from './dto/add-cart-item.dto';
 import type { CheckoutDto } from './dto/checkout.dto';
 import type { ListStorefrontFiltersQueryDto } from './dto/list-storefront-filters-query.dto';
@@ -186,10 +187,16 @@ export class StorefrontService {
     private readonly storesRepository: StoresRepository,
     private readonly webhooksService: WebhooksService,
     private readonly customersService: CustomersService,
+    private readonly storefrontTrackingService: StorefrontTrackingService,
   ) {}
 
   async getStore(request: Request) {
     const store = await this.storeResolverService.resolve(request);
+    await this.storefrontTrackingService.trackEvent(request, {
+      storeId: store.id,
+      eventType: 'store_visit',
+    });
+
     return {
       id: store.id,
       name: store.name,
@@ -308,6 +315,15 @@ export class StorefrontService {
 
     const listingMeta = this.computeProductListingMeta(variants, images);
 
+    await this.storefrontTrackingService.trackEvent(request, {
+      storeId: store.id,
+      eventType: 'product_view',
+      productId: product.id,
+      metadata: {
+        productSlug: slug,
+      },
+    });
+
     return {
       ...this.mapProduct(product, listingMeta),
       variants: variants.map((variant) => this.mapVariant(variant)),
@@ -363,6 +379,17 @@ export class StorefrontService {
     });
 
     const items = await this.ordersRepository.listCartItems(store.id, cart.id);
+    await this.storefrontTrackingService.trackEvent(request, {
+      storeId: store.id,
+      eventType: 'add_to_cart',
+      cartId: cart.id,
+      productId: variant.product_id,
+      variantId: variant.variant_id,
+      metadata: {
+        quantity: input.quantity,
+      },
+    });
+
     return this.mapCart(cart.id, store.currency_code, items);
   }
 
@@ -439,6 +466,16 @@ export class StorefrontService {
   ): Promise<CheckoutResponse> {
     const store = await this.storeResolverService.resolve(request);
 
+    await this.storefrontTrackingService.trackEvent(request, {
+      storeId: store.id,
+      eventType: 'checkout_start',
+      cartId: input.cartId,
+      metadata: {
+        paymentMethod: input.paymentMethod,
+        hasCoupon: Boolean(input.couponCode?.trim()),
+      },
+    });
+
     if (idempotencyKey) {
       const cachedResult = await this.idempotencyService.checkOrPrepare({
         storeId: store.id,
@@ -479,6 +516,33 @@ export class StorefrontService {
     });
 
     const response = this.mapCheckoutResponse(order);
+
+    await this.storefrontTrackingService.trackEvent(request, {
+      storeId: store.id,
+      eventType: 'checkout_complete',
+      cartId: input.cartId,
+      orderId: order.id,
+      metadata: {
+        paymentMethod: input.paymentMethod,
+        total: response.total,
+        currencyCode: response.currencyCode,
+      },
+    });
+
+    if (checkoutData.promotion.couponCode) {
+      await this.storefrontTrackingService.trackEvent(request, {
+        storeId: store.id,
+        eventType: 'coupon_apply',
+        cartId: input.cartId,
+        orderId: order.id,
+        metadata: {
+          couponCode: checkoutData.promotion.couponCode,
+          discountTotal: checkoutData.promotion.totalDiscount,
+          total: response.total,
+          currencyCode: response.currencyCode,
+        },
+      });
+    }
 
     if (idempotencyKey) {
       await this.idempotencyService.storeResponse(

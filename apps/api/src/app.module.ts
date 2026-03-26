@@ -30,6 +30,7 @@ import { ObservabilityModule } from './observability/observability.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { AdvancedOffersModule } from './advanced-offers/advanced-offers.module';
 import { CustomersModule } from './customers/customers.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { CustomersModule } from './customers/customers.module';
     PaymentsModule,
     StorefrontModule,
     CustomersModule,
+    AnalyticsModule,
   ],
   providers: [
     {

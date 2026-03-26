@@ -19,12 +19,14 @@ const { PromotionsController } = require('../dist/promotions/promotions.controll
 const { PromotionsRepository } = require('../dist/promotions/promotions.repository');
 const { PromotionsService } = require('../dist/promotions/promotions.service');
 const { CategoriesRepository } = require('../dist/categories/categories.repository');
+const { CustomersService } = require('../dist/customers/customers.service');
 const { ProductsRepository } = require('../dist/products/products.repository');
 const { ShippingController } = require('../dist/shipping/shipping.controller');
 const { ShippingRepository } = require('../dist/shipping/shipping.repository');
 const { ShippingService } = require('../dist/shipping/shipping.service');
 const { StoreResolverService } = require('../dist/storefront/store-resolver.service');
 const { StorefrontController } = require('../dist/storefront/storefront.controller');
+const { StorefrontTrackingService } = require('../dist/storefront/storefront-tracking.service');
 const { StorefrontService } = require('../dist/storefront/storefront.service');
 const { StoresRepository } = require('../dist/stores/stores.repository');
 const { TenantGuard } = require('../dist/tenancy/guards/tenant.guard');
@@ -386,6 +388,18 @@ const webhooksServiceMock = {
   },
 };
 
+const customersServiceMock = {
+  async verifyAccessToken() {
+    throw new Error('invalid token');
+  },
+};
+
+const storefrontTrackingServiceMock = {
+  async trackEvent() {
+    return;
+  },
+};
+
 const advancedOffersServiceMock = {
   async computeBestDiscount() {
     return { offerId: null, discount: 0 };
@@ -440,6 +454,8 @@ describe('Sprint 4 API smoke e2e', () => {
         { provide: SaasService, useValue: saasServiceMock },
         { provide: ThemesService, useValue: themesServiceMock },
         { provide: WebhooksService, useValue: webhooksServiceMock },
+        { provide: CustomersService, useValue: customersServiceMock },
+        { provide: StorefrontTrackingService, useValue: storefrontTrackingServiceMock },
         { provide: AdvancedOffersService, useValue: advancedOffersServiceMock },
         { provide: OutboxService, useValue: outboxServiceMock },
         { provide: AuditService, useValue: auditServiceMock },

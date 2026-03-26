@@ -311,10 +311,10 @@ export function App() {
               key={item.route}
               selected={route === item.route}
               onClick={() => navigate(item.route)}
-              sx={{ mx: 1, borderRadius: 2 }}
+              sx={{ mx: 1, borderRadius: 2, direction: 'rtl' }}
             >
               {item.icon}
-              <ListItemText sx={{ mr: 1 }} primary={item.label} />
+              <ListItemText sx={{ ml: 1, textAlign: 'right' }} primary={item.label} />
             </ListItemButton>
           ))}
         </List>

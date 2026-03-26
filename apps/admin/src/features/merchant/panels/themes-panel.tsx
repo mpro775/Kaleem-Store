@@ -18,7 +18,7 @@ import SettingsSuggestIcon from '@mui/icons-material/SettingsSuggest';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
-import type { MerchantRequester } from '../merchant-dashboard';
+import type { MerchantRequester } from '../merchant-dashboard.types';
 import type { PreviewTokenResponse, ThemeState } from '../types';
 
 interface ThemesPanelProps {
@@ -42,16 +42,16 @@ const sectionKeys = [
 type SectionKey = (typeof sectionKeys)[number];
 
 const sectionLabels: Record<SectionKey, string> = {
-  announcement_bar: 'الشريط الإعلاني العلوي',
-  header: 'الترويسة (الرأس)',
-  hero: 'قسم البانر الرئيسي',
-  categories_grid: 'شبكة التصنيفات',
-  featured_products: 'المنتجات المميزة',
-  rich_text: 'نص ترويجي غني',
-  testimonials: 'آراء العملاء',
-  newsletter_signup: 'الاشتراك بالنشرة البريدية',
-  offers_banner: 'بانر العروض',
-  footer: 'التذييل (أسفل الصفحة)',
+  announcement_bar: 'ط§ظ„ط´ط±ظٹط· ط§ظ„ط¥ط¹ظ„ط§ظ†ظٹ ط§ظ„ط¹ظ„ظˆظٹ',
+  header: 'ط§ظ„طھط±ظˆظٹط³ط© (ط§ظ„ط±ط£ط³)',
+  hero: 'ظ‚ط³ظ… ط§ظ„ط¨ط§ظ†ط± ط§ظ„ط±ط¦ظٹط³ظٹ',
+  categories_grid: 'ط´ط¨ظƒط© ط§ظ„طھطµظ†ظٹظپط§طھ',
+  featured_products: 'ط§ظ„ظ…ظ†طھط¬ط§طھ ط§ظ„ظ…ظ…ظٹط²ط©',
+  rich_text: 'ظ†طµ طھط±ظˆظٹط¬ظٹ ط؛ظ†ظٹ',
+  testimonials: 'ط¢ط±ط§ط، ط§ظ„ط¹ظ…ظ„ط§ط،',
+  newsletter_signup: 'ط§ظ„ط§ط´طھط±ط§ظƒ ط¨ط§ظ„ظ†ط´ط±ط© ط§ظ„ط¨ط±ظٹط¯ظٹط©',
+  offers_banner: 'ط¨ط§ظ†ط± ط§ظ„ط¹ط±ظˆط¶',
+  footer: 'ط§ظ„طھط°ظٹظٹظ„ (ط£ط³ظپظ„ ط§ظ„طµظپط­ط©)',
 };
 
 interface ThemeEditorForm {
@@ -68,7 +68,7 @@ const defaultForm: ThemeEditorForm = {
   accentColor: '#8F00FF',
   background: '#FAFAFF',
   fontFamily: 'Tajawal, Cairo, sans-serif',
-  heroHeadline: 'مرحباً بك في متجرنا',
+  heroHeadline: 'ظ…ط±ط­ط¨ط§ظ‹ ط¨ظƒ ظپظٹ ظ…طھط¬ط±ظ†ط§',
   sectionEnabled: {
     announcement_bar: true,
     header: true,
@@ -107,7 +107,7 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
       setThemeState(data);
       setForm(themeConfigToForm(data.draftConfig));
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحميل إعدادات الواجهة', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ظ…ظٹظ„ ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ظˆط§ط¬ظ‡ط©', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -125,16 +125,16 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
       if (data) {
         setThemeState(data);
       }
-      setMessage({ text: 'تم حفظ مسودة التعديلات بنجاح. راجعها قبل النشر.', type: 'success' });
+      setMessage({ text: 'طھظ… ط­ظپط¸ ظ…ط³ظˆط¯ط© ط§ظ„طھط¹ط¯ظٹظ„ط§طھ ط¨ظ†ط¬ط§ط­. ط±ط§ط¬ط¹ظ‡ط§ ظ‚ط¨ظ„ ط§ظ„ظ†ط´ط±.', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'تعذر حفظ المسودة', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط­ظپط¸ ط§ظ„ظ…ط³ظˆط¯ط©', type: 'error' });
     } finally {
       setActionLoading(false);
     }
   }
 
   async function publishTheme(): Promise<void> {
-    if (!window.confirm('هل أنت متأكد من نشر هذه التعديلات لتظهر للعملاء الآن؟')) return;
+    if (!window.confirm('ظ‡ظ„ ط£ظ†طھ ظ…طھط£ظƒط¯ ظ…ظ† ظ†ط´ط± ظ‡ط°ظ‡ ط§ظ„طھط¹ط¯ظٹظ„ط§طھ ظ„طھط¸ظ‡ط± ظ„ظ„ط¹ظ…ظ„ط§ط، ط§ظ„ط¢ظ†طں')) return;
     setActionLoading(true);
     setMessage({ text: '', type: 'info' });
     try {
@@ -142,9 +142,9 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
       if (data) {
         setThemeState(data);
       }
-      setMessage({ text: 'تم نشر الواجهة المحدثة بنجاح.', type: 'success' });
+      setMessage({ text: 'طھظ… ظ†ط´ط± ط§ظ„ظˆط§ط¬ظ‡ط© ط§ظ„ظ…ط­ط¯ط«ط© ط¨ظ†ط¬ط§ط­.', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'تعذر نشر الواجهة', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ظ†ط´ط± ط§ظ„ظˆط§ط¬ظ‡ط©', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -159,9 +159,9 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
         body: JSON.stringify({ expiresInMinutes: 30 }),
       });
       setPreviewToken(token);
-      setMessage({ text: 'تم إنشاء رمز المعاينة بنجاح.', type: 'success' });
+      setMessage({ text: 'طھظ… ط¥ظ†ط´ط§ط، ط±ظ…ط² ط§ظ„ظ…ط¹ط§ظٹظ†ط© ط¨ظ†ط¬ط§ط­.', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'تعذر إنشاء رمز المعاينة', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط¥ظ†ط´ط§ط، ط±ظ…ط² ط§ظ„ظ…ط¹ط§ظٹظ†ط©', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -180,10 +180,10 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1, flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Typography variant="h4" fontWeight={800} gutterBottom>
-            واجهة المتجر والتخصيص
+            ظˆط§ط¬ظ‡ط© ط§ظ„ظ…طھط¬ط± ظˆط§ظ„طھط®طµظٹطµ
           </Typography>
           <Typography color="text.secondary">
-            تحكم في ألوان المتجر، الخطوط، وإخفاء أو إظهار أقسام الصفحة الرئيسية.
+            طھط­ظƒظ… ظپظٹ ط£ظ„ظˆط§ظ† ط§ظ„ظ…طھط¬ط±طŒ ط§ظ„ط®ط·ظˆط·طŒ ظˆط¥ط®ظپط§ط، ط£ظˆ ط¥ط¸ظ‡ط§ط± ط£ظ‚ط³ط§ظ… ط§ظ„طµظپط­ط© ط§ظ„ط±ط¦ظٹط³ظٹط©.
           </Typography>
         </Box>
         <Stack direction="row" spacing={1.5}>
@@ -192,7 +192,7 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
             onClick={() => loadDraft().catch(() => undefined)}
             disabled={actionLoading}
           >
-            تجاهل التعديلات
+            طھط¬ط§ظ‡ظ„ ط§ظ„طھط¹ط¯ظٹظ„ط§طھ
           </Button>
           <Button 
             variant="outlined" 
@@ -200,7 +200,7 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
             onClick={() => saveDraft().catch(() => undefined)}
             disabled={actionLoading}
           >
-            حفظ كمسودة
+            ط­ظپط¸ ظƒظ…ط³ظˆط¯ط©
           </Button>
           <Button 
             variant="contained" 
@@ -209,7 +209,7 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
             disabled={actionLoading}
             disableElevation
           >
-            نشر التعديلات
+            ظ†ط´ط± ط§ظ„طھط¹ط¯ظٹظ„ط§طھ
           </Button>
         </Stack>
       </Box>
@@ -224,7 +224,7 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
           <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', height: '100%' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
               <PaletteIcon color="primary" />
-              <Typography variant="h6" fontWeight={800}>الألوان والخطوط</Typography>
+              <Typography variant="h6" fontWeight={800}>ط§ظ„ط£ظ„ظˆط§ظ† ظˆط§ظ„ط®ط·ظˆط·</Typography>
             </Box>
             <Divider sx={{ mb: 4 }} />
 
@@ -232,7 +232,7 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <TextField 
                   fullWidth 
-                  label="اللون الأساسي" 
+                  label="ط§ظ„ظ„ظˆظ† ط§ظ„ط£ط³ط§ط³ظٹ" 
                   value={form.primaryColor} 
                   onChange={(event) => setForm((prev) => ({ ...prev, primaryColor: event.target.value }))} 
                   dir="ltr"
@@ -242,7 +242,7 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
                 />
                 <TextField 
                   fullWidth 
-                  label="لون التمييز (Accent)" 
+                  label="ظ„ظˆظ† ط§ظ„طھظ…ظٹظٹط² (Accent)" 
                   value={form.accentColor} 
                   onChange={(event) => setForm((prev) => ({ ...prev, accentColor: event.target.value }))} 
                   dir="ltr"
@@ -255,7 +255,7 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <TextField 
                   fullWidth 
-                  label="لون الخلفية العامة" 
+                  label="ظ„ظˆظ† ط§ظ„ط®ظ„ظپظٹط© ط§ظ„ط¹ط§ظ…ط©" 
                   value={form.background} 
                   onChange={(event) => setForm((prev) => ({ ...prev, background: event.target.value }))} 
                   dir="ltr"
@@ -267,11 +267,11 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
 
               <TextField 
                 fullWidth 
-                label="الخط الرئيسي (CSS Font Family)" 
+                label="ط§ظ„ط®ط· ط§ظ„ط±ط¦ظٹط³ظٹ (CSS Font Family)" 
                 value={form.fontFamily} 
                 onChange={(event) => setForm((prev) => ({ ...prev, fontFamily: event.target.value }))} 
                 dir="ltr"
-                helperText="مثال: Tajawal, Cairo, sans-serif"
+                helperText="ظ…ط«ط§ظ„: Tajawal, Cairo, sans-serif"
               />
             </Stack>
           </Paper>
@@ -282,19 +282,19 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
           <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', height: '100%' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
               <SettingsSuggestIcon color="primary" />
-              <Typography variant="h6" fontWeight={800}>أقسام الصفحة الرئيسية</Typography>
+              <Typography variant="h6" fontWeight={800}>ط£ظ‚ط³ط§ظ… ط§ظ„طµظپط­ط© ط§ظ„ط±ط¦ظٹط³ظٹط©</Typography>
             </Box>
             <Divider sx={{ mb: 4 }} />
 
             <TextField 
               fullWidth 
-              label="عنوان البانر الرئيسي (Hero)" 
+              label="ط¹ظ†ظˆط§ظ† ط§ظ„ط¨ط§ظ†ط± ط§ظ„ط±ط¦ظٹط³ظٹ (Hero)" 
               value={form.heroHeadline} 
               onChange={(event) => setForm((prev) => ({ ...prev, heroHeadline: event.target.value }))} 
               sx={{ mb: 3 }}
             />
 
-            <Typography variant="subtitle2" fontWeight={700} mb={2}>تفعيل وإلغاء الأقسام:</Typography>
+            <Typography variant="subtitle2" fontWeight={700} mb={2}>طھظپط¹ظٹظ„ ظˆط¥ظ„ط؛ط§ط، ط§ظ„ط£ظ‚ط³ط§ظ…:</Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
               {sectionKeys.map((key) => (
                 <Paper key={key} variant="outlined" sx={{ p: 1, px: 2, display: 'flex', alignItems: 'center', bgcolor: form.sectionEnabled[key] ? 'background.default' : 'transparent' }}>
@@ -328,13 +328,13 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <CheckCircleIcon color="success" fontSize="large" />
               <Box>
-                <Typography variant="h6" fontWeight={800}>حالة الواجهة الحالية</Typography>
+                <Typography variant="h6" fontWeight={800}>ط­ط§ظ„ط© ط§ظ„ظˆط§ط¬ظ‡ط© ط§ظ„ط­ط§ظ„ظٹط©</Typography>
                 {themeState ? (
                   <Typography variant="body2" color="text.secondary">
-                    الإصدار المنشور: {themeState.version}
+                    ط§ظ„ط¥طµط¯ط§ط± ط§ظ„ظ…ظ†ط´ظˆط±: {themeState.version}
                   </Typography>
                 ) : (
-                  <Typography variant="body2" color="text.secondary">لا توجد بيانات للإصدار.</Typography>
+                  <Typography variant="body2" color="text.secondary">ظ„ط§ طھظˆط¬ط¯ ط¨ظٹط§ظ†ط§طھ ظ„ظ„ط¥طµط¯ط§ط±.</Typography>
                 )}
               </Box>
             </Box>
@@ -348,7 +348,7 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
                   target="_blank"
                   sx={{ fontWeight: 700 }}
                 >
-                  فتح رابط المعاينة
+                  ظپطھط­ ط±ط§ط¨ط· ط§ظ„ظ…ط¹ط§ظٹظ†ط©
                 </Button>
               )}
               <Button 
@@ -357,7 +357,7 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
                 onClick={() => createPreviewToken().catch(() => undefined)}
                 disabled={actionLoading}
               >
-                إنشاء رابط معاينة
+                ط¥ظ†ط´ط§ط، ط±ط§ط¨ط· ظ…ط¹ط§ظٹظ†ط©
               </Button>
             </Stack>
           </Paper>
@@ -410,7 +410,7 @@ function formToThemeConfig(form: ThemeEditorForm): Record<string, unknown> {
         id: 'announcement-main',
         type: 'announcement_bar',
         enabled: form.sectionEnabled.announcement_bar,
-         settings: { message: 'شحن مجاني للطلبات فوق 300 ريال' },
+         settings: { message: 'ط´ط­ظ† ظ…ط¬ط§ظ†ظٹ ظ„ظ„ط·ظ„ط¨ط§طھ ظپظˆظ‚ 300 ط±ظٹط§ظ„' },
       },
       {
         id: 'header-main',
@@ -441,8 +441,8 @@ function formToThemeConfig(form: ThemeEditorForm): Record<string, unknown> {
         type: 'rich_text',
         enabled: form.sectionEnabled.rich_text,
         settings: {
-           title: 'لماذا يثق العملاء بنا؟',
-           body: 'توصيل سريع، منتجات مختارة، ودفع آمن.',
+           title: 'ظ„ظ…ط§ط°ط§ ظٹط«ظ‚ ط§ظ„ط¹ظ…ظ„ط§ط، ط¨ظ†ط§طں',
+           body: 'طھظˆطµظٹظ„ ط³ط±ظٹط¹طŒ ظ…ظ†طھط¬ط§طھ ظ…ط®طھط§ط±ط©طŒ ظˆط¯ظپط¹ ط¢ظ…ظ†.',
         },
       },
       {
@@ -450,10 +450,10 @@ function formToThemeConfig(form: ThemeEditorForm): Record<string, unknown> {
         type: 'testimonials',
         enabled: form.sectionEnabled.testimonials,
         settings: {
-           title: 'مفضل لدى المتسوقين',
+           title: 'ظ…ظپط¶ظ„ ظ„ط¯ظ‰ ط§ظ„ظ…طھط³ظˆظ‚ظٹظ†',
            items: [
-             { quote: 'جودة ممتازة ودعم سريع.', author: 'ريم' },
-             { quote: 'تجربة دفع سلسة على الجوال.', author: 'فيصل' },
+             { quote: 'ط¬ظˆط¯ط© ظ…ظ…طھط§ط²ط© ظˆط¯ط¹ظ… ط³ط±ظٹط¹.', author: 'ط±ظٹظ…' },
+             { quote: 'طھط¬ط±ط¨ط© ط¯ظپط¹ ط³ظ„ط³ط© ط¹ظ„ظ‰ ط§ظ„ط¬ظˆط§ظ„.', author: 'ظپظٹطµظ„' },
            ],
         },
       },
@@ -461,7 +461,7 @@ function formToThemeConfig(form: ThemeEditorForm): Record<string, unknown> {
         id: 'newsletter-main',
         type: 'newsletter_signup',
         enabled: form.sectionEnabled.newsletter_signup,
-         settings: { title: 'احصل على عروض أسبوعية', ctaLabel: 'اشترك' },
+         settings: { title: 'ط§ط­طµظ„ ط¹ظ„ظ‰ ط¹ط±ظˆط¶ ط£ط³ط¨ظˆط¹ظٹط©', ctaLabel: 'ط§ط´طھط±ظƒ' },
       },
       {
         id: 'offers-main',

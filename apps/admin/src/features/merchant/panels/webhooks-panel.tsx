@@ -24,7 +24,7 @@ import AddIcon from '@mui/icons-material/Add';
 import SyncIcon from '@mui/icons-material/Sync';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 
-import type { MerchantRequester } from '../merchant-dashboard';
+import type { MerchantRequester } from '../merchant-dashboard.types';
 import type { WebhookDelivery, WebhookEndpoint } from '../types';
 
 interface WebhooksPanelProps {
@@ -74,7 +74,7 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
       setEndpoints(endpointRows ?? []);
       setDeliveries(deliveryRows?.items ?? []);
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحميل بيانات الويب هوكس', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ظ…ظٹظ„ ط¨ظٹط§ظ†ط§طھ ط§ظ„ظˆظٹط¨ ظ‡ظˆظƒط³', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -82,7 +82,7 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
 
   async function createEndpoint(): Promise<void> {
     if (!form.name.trim() || !form.url.trim() || form.events.length === 0) {
-      setMessage({ text: 'الاسم والرابط وحدث واحد على الأقل مطلوبة', type: 'error' });
+      setMessage({ text: 'ط§ظ„ط§ط³ظ… ظˆط§ظ„ط±ط§ط¨ط· ظˆط­ط¯ط« ظˆط§ط­ط¯ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„ ظ…ط·ظ„ظˆط¨ط©', type: 'error' });
       return;
     }
 
@@ -99,10 +99,10 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
         }),
       });
       await loadAll();
-      setMessage({ text: 'تم إنشاء نقطة نهاية ويب هوك بنجاح', type: 'success' });
+      setMessage({ text: 'طھظ… ط¥ظ†ط´ط§ط، ظ†ظ‚ط·ط© ظ†ظ‡ط§ظٹط© ظˆظٹط¨ ظ‡ظˆظƒ ط¨ظ†ط¬ط§ط­', type: 'success' });
       setForm((prev) => ({ ...prev, name: '', url: '' }));
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'تعذر إنشاء نقطة النهاية', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط¥ظ†ط´ط§ط، ظ†ظ‚ط·ط© ط§ظ„ظ†ظ‡ط§ظٹط©', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -123,9 +123,9 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
         }),
       });
       await loadAll();
-      setMessage({ text: 'تم إرسال حدث اختباري بنجاح', type: 'success' });
+      setMessage({ text: 'طھظ… ط¥ط±ط³ط§ظ„ ط­ط¯ط« ط§ط®طھط¨ط§ط±ظٹ ط¨ظ†ط¬ط§ط­', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'تعذر تشغيل الحدث الاختباري', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط´ط؛ظٹظ„ ط§ظ„ط­ط¯ط« ط§ظ„ط§ط®طھط¨ط§ط±ظٹ', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -137,9 +137,9 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
     try {
       await request('/webhooks/deliveries/retry-pending', { method: 'POST' });
       await loadAll();
-      setMessage({ text: 'تمت معالجة الإعادات المعلقة', type: 'success' });
+      setMessage({ text: 'طھظ…طھ ظ…ط¹ط§ظ„ط¬ط© ط§ظ„ط¥ط¹ط§ط¯ط§طھ ط§ظ„ظ…ط¹ظ„ظ‚ط©', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'تعذر معالجة الإعادات المعلقة', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ظ…ط¹ط§ظ„ط¬ط© ط§ظ„ط¥ط¹ط§ط¯ط§طھ ط§ظ„ظ…ط¹ظ„ظ‚ط©', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -150,10 +150,10 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1, flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Typography variant="h4" fontWeight={800} gutterBottom>
-            الربط المتقدم (Webhooks)
+            ط§ظ„ط±ط¨ط· ط§ظ„ظ…طھظ‚ط¯ظ… (Webhooks)
           </Typography>
           <Typography color="text.secondary">
-            أرسل الإشعارات الفورية للأنظمة الخارجية (مثل أنظمة المحاسبة) عند حدوث أي تغيير.
+            ط£ط±ط³ظ„ ط§ظ„ط¥ط´ط¹ط§ط±ط§طھ ط§ظ„ظپظˆط±ظٹط© ظ„ظ„ط£ظ†ط¸ظ…ط© ط§ظ„ط®ط§ط±ط¬ظٹط© (ظ…ط«ظ„ ط£ظ†ط¸ظ…ط© ط§ظ„ظ…ط­ط§ط³ط¨ط©) ط¹ظ†ط¯ ط­ط¯ظˆط« ط£ظٹ طھط؛ظٹظٹط±.
           </Typography>
         </Box>
         <Stack direction="row" spacing={1.5}>
@@ -162,7 +162,7 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
             onClick={() => loadAll().catch(() => undefined)}
             disabled={loading}
           >
-            تحديث القائمة
+            طھط­ط¯ظٹط« ط§ظ„ظ‚ط§ط¦ظ…ط©
           </Button>
         </Stack>
       </Box>
@@ -175,7 +175,7 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
       <Paper elevation={0} sx={{ p: { xs: 3, md: 4 }, borderRadius: 4, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
           <WebhookIcon color="primary" />
-          <Typography variant="h6" fontWeight={800}>إضافة نقطة نهاية جديدة (Endpoint)</Typography>
+          <Typography variant="h6" fontWeight={800}>ط¥ط¶ط§ظپط© ظ†ظ‚ط·ط© ظ†ظ‡ط§ظٹط© ط¬ط¯ظٹط¯ط© (Endpoint)</Typography>
         </Box>
         <Divider sx={{ mb: 4 }} />
         
@@ -183,17 +183,17 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 2fr' }, gap: 3 }}>
             <Box>
               <TextField 
-                label="الاسم التعريفي" 
+                label="ط§ظ„ط§ط³ظ… ط§ظ„طھط¹ط±ظٹظپظٹ" 
                 fullWidth 
                 value={form.name} 
                 onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} 
-                placeholder="مثال: نظام المحاسبة ERP"
+                placeholder="ظ…ط«ط§ظ„: ظ†ط¸ط§ظ… ط§ظ„ظ…ط­ط§ط³ط¨ط© ERP"
                 required
               />
             </Box>
             <Box>
               <TextField
-                label="رابط الاستلام (URL)"
+                label="ط±ط§ط¨ط· ط§ظ„ط§ط³طھظ„ط§ظ… (URL)"
                 fullWidth
                 value={form.url}
                 onChange={(event) => setForm((prev) => ({ ...prev, url: event.target.value }))}
@@ -205,7 +205,7 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
           </Box>
 
           <Box sx={{ bgcolor: 'background.default', p: 3, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
-            <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 2 }}>اختر الأحداث (Events) التي سيتم إرسالها:</Typography>
+            <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 2 }}>ط§ط®طھط± ط§ظ„ط£ط­ط¯ط§ط« (Events) ط§ظ„طھظٹ ط³ظٹطھظ… ط¥ط±ط³ط§ظ„ظ‡ط§:</Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
               {EVENT_OPTIONS.map((eventType) => (
                 <FormControlLabel
@@ -239,7 +239,7 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
               disabled={actionLoading}
               sx={{ px: 4, borderRadius: 2 }}
             >
-              {actionLoading ? 'جارِ الحفظ...' : 'إضافة Endpoint'}
+              {actionLoading ? 'ط¬ط§ط±ظگ ط§ظ„ط­ظپط¸...' : 'ط¥ط¶ط§ظپط© Endpoint'}
             </Button>
           </Box>
         </Stack>
@@ -252,21 +252,21 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
         <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden', height: 'fit-content' }}>
           <Box sx={{ p: 2, bgcolor: 'background.default', borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
             <CompareArrowsIcon color="action" />
-            <Typography variant="subtitle1" fontWeight={800}>نقاط النهاية (Endpoints)</Typography>
+            <Typography variant="subtitle1" fontWeight={800}>ظ†ظ‚ط§ط· ط§ظ„ظ†ظ‡ط§ظٹط© (Endpoints)</Typography>
           </Box>
           <TableContainer>
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 700 }}>الاسم / الرابط</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>الأحداث المشتركة</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ط§ط³ظ… / ط§ظ„ط±ط§ط¨ط·</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ط£ط­ط¯ط§ط« ط§ظ„ظ…ط´طھط±ظƒط©</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loading ? (
                   <TableRow><TableCell colSpan={2} align="center" sx={{ py: 3 }}><CircularProgress size={24} /></TableCell></TableRow>
                 ) : endpoints.length === 0 ? (
-                  <TableRow><TableCell colSpan={2} align="center" sx={{ py: 3 }}><Typography color="text.secondary">لا توجد نقاط نهاية مضافة.</Typography></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={2} align="center" sx={{ py: 3 }}><Typography color="text.secondary">ظ„ط§ طھظˆط¬ط¯ ظ†ظ‚ط§ط· ظ†ظ‡ط§ظٹط© ظ…ط¶ط§ظپط©.</Typography></TableCell></TableRow>
                 ) : (
                   endpoints.map((endpoint) => (
                     <TableRow key={endpoint.id} hover>
@@ -296,27 +296,27 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
           <Box sx={{ p: 2, bgcolor: 'background.default', borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'space-between' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <SyncIcon color="action" />
-              <Typography variant="subtitle1" fontWeight={800}>سجل الإرسال الحديث</Typography>
+              <Typography variant="subtitle1" fontWeight={800}>ط³ط¬ظ„ ط§ظ„ط¥ط±ط³ط§ظ„ ط§ظ„ط­ط¯ظٹط«</Typography>
             </Box>
             <Stack direction="row" spacing={1}>
-              <Button size="small" variant="outlined" onClick={() => triggerTestEvent().catch(() => undefined)} disabled={actionLoading}>إرسال تجريبي</Button>
-              <Button size="small" variant="outlined" onClick={() => retryPending().catch(() => undefined)} disabled={actionLoading}>إعادة المعلق</Button>
+              <Button size="small" variant="outlined" onClick={() => triggerTestEvent().catch(() => undefined)} disabled={actionLoading}>ط¥ط±ط³ط§ظ„ طھط¬ط±ظٹط¨ظٹ</Button>
+              <Button size="small" variant="outlined" onClick={() => retryPending().catch(() => undefined)} disabled={actionLoading}>ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط¹ظ„ظ‚</Button>
             </Stack>
           </Box>
           <TableContainer>
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 700 }}>الحدث (Event)</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 700 }}>حالة الاستجابة</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 700 }}>المحاولات</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ط­ط¯ط« (Event)</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>ط­ط§ظ„ط© ط§ظ„ط§ط³طھط¬ط§ط¨ط©</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>ط§ظ„ظ…ط­ط§ظˆظ„ط§طھ</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loading ? (
                   <TableRow><TableCell colSpan={3} align="center" sx={{ py: 3 }}><CircularProgress size={24} /></TableCell></TableRow>
                 ) : deliveries.length === 0 ? (
-                  <TableRow><TableCell colSpan={3} align="center" sx={{ py: 3 }}><Typography color="text.secondary">لا توجد عمليات إرسال مسجلة.</Typography></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={3} align="center" sx={{ py: 3 }}><Typography color="text.secondary">ظ„ط§ طھظˆط¬ط¯ ط¹ظ…ظ„ظٹط§طھ ط¥ط±ط³ط§ظ„ ظ…ط³ط¬ظ„ط©.</Typography></TableCell></TableRow>
                 ) : (
                   deliveries.map((delivery) => (
                     <TableRow key={delivery.id} hover>
@@ -326,7 +326,7 @@ export function WebhooksPanel({ request }: WebhooksPanelProps) {
                       <TableCell align="center">
                         <Chip 
                           size="small" 
-                          label={delivery.responseStatus ?? 'معلق'} 
+                          label={delivery.responseStatus ?? 'ظ…ط¹ظ„ظ‚'} 
                           color={delivery.responseStatus && delivery.responseStatus >= 200 && delivery.responseStatus < 300 ? 'success' : delivery.responseStatus ? 'error' : 'warning'} 
                           sx={{ fontWeight: 700 }}
                         />

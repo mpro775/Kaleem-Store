@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service';
 import type { RequestContextData } from '../common/utils/request-context.util';
+import { parseIanaTimezone } from '../common/utils/timezone.util';
 import type { AuthUser } from '../auth/interfaces/auth-user.interface';
 import type { UpdateStoreSettingsDto } from './dto/update-store-settings.dto';
 import { StoresRepository, type StoreSettingsRecord } from './stores.repository';
@@ -53,11 +54,18 @@ export class StoresService {
   }
 
   private buildUpdatePayload(current: StoreSettingsRecord, input: UpdateStoreSettingsDto) {
+    const resolvedTimezone =
+      input.timezone !== undefined ? parseIanaTimezone(input.timezone) : current.timezone;
+
+    if (!resolvedTimezone) {
+      throw new BadRequestException('Invalid timezone. Please use a valid IANA timezone value.');
+    }
+
     return {
       storeId: current.id,
       name: input.name?.trim() ?? current.name,
       currencyCode: input.currencyCode ?? current.currency_code,
-      timezone: input.timezone?.trim() ?? current.timezone,
+      timezone: resolvedTimezone,
       logoUrl: input.logoUrl ?? current.logo_url,
       phone: input.phone ?? current.phone,
       address: input.address ?? current.address,
