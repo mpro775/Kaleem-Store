@@ -74,7 +74,7 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
       setMovements(movementsData?.items ?? []);
       setReservations(reservationsData?.items ?? []);
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ظ…ظٹظ„ ط¨ظٹط§ظ†ط§طھ ط§ظ„ظ…ط®ط²ظˆظ†', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحميل بيانات المخزون', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -85,11 +85,11 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
     const quantityDelta = Number(adjustDelta);
 
     if (!variantId) {
-      setMessage({ text: 'ظ…ط¹ط±ظ‘ظپ ط§ظ„ظ…طھط؛ظٹط± ظ…ط·ظ„ظˆط¨ ظ„طھط¹ط¯ظٹظ„ ط§ظ„ظ…ط®ط²ظˆظ†', type: 'error' });
+      setMessage({ text: 'معرّف المتغير مطلوب لتعديل المخزون', type: 'error' });
       return;
     }
     if (!Number.isInteger(quantityDelta) || quantityDelta === 0) {
-      setMessage({ text: 'ظٹط¬ط¨ ط£ظ† طھظƒظˆظ† ظ‚ظٹظ…ط© ط§ظ„طھط¹ط¯ظٹظ„ ط±ظ‚ظ…ط§ظ‹ طµط­ظٹط­ط§ظ‹ ظˆط؛ظٹط± طµظپط±ظٹ', type: 'error' });
+      setMessage({ text: 'يجب أن تكون قيمة التعديل رقماً صحيحاً وغير صفري', type: 'error' });
       return;
     }
 
@@ -106,9 +106,9 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
       await loadInventoryData();
       setAdjustDelta('0');
       setAdjustNote('');
-      setMessage({ text: 'طھظ… طھط¹ط¯ظٹظ„ ط§ظ„ظ…ط®ط²ظˆظ† ط¨ظ†ط¬ط§ط­', type: 'success' });
+      setMessage({ text: 'تم تعديل المخزون بنجاح', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط¹ط¯ظٹظ„ ط§ظ„ظ…ط®ط²ظˆظ†', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تعديل المخزون', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -119,11 +119,11 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
     const lowStockThreshold = Number(thresholdValue);
 
     if (!variantId) {
-      setMessage({ text: 'ظ…ط¹ط±ظ‘ظپ ط§ظ„ظ…طھط؛ظٹط± ظ…ط·ظ„ظˆط¨ ظ„طھط­ط¯ظٹط« ط­ط¯ ط§ظ„طھظ†ط¨ظٹظ‡', type: 'error' });
+      setMessage({ text: 'معرّف المتغير مطلوب لتحديث حد التنبيه', type: 'error' });
       return;
     }
     if (!Number.isInteger(lowStockThreshold) || lowStockThreshold < 0) {
-      setMessage({ text: 'ط­ط¯ ط§ظ†ط®ظپط§ط¶ ط§ظ„ظ…ط®ط²ظˆظ† ظٹط¬ط¨ ط£ظ† ظٹظƒظˆظ† ط±ظ‚ظ…ط§ظ‹ طµط­ظٹط­ط§ظ‹ ط£ظƒط¨ط± ط£ظˆ ظٹط³ط§ظˆظٹ 0', type: 'error' });
+      setMessage({ text: 'حد انخفاض المخزون يجب أن يكون رقماً صحيحاً أكبر أو يساوي 0', type: 'error' });
       return;
     }
 
@@ -135,9 +135,9 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
         body: JSON.stringify({ lowStockThreshold }),
       });
       await loadInventoryData();
-      setMessage({ text: 'طھظ… طھط­ط¯ظٹط« ط­ط¯ ط§ظ†ط®ظپط§ط¶ ط§ظ„ظ…ط®ط²ظˆظ† ط¨ظ†ط¬ط§ط­', type: 'success' });
+      setMessage({ text: 'تم تحديث حد انخفاض المخزون بنجاح', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ط¯ظٹط« ط­ط¯ ط§ظ„طھظ†ط¨ظٹظ‡', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحديث حد التنبيه', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -148,10 +148,10 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1, flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Typography variant="h4" fontWeight={800} gutterBottom>
-            ط¥ط¯ط§ط±ط© ط§ظ„ظ…ط®ط²ظˆظ†
+            إدارة المخزون
           </Typography>
           <Typography color="text.secondary">
-            ط±ط§ظ‚ط¨ ط§ظ„ط­ط±ظƒط§طھ ظˆط§ظ„طھظ†ط¨ظٹظ‡ط§طھطŒ ظˆظ‚ظ… ط¨طھط¹ط¯ظٹظ„ ط§ظ„ظƒظ…ظٹط§طھ ظٹط¯ظˆظٹط§ظ‹.
+            راقب الحركات والتنبيهات، وقم بتعديل الكميات يدوياً.
           </Typography>
         </Box>
         <Button 
@@ -159,7 +159,7 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
           onClick={() => loadInventoryData().catch(() => undefined)}
           disabled={loading}
         >
-          طھط­ط¯ظٹط« ط§ظ„ط¨ظٹط§ظ†ط§طھ
+          تحديث البيانات
         </Button>
       </Box>
 
@@ -179,16 +179,16 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
               <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', height: '100%' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
                   <AddShoppingCartIcon color="primary" />
-                  <Typography variant="h6" fontWeight={800}>طھط¹ط¯ظٹظ„ ظ…ط®ط²ظˆظ† ظٹط¯ظˆظٹ</Typography>
+                  <Typography variant="h6" fontWeight={800}>تعديل مخزون يدوي</Typography>
                 </Box>
                 <Stack spacing={2}>
-                  <TextField size="small" label="ظ…ط¹ط±ظ‘ظپ ط§ظ„ظ…طھط؛ظٹط± (Variant ID)" fullWidth value={adjustVariantId} onChange={(event) => setAdjustVariantId(event.target.value)} />
+                  <TextField size="small" label="معرّف المتغير (Variant ID)" fullWidth value={adjustVariantId} onChange={(event) => setAdjustVariantId(event.target.value)} />
                   <Box sx={{ display: 'flex', gap: 2 }}>
-                    <TextField size="small" label="ظپط±ظ‚ ط§ظ„ظƒظ…ظٹط© (ظ…ط«ظ„: 5 ط£ظˆ -2)" type="number" inputProps={{ step: 1 }} fullWidth value={adjustDelta} onChange={(event) => setAdjustDelta(event.target.value)} />
+                    <TextField size="small" label="فرق الكمية (مثل: 5 أو -2)" type="number" inputProps={{ step: 1 }} fullWidth value={adjustDelta} onChange={(event) => setAdjustDelta(event.target.value)} />
                   </Box>
-                  <TextField size="small" label="ظ…ظ„ط§ط­ط¸ط© ط£ظˆ ط³ط¨ط¨ ط§ظ„طھط¹ط¯ظٹظ„" fullWidth value={adjustNote} onChange={(event) => setAdjustNote(event.target.value)} />
+                  <TextField size="small" label="ملاحظة أو سبب التعديل" fullWidth value={adjustNote} onChange={(event) => setAdjustNote(event.target.value)} />
                   <Button variant="contained" onClick={() => adjustInventory().catch(() => undefined)} disabled={actionLoading} disableElevation>
-                    طھط·ط¨ظٹظ‚ ط§ظ„طھط¹ط¯ظٹظ„
+                    تطبيق التعديل
                   </Button>
                 </Stack>
               </Paper>
@@ -198,13 +198,13 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
               <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', height: '100%' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
                   <WarningAmberIcon color="warning" />
-                  <Typography variant="h6" fontWeight={800}>ط­ط¯ طھظ†ط¨ظٹظ‡ ط§ظ†ط®ظپط§ط¶ ط§ظ„ظ…ط®ط²ظˆظ†</Typography>
+                  <Typography variant="h6" fontWeight={800}>حد تنبيه انخفاض المخزون</Typography>
                 </Box>
                 <Stack spacing={2}>
-                  <TextField size="small" label="ظ…ط¹ط±ظ‘ظپ ط§ظ„ظ…طھط؛ظٹط± (Variant ID)" fullWidth value={thresholdVariantId} onChange={(event) => setThresholdVariantId(event.target.value)} />
-                  <TextField size="small" label="ط§ظ„ط­ط¯ ط§ظ„ط£ط¯ظ†ظ‰ ظ„ظ„طھظ†ط¨ظٹظ‡" type="number" inputProps={{ min: 0, step: 1 }} fullWidth value={thresholdValue} onChange={(event) => setThresholdValue(event.target.value)} />
+                  <TextField size="small" label="معرّف المتغير (Variant ID)" fullWidth value={thresholdVariantId} onChange={(event) => setThresholdVariantId(event.target.value)} />
+                  <TextField size="small" label="الحد الأدنى للتنبيه" type="number" inputProps={{ min: 0, step: 1 }} fullWidth value={thresholdValue} onChange={(event) => setThresholdValue(event.target.value)} />
                   <Button variant="outlined" color="warning" onClick={() => updateThreshold().catch(() => undefined)} disabled={actionLoading}>
-                    طھط­ط¯ظٹط« ط§ظ„ط­ط¯
+                    تحديث الحد
                   </Button>
                 </Stack>
               </Paper>
@@ -215,24 +215,24 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
           <Paper elevation={0} sx={{ p: 0, borderRadius: 3, border: '1px solid', borderColor: 'error.light', overflow: 'hidden' }}>
             <Box sx={{ p: 2, bgcolor: 'error.50', borderBottom: '1px solid', borderColor: 'error.light', display: 'flex', alignItems: 'center', gap: 1 }}>
               <WarningAmberIcon color="error" />
-              <Typography variant="h6" fontWeight={800} color="error.dark">طھظ†ط¨ظٹظ‡ط§طھ ط§ظ†ط®ظپط§ط¶ ط§ظ„ظ…ط®ط²ظˆظ† ({alerts.length})</Typography>
+              <Typography variant="h6" fontWeight={800} color="error.dark">تنبيهات انخفاض المخزون ({alerts.length})</Typography>
             </Box>
             <TableContainer>
               <Table size="small">
                 <TableHead>
                   <TableRow sx={{ bgcolor: 'background.paper' }}>
-                    <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ظ…ظ†طھط¬ / ط§ظ„ظ…طھط؛ظٹط±</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>المنتج / المتغير</TableCell>
                     <TableCell sx={{ fontWeight: 700 }}>SKU</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 700 }}>ط§ظ„ظ…طھظˆظپط± / ط§ظ„ظ…ط­ط¬ظˆط²</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 700 }}>ط§ظ„ظ…ط®ط²ظˆظ† ط§ظ„ظپط¹ظ„ظٹ</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 700 }}>ط­ط¯ ط§ظ„طھظ†ط¨ظٹظ‡</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700 }}>المتوفر / المحجوز</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700 }}>المخزون الفعلي</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700 }}>حد التنبيه</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {alerts.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
-                        <Typography color="text.secondary">ط§ظ„ظ…ط®ط²ظˆظ† ط¨ظˆط¶ط¹ ط¬ظٹط¯. ظ„ط§ طھظˆط¬ط¯ طھظ†ط¨ظٹظ‡ط§طھ.</Typography>
+                        <Typography color="text.secondary">المخزون بوضع جيد. لا توجد تنبيهات.</Typography>
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -266,23 +266,23 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
               <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden', height: '100%' }}>
                 <Box sx={{ p: 2, bgcolor: 'background.default', borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
                   <AssignmentReturnIcon color="action" />
-                  <Typography variant="subtitle1" fontWeight={800}>ط¢ط®ط± ط§ظ„ط­ط±ظƒط§طھ</Typography>
+                  <Typography variant="subtitle1" fontWeight={800}>آخر الحركات</Typography>
                 </Box>
                 <TableContainer>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ظ†ظˆط¹</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>النوع</TableCell>
                         <TableCell sx={{ fontWeight: 700 }}>SKU</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ظƒظ…ظٹط©</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>ظ…ظ„ط§ط­ط¸ط©</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>الكمية</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>ملاحظة</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {movements.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
-                            <Typography color="text.secondary" variant="body2">ظ„ط§ طھظˆط¬ط¯ ط­ط±ظƒط§طھ.</Typography>
+                            <Typography color="text.secondary" variant="body2">لا توجد حركات.</Typography>
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -311,23 +311,23 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
               <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden', height: '100%' }}>
                 <Box sx={{ p: 2, bgcolor: 'background.default', borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
                   <LocalOfferIcon color="action" />
-                  <Typography variant="subtitle1" fontWeight={800}>ط§ظ„ط­ط¬ظˆط²ط§طھ ط§ظ„ظ†ط´ط·ط© (ظ„ظ„ط·ظ„ط¨ط§طھ ط؛ظٹط± ط§ظ„ظ…ظƒطھظ…ظ„ط©)</Typography>
+                  <Typography variant="subtitle1" fontWeight={800}>الحجوزات النشطة (للطلبات غير المكتملة)</Typography>
                 </Box>
                 <TableContainer>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
                         <TableCell sx={{ fontWeight: 700 }}>SKU</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ظƒظ…ظٹط© ط§ظ„ظ…ط­ط¬ظˆط²ط©</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>ط­ط§ظ„ط© ط§ظ„ط­ط¬ط²</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>ط±ظ‚ظ… ط§ظ„ط·ظ„ط¨</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>الكمية المحجوزة</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>حالة الحجز</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>رقم الطلب</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {reservations.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
-                            <Typography color="text.secondary" variant="body2">ظ„ط§ طھظˆط¬ط¯ ط­ط¬ظˆط²ط§طھ ظ†ط´ط·ط©.</Typography>
+                            <Typography color="text.secondary" variant="body2">لا توجد حجوزات نشطة.</Typography>
                           </TableCell>
                         </TableRow>
                       ) : (

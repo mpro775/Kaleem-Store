@@ -7,6 +7,7 @@ import { checkout, getCart, listShippingZones } from '../lib/storefront-client';
 import { getAccessToken } from '../lib/customer-auth-storage';
 import * as customerClient from '../lib/customer-client';
 import { useCustomerAuth } from '../lib/customer-auth-context';
+import { trackStorefrontEvent } from '../lib/storefront-analytics';
 import { AuthModal } from './auth-modal';
 import type { ShippingZone, StorefrontCart } from '../lib/types';
 import type { CustomerAddress } from '../lib/customer-client';
@@ -22,6 +23,7 @@ export function CheckoutPageClient() {
   const [orderCode, setOrderCode] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const [form, setForm] = useState({
     customerName: '',
@@ -83,6 +85,30 @@ export function CheckoutPageClient() {
   }, [form.shippingZoneId, zones]);
 
   const estimatedTotal = (cart?.subtotal ?? 0) + shippingFee;
+  const checkoutStep = resolveCheckoutStep(form, zones.length > 0);
+
+  useEffect(() => {
+    if (!loading) {
+      trackStorefrontEvent('sf_checkout_started', {
+        ...(cart?.cartId ? { cartId: cart.cartId } : {}),
+        metadata: {
+          page: 'checkout',
+          hasItems: Boolean(cart?.items.length),
+        },
+      }).catch(() => undefined);
+    }
+  }, [loading]);
+
+  useEffect(() => {
+    if (!loading) {
+      trackStorefrontEvent('sf_checkout_step_completed', {
+        ...(cart?.cartId ? { cartId: cart.cartId } : {}),
+        metadata: {
+          step: checkoutStep,
+        },
+      }).catch(() => undefined);
+    }
+  }, [checkoutStep, loading, cart?.cartId]);
 
   async function bootstrap() {
     const cartId = getCartIdFromStorage();
@@ -115,11 +141,33 @@ export function CheckoutPageClient() {
       return;
     }
 
+    const validationErrors = validateCheckoutForm(form, zones.length > 0);
+    setFieldErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) {
+      setError('Please complete the required fields before confirming your order.');
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
     try {
       const payload = buildCheckoutPayload(cart.cartId, form);
+      await trackStorefrontEvent('sf_checkout_submitted', {
+        cartId: cart.cartId,
+        metadata: {
+          paymentMethod: form.paymentMethod,
+          hasCoupon: Boolean(form.couponCode.trim()),
+        },
+      });
       const response = await checkout(payload);
+      await trackStorefrontEvent('sf_checkout_completed', {
+        cartId: cart.cartId,
+        metadata: {
+          orderCode: response.orderCode,
+          total: response.total,
+          currencyCode: response.currencyCode,
+        },
+      });
       clearCartIdFromStorage();
       setOrderCode(response.orderCode);
       setCart(null);
@@ -176,6 +224,13 @@ export function CheckoutPageClient() {
         <p>أكمل بياناتك وأكد طلبك</p>
       </header>
 
+      <div className="checkout-stepper" aria-label="Checkout progress">
+        <div className={`checkout-step ${checkoutStep >= 1 ? 'active' : ''}`}>1. العميل</div>
+        <div className={`checkout-step ${checkoutStep >= 2 ? 'active' : ''}`}>2. العنوان</div>
+        <div className={`checkout-step ${checkoutStep >= 3 ? 'active' : ''}`}>3. الدفع</div>
+        <div className={`checkout-step ${checkoutStep >= 4 ? 'active' : ''}`}>4. تأكيد الطلب</div>
+      </div>
+
       {/* Auth Prompt for Guests */}
       {!isAuthenticated && (
         <div className="checkout-auth-prompt">
@@ -205,13 +260,16 @@ export function CheckoutPageClient() {
           <h2>بيانات العميل</h2>
           <input
             className="input"
+            aria-label="Customer full name"
             placeholder="الاسم الكامل"
             value={form.customerName}
             onChange={(event) => setForm((prev) => ({ ...prev, customerName: event.target.value }))}
             required
           />
+          {fieldErrors.customerName ? <p className="error-message">{fieldErrors.customerName}</p> : null}
           <input
             className="input"
+            aria-label="Customer phone"
             placeholder="رقم الهاتف"
             value={form.customerPhone}
             onChange={(event) =>
@@ -219,14 +277,17 @@ export function CheckoutPageClient() {
             }
             required
           />
+          {fieldErrors.customerPhone ? <p className="error-message">{fieldErrors.customerPhone}</p> : null}
           <input
             className="input"
+            aria-label="Customer email"
             placeholder="البريد الإلكتروني (اختياري)"
             value={form.customerEmail}
             onChange={(event) =>
               setForm((prev) => ({ ...prev, customerEmail: event.target.value }))
             }
           />
+          {fieldErrors.customerEmail ? <p className="error-message">{fieldErrors.customerEmail}</p> : null}
 
           {/* Saved Addresses */}
           {isAuthenticated && addresses.length > 0 && (
@@ -264,19 +325,23 @@ export function CheckoutPageClient() {
           <h2>عنوان التوصيل</h2>
           <input
             className="input"
+            aria-label="Address line"
             placeholder="العنوان"
             value={form.addressLine}
             onChange={(event) => setForm((prev) => ({ ...prev, addressLine: event.target.value }))}
             required
           />
+          {fieldErrors.addressLine ? <p className="error-message">{fieldErrors.addressLine}</p> : null}
           <input
             className="input"
+            aria-label="City"
             placeholder="المدينة"
             value={form.city}
             onChange={(event) => setForm((prev) => ({ ...prev, city: event.target.value }))}
           />
           <input
             className="input"
+            aria-label="Area"
             placeholder="المنطقة"
             value={form.area}
             onChange={(event) => setForm((prev) => ({ ...prev, area: event.target.value }))}
@@ -284,6 +349,7 @@ export function CheckoutPageClient() {
 
           <select
             className="input"
+            aria-label="Shipping zone"
             value={form.shippingZoneId}
             onChange={(event) =>
               setForm((prev) => ({ ...prev, shippingZoneId: event.target.value }))
@@ -296,10 +362,12 @@ export function CheckoutPageClient() {
               </option>
             ))}
           </select>
+          {fieldErrors.shippingZoneId ? <p className="error-message">{fieldErrors.shippingZoneId}</p> : null}
 
           <h2>طريقة الدفع</h2>
           <select
             className="input"
+            aria-label="Payment method"
             value={form.paymentMethod}
             onChange={(event) =>
               setForm((prev) => ({
@@ -314,12 +382,14 @@ export function CheckoutPageClient() {
 
           <input
             className="input"
+            aria-label="Coupon code"
             placeholder="كود الخصم (إن وجد)"
             value={form.couponCode}
             onChange={(event) => setForm((prev) => ({ ...prev, couponCode: event.target.value }))}
           />
           <textarea
             className="input"
+            aria-label="Order note"
             placeholder="ملاحظات على الطلب"
             value={form.note}
             onChange={(event) => setForm((prev) => ({ ...prev, note: event.target.value }))}
@@ -330,7 +400,7 @@ export function CheckoutPageClient() {
           </button>
         </form>
 
-        <aside className="panel stack-md">
+        <aside className="panel stack-md checkout-summary-panel">
           <h2>ملخص الطلب</h2>
           {cart.items.map((item) => (
             <div key={item.variantId} className="summary-row">
@@ -353,6 +423,21 @@ export function CheckoutPageClient() {
             <strong>
               {estimatedTotal.toFixed(2)} {cart.currencyCode}
             </strong>
+          </div>
+
+          <div className="checkout-trust-grid">
+            <div className="checkout-trust-item">
+              <strong>دفع آمن</strong>
+              <span className="muted">جميع البيانات محمية ومشفرة</span>
+            </div>
+            <div className="checkout-trust-item">
+              <strong>تأكيد سريع</strong>
+              <span className="muted">يتم تأكيد الطلب فور المراجعة</span>
+            </div>
+            <div className="checkout-trust-item">
+              <strong>تتبع مباشر</strong>
+              <span className="muted">استعرض حالة الطلب من صفحة التتبع</span>
+            </div>
           </div>
         </aside>
       </div>
@@ -435,4 +520,74 @@ function buildCheckoutPayload(
   }
 
   return payload;
+}
+
+function validateCheckoutForm(
+  form: {
+    customerName: string;
+    customerPhone: string;
+    customerEmail: string;
+    addressLine: string;
+    city: string;
+    area: string;
+    shippingZoneId: string;
+    couponCode: string;
+    note: string;
+    paymentMethod: 'cod' | 'transfer';
+  },
+  shippingZoneRequired: boolean,
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+
+  if (form.customerName.trim().length < 2) {
+    errors.customerName = 'يرجى إدخال الاسم الكامل بشكل صحيح.';
+  }
+
+  if (form.customerPhone.trim().length < 8) {
+    errors.customerPhone = 'يرجى إدخال رقم هاتف صالح.';
+  }
+
+  if (form.addressLine.trim().length < 5) {
+    errors.addressLine = 'يرجى إدخال عنوان واضح للتوصيل.';
+  }
+
+  if (shippingZoneRequired && !form.shippingZoneId) {
+    errors.shippingZoneId = 'يرجى اختيار منطقة الشحن.';
+  }
+
+  if (form.customerEmail && !/^\S+@\S+\.\S+$/.test(form.customerEmail.trim())) {
+    errors.customerEmail = 'صيغة البريد الإلكتروني غير صحيحة.';
+  }
+
+  return errors;
+}
+
+function resolveCheckoutStep(
+  form: {
+    customerName: string;
+    customerPhone: string;
+    customerEmail: string;
+    addressLine: string;
+    city: string;
+    area: string;
+    shippingZoneId: string;
+    couponCode: string;
+    note: string;
+    paymentMethod: 'cod' | 'transfer';
+  },
+  shippingZoneRequired: boolean,
+): 1 | 2 | 3 | 4 {
+  if (!form.customerName.trim() || !form.customerPhone.trim()) {
+    return 1;
+  }
+
+  if (!form.addressLine.trim() || (shippingZoneRequired && !form.shippingZoneId)) {
+    return 2;
+  }
+
+  if (!form.paymentMethod) {
+    return 3;
+  }
+
+  return 4;
 }

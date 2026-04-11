@@ -7,6 +7,7 @@ import type { AuthUser } from '../auth/interfaces/auth-user.interface';
 import { RequirePermissions } from '../rbac/decorators/permissions.decorator';
 import { PermissionsGuard } from '../rbac/guards/permissions.guard';
 import { TenantGuard } from '../tenancy/guards/tenant.guard';
+import { AnalyticsAnomaliesQueryDto } from './dto/analytics-anomalies-query.dto';
 import { AnalyticsGovernanceQueryDto } from './dto/analytics-governance-query.dto';
 import { AnalyticsWindowQueryDto } from './dto/analytics-window-query.dto';
 import {
@@ -15,6 +16,7 @@ import {
   type AnalyticsDataQualityResponse,
   type AnalyticsOverviewResponse,
   type CustomersRetentionResponse,
+  type EventTaxonomyResponse,
   type FunnelConversionResponse,
   type FulfillmentSlaResponse,
   type InventoryHealthResponse,
@@ -164,6 +166,19 @@ export class AnalyticsController {
     });
   }
 
+  @Get('funnel/event-taxonomy')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get tracked storefront event taxonomy and volume' })
+  async getEventTaxonomy(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<EventTaxonomyResponse> {
+    return this.analyticsService.getEventTaxonomy(currentUser, {
+      windowDays: query.window ?? 30,
+      limit: query.limit ?? 20,
+    });
+  }
+
   @Get('quality/data-health')
   @RequirePermissions(PERMISSIONS.storeRead)
   @ApiOkResponse({ description: 'Get analytics data-quality checks and score' })
@@ -179,12 +194,11 @@ export class AnalyticsController {
   @ApiOkResponse({ description: 'Get analytics anomaly report versus previous window' })
   async getAnomalies(
     @CurrentUser() currentUser: AuthUser,
-    @Query() windowQuery: AnalyticsWindowQueryDto,
-    @Query() governanceQuery: AnalyticsGovernanceQueryDto,
+    @Query() query: AnalyticsAnomaliesQueryDto,
   ): Promise<AnalyticsAnomalyReportResponse> {
     return this.analyticsService.getAnomalyReport(currentUser, {
-      windowDays: windowQuery.window ?? 30,
-      thresholdPercent: governanceQuery.anomalyThresholdPercent ?? 25,
+      windowDays: query.window ?? 30,
+      thresholdPercent: query.anomalyThresholdPercent ?? 25,
     });
   }
 

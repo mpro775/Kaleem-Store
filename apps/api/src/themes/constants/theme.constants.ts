@@ -8,6 +8,8 @@ export const THEME_SECTION_TYPES = [
   'testimonials',
   'newsletter_signup',
   'offers_banner',
+  'faq',
+  'trust_badges',
   'footer',
 ] as const;
 

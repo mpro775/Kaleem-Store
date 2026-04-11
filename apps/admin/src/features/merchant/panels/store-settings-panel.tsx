@@ -54,7 +54,7 @@ export function StoreSettingsPanel({ request }: StoreSettingsPanelProps) {
         termsAndConditions: data.termsAndConditions ?? '',
       });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ظ…ظٹظ„ ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ظ…طھط¬ط±', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحميل إعدادات المتجر', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -69,10 +69,10 @@ export function StoreSettingsPanel({ request }: StoreSettingsPanelProps) {
         method: 'PUT',
         body: JSON.stringify(buildPayload(form)),
       });
-      setMessage({ text: 'طھظ… طھط­ط¯ظٹط« ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ظ…طھط¬ط± ط¨ظ†ط¬ط§ط­', type: 'success' });
+      setMessage({ text: 'تم تحديث إعدادات المتجر بنجاح', type: 'success' });
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ط¯ظٹط« ط§ظ„ط¥ط¹ط¯ط§ط¯ط§طھ', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحديث الإعدادات', type: 'error' });
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setSaveLoading(false);
@@ -94,10 +94,10 @@ export function StoreSettingsPanel({ request }: StoreSettingsPanelProps) {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1 }}>
         <Box>
           <Typography variant="h4" fontWeight={800} gutterBottom>
-            ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ظ…طھط¬ط±
+            إعدادات المتجر
           </Typography>
           <Typography color="text.secondary">
-            ظ‚ظ… ط¨ط¶ط¨ط· ط§ظ„ط¨ظٹط§ظ†ط§طھ ط§ظ„ط£ط³ط§ط³ظٹط© ظˆط§ظ„ط³ظٹط§ط³ط§طھ ط§ظ„ط®ط§طµط© ط¨ظ…طھط¬ط±ظƒ ظ„طھط¸ظ‡ط± ظ„ظ„ط¹ظ…ظ„ط§ط، ط¨ط´ظƒظ„ طµط­ظٹط­.
+            قم بضبط البيانات الأساسية والسياسات الخاصة بمتجرك لتظهر للعملاء بشكل صحيح.
           </Typography>
         </Box>
         <Stack direction="row" spacing={1.5}>
@@ -108,7 +108,7 @@ export function StoreSettingsPanel({ request }: StoreSettingsPanelProps) {
             onClick={() => loadSettings().catch(() => undefined)} 
             disabled={saveLoading}
           >
-            ط¥ظ„ط؛ط§ط، ط§ظ„طھط¹ط¯ظٹظ„ط§طھ
+            إلغاء التعديلات
           </Button>
           <Button 
             variant="contained" 
@@ -117,7 +117,7 @@ export function StoreSettingsPanel({ request }: StoreSettingsPanelProps) {
             onClick={() => saveSettings().catch(() => undefined)} 
             disabled={saveLoading}
           >
-            {saveLoading ? 'ط¬ط§ط±ظگ ط§ظ„ط­ظپط¸...' : 'ط­ظپط¸ ط§ظ„طھط؛ظٹظٹط±ط§طھ'}
+            {saveLoading ? 'جارِ الحفظ...' : 'حفظ التغييرات'}
           </Button>
         </Stack>
       </Box>
@@ -132,41 +132,41 @@ export function StoreSettingsPanel({ request }: StoreSettingsPanelProps) {
       <Paper elevation={0} sx={{ p: { xs: 3, md: 4 }, borderRadius: 4, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
           <StoreIcon color="primary" />
-          <Typography variant="h6" fontWeight={800}>ط§ظ„ظ…ط¹ظ„ظˆظ…ط§طھ ط§ظ„ط£ط³ط§ط³ظٹط©</Typography>
+          <Typography variant="h6" fontWeight={800}>المعلومات الأساسية</Typography>
         </Box>
         <Divider sx={{ mb: 4 }} />
         
         <Stack spacing={3}>
           <TextField 
-            label="ط§ط³ظ… ط§ظ„ظ…طھط¬ط±" 
+            label="اسم المتجر" 
             fullWidth 
             value={form.name} 
             onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} 
-            placeholder="ظ…ط«ط§ظ„: ظ…طھط¬ط± ط§ظ„ظ‡ط¯ط§ظٹط§ ط§ظ„ظپط§ط®ط±ط©"
+            placeholder="مثال: متجر الهدايا الفاخرة"
           />
           <TextField 
-            label="ط±ط§ط¨ط· ط§ظ„ط´ط¹ط§ط± (Logo URL)" 
+            label="رابط الشعار (Logo URL)" 
             fullWidth 
             value={form.logoUrl} 
             onChange={(event) => setForm((prev) => ({ ...prev, logoUrl: event.target.value }))} 
             placeholder="https://example.com/logo.png"
-            helperText="ط£ط¯ط®ظ„ ط±ط§ط¨ط· طµظˆط±ط© ط´ط¹ط§ط± ط§ظ„ظ…طھط¬ط±. ط³ظٹط¸ظ‡ط± ظپظٹ ط§ظ„ظپظˆط§طھظٹط± ظˆظˆط§ط¬ظ‡ط© ط§ظ„ظ…طھط¬ط±."
+            helperText="أدخل رابط صورة شعار المتجر. سيظهر في الفواتير وواجهة المتجر."
           />
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
             <TextField
-              label="ط±ظ…ط² ط§ظ„ط¹ظ…ظ„ط©"
+              label="رمز العملة"
               fullWidth
               value={form.currencyCode}
               inputProps={{ maxLength: 3 }}
               onChange={(event) => setForm((prev) => ({ ...prev, currencyCode: event.target.value.toUpperCase() }))}
-              helperText="ظ…ط«ط§ظ„: SAR, YER, USD"
+              helperText="مثال: SAR, YER, USD"
             />
             <TextField 
-              label="ط§ظ„ظ…ظ†ط·ظ‚ط© ط§ظ„ط²ظ…ظ†ظٹط©" 
+              label="المنطقة الزمنية" 
               fullWidth 
               value={form.timezone} 
               onChange={(event) => setForm((prev) => ({ ...prev, timezone: event.target.value }))} 
-              helperText="ظ…ط«ط§ظ„: Asia/Riyadh"
+              helperText="مثال: Asia/Riyadh"
               dir="ltr"
             />
           </Stack>
@@ -177,13 +177,13 @@ export function StoreSettingsPanel({ request }: StoreSettingsPanelProps) {
       <Paper elevation={0} sx={{ p: { xs: 3, md: 4 }, borderRadius: 4, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
           <PhoneIcon color="primary" />
-          <Typography variant="h6" fontWeight={800}>ظ…ط¹ظ„ظˆظ…ط§طھ ط§ظ„طھظˆط§طµظ„</Typography>
+          <Typography variant="h6" fontWeight={800}>معلومات التواصل</Typography>
         </Box>
         <Divider sx={{ mb: 4 }} />
         
         <Stack spacing={3}>
           <TextField 
-            label="ط±ظ‚ظ… ط§ظ„ظ‡ط§طھظپ" 
+            label="رقم الهاتف" 
             fullWidth 
             value={form.phone} 
             onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))} 
@@ -191,13 +191,13 @@ export function StoreSettingsPanel({ request }: StoreSettingsPanelProps) {
             dir="ltr"
           />
           <TextField 
-            label="ط§ظ„ط¹ظ†ظˆط§ظ† ط§ظ„ط¬ط؛ط±ط§ظپظٹ" 
+            label="العنوان الجغرافي" 
             fullWidth 
             multiline
             rows={2}
             value={form.address} 
             onChange={(event) => setForm((prev) => ({ ...prev, address: event.target.value }))} 
-            placeholder="ظ…ط«ط§ظ„: ط´ط§ط±ط¹ ط§ظ„ط¹ظ„ظٹط§طŒ ط§ظ„ط±ظٹط§ط¶طŒ ط§ظ„ظ…ظ…ظ„ظƒط© ط§ظ„ط¹ط±ط¨ظٹط© ط§ظ„ط³ط¹ظˆط¯ظٹط©"
+            placeholder="مثال: شارع العليا، الرياض، المملكة العربية السعودية"
           />
         </Stack>
       </Paper>
@@ -206,53 +206,53 @@ export function StoreSettingsPanel({ request }: StoreSettingsPanelProps) {
       <Paper elevation={0} sx={{ p: { xs: 3, md: 4 }, borderRadius: 4, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
           <PolicyIcon color="primary" />
-          <Typography variant="h6" fontWeight={800}>ط§ظ„ط³ظٹط§ط³ط§طھ ظˆط§ظ„ط£ط­ظƒط§ظ…</Typography>
+          <Typography variant="h6" fontWeight={800}>السياسات والأحكام</Typography>
         </Box>
         <Divider sx={{ mb: 4 }} />
         
         <Stack spacing={4}>
           <Box>
-            <Typography variant="subtitle2" fontWeight={700} gutterBottom>ط³ظٹط§ط³ط© ط§ظ„ط´ط­ظ† ظˆط§ظ„طھظˆطµظٹظ„</Typography>
+            <Typography variant="subtitle2" fontWeight={700} gutterBottom>سياسة الشحن والتوصيل</Typography>
             <TextField 
               fullWidth 
               multiline 
               minRows={3} 
               value={form.shippingPolicy} 
               onChange={(event) => setForm((prev) => ({ ...prev, shippingPolicy: event.target.value }))} 
-              placeholder="ط§ظƒطھط¨ ظ‡ظ†ط§ طھظپط§طµظٹظ„ ط§ظ„ط´ط­ظ† ظˆط§ظ„ط´ط±ظƒط§طھ ط§ظ„ظ…ط¹طھظ…ط¯ط© ظˆظ…ط¯ط© ط§ظ„طھظˆطµظٹظ„ ط§ظ„ظ…طھظˆظ‚ط¹ط©..."
+              placeholder="اكتب هنا تفاصيل الشحن والشركات المعتمدة ومدة التوصيل المتوقعة..."
             />
           </Box>
           <Box>
-            <Typography variant="subtitle2" fontWeight={700} gutterBottom>ط³ظٹط§ط³ط© ط§ظ„ط§ط³طھط±ط¬ط§ط¹ ظˆط§ظ„ط§ط³طھط¨ط¯ط§ظ„</Typography>
+            <Typography variant="subtitle2" fontWeight={700} gutterBottom>سياسة الاسترجاع والاستبدال</Typography>
             <TextField 
               fullWidth 
               multiline 
               minRows={3} 
               value={form.returnPolicy} 
               onChange={(event) => setForm((prev) => ({ ...prev, returnPolicy: event.target.value }))} 
-              placeholder="ط§ظƒطھط¨ ظ‡ظ†ط§ ط´ط±ظˆط· ظ‚ط¨ظˆظ„ ط§ط³طھط±ط¬ط§ط¹ ط£ظˆ ط§ط³طھط¨ط¯ط§ظ„ ط§ظ„ظ…ظ†طھط¬ط§طھ..."
+              placeholder="اكتب هنا شروط قبول استرجاع أو استبدال المنتجات..."
             />
           </Box>
           <Box>
-            <Typography variant="subtitle2" fontWeight={700} gutterBottom>ط³ظٹط§ط³ط© ط§ظ„ط®طµظˆطµظٹط©</Typography>
+            <Typography variant="subtitle2" fontWeight={700} gutterBottom>سياسة الخصوصية</Typography>
             <TextField 
               fullWidth 
               multiline 
               minRows={3} 
               value={form.privacyPolicy} 
               onChange={(event) => setForm((prev) => ({ ...prev, privacyPolicy: event.target.value }))} 
-              placeholder="ط§ظƒطھط¨ ظ‡ظ†ط§ ظƒظٹظپظٹط© ط¬ظ…ط¹ ظˆط§ط³طھط®ط¯ط§ظ… ط¨ظٹط§ظ†ط§طھ ط§ظ„ط¹ظ…ظ„ط§ط،..."
+              placeholder="اكتب هنا كيفية جمع واستخدام بيانات العملاء..."
             />
           </Box>
           <Box>
-            <Typography variant="subtitle2" fontWeight={700} gutterBottom>ط§ظ„ط´ط±ظˆط· ظˆط§ظ„ط£ط­ظƒط§ظ…</Typography>
+            <Typography variant="subtitle2" fontWeight={700} gutterBottom>الشروط والأحكام</Typography>
             <TextField 
               fullWidth 
               multiline 
               minRows={3} 
               value={form.termsAndConditions} 
               onChange={(event) => setForm((prev) => ({ ...prev, termsAndConditions: event.target.value }))} 
-              placeholder="ط§ظƒطھط¨ ظ‡ظ†ط§ ط§ظ„ط´ط±ظˆط· ط§ظ„ط¹ط§ظ…ط© ظ„ط§ط³طھط®ط¯ط§ظ… ط§ظ„ظ…ظˆظ‚ط¹ ظˆط¥طھظ…ط§ظ… ط§ظ„ط·ظ„ط¨ط§طھ..."
+              placeholder="اكتب هنا الشروط العامة لاستخدام الموقع وإتمام الطلبات..."
             />
           </Box>
         </Stack>
@@ -269,7 +269,7 @@ export function StoreSettingsPanel({ request }: StoreSettingsPanelProps) {
           disabled={saveLoading}
           sx={{ px: 4, py: 1.5, borderRadius: 2 }}
         >
-          {saveLoading ? 'ط¬ط§ط±ظگ ط§ظ„ط­ظپط¸...' : 'ط­ظپط¸ ط§ظ„طھط؛ظٹظٹط±ط§طھ'}
+          {saveLoading ? 'جارِ الحفظ...' : 'حفظ التغييرات'}
         </Button>
       </Box>
 

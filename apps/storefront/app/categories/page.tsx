@@ -1,7 +1,10 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import type { Metadata } from 'next';
+import { AnalyticsPageView } from '../../components/analytics-page-view';
 import { listCategories, listFilterAttributes, listProducts } from '../../lib/storefront-server';
 import type { StorefrontFilterAttribute } from '../../lib/types';
+import { absoluteUrl } from '../../lib/seo';
 
 function bilingual(ar: string | null | undefined, en: string | null | undefined, fallback: string): string {
   if (ar && en) return `${ar} / ${en}`;
@@ -12,6 +15,46 @@ export const dynamic = 'force-dynamic';
 
 interface CategoriesPageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export async function generateMetadata({ searchParams }: CategoriesPageProps): Promise<Metadata> {
+  const resolvedParams = searchParams ? await searchParams : {};
+  const selectedCategory = readSingleSearchParam(resolvedParams, 'category');
+  const query = readSingleSearchParam(resolvedParams, 'q');
+
+  const titleBase = selectedCategory ? `Categories - ${selectedCategory}` : 'Categories';
+  const title = query ? `${titleBase} | Search: ${query}` : titleBase;
+  const description = selectedCategory
+    ? `Browse products in ${selectedCategory} and discover top picks with filters.`
+    : 'Browse categories with advanced filters and fast product discovery.';
+
+  const params = new URLSearchParams();
+  if (selectedCategory) {
+    params.set('category', selectedCategory);
+  }
+  if (query) {
+    params.set('q', query);
+  }
+
+  const canonicalPath = params.size > 0 ? `/categories?${params.toString()}` : '/categories';
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: canonicalPath,
+    },
+    openGraph: {
+      title,
+      description,
+      url: await absoluteUrl(canonicalPath),
+      type: 'website',
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
+  };
 }
 
 export default async function CategoriesPage({ searchParams }: CategoriesPageProps) {
@@ -37,9 +80,50 @@ export default async function CategoriesPage({ searchParams }: CategoriesPagePro
   ]);
 
   const totalPages = Math.max(1, Math.ceil(products.total / limit));
+  const pageUrl = buildPageHref(page, selectedCategory, query, attributeFilters);
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Categories',
+    url: await absoluteUrl(pageUrl),
+    isPartOf: {
+      '@type': 'WebSite',
+      url: await absoluteUrl('/'),
+    },
+    breadcrumb: {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: await absoluteUrl('/'),
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Categories',
+          item: await absoluteUrl('/categories'),
+        },
+      ],
+    },
+  };
 
   return (
     <main className="page-shell stack-lg">
+      <AnalyticsPageView
+        eventName="sf_category_viewed"
+        metadata={{
+          category: selectedCategory ?? null,
+          query: query ?? null,
+          page,
+          resultCount: products.total,
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <header className="page-header">
         <h1>Categories</h1>
         <p>Browse products with quick filters and pagination.</p>
@@ -118,6 +202,8 @@ function SearchPanel({
       {renderAttributeHiddenInputs(attributeFilters)}
       <div className="search-row">
         <input
+          id="product-search"
+          aria-label="Search products"
           className="input"
           type="search"
           name="q"
@@ -225,7 +311,7 @@ function ProductsGrid({
           </div>
           <strong>{bilingual(product.titleAr, product.titleEn, product.title)}</strong>
           {product.ratingCount > 0 ? (
-            <span className="product-rating-sm">
+            <span className="product-rating-sm" aria-label={`Rating ${product.ratingAvg.toFixed(1)} out of 5`}>
               {'★'.repeat(Math.min(Math.round(product.ratingAvg), 5))}
               {'☆'.repeat(Math.max(5 - Math.round(product.ratingAvg), 0))}
               {' '}({product.ratingCount})
@@ -254,7 +340,7 @@ function PaginationControls({
   attributeFilters: Record<string, string[]>;
 }) {
   return (
-    <footer className="pagination">
+    <footer className="pagination" aria-label="Pagination navigation">
       <Link
         className={page <= 1 ? 'button-secondary disabled' : 'button-secondary'}
         href={buildPageHref(page - 1, selectedCategory, query, attributeFilters)}

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { trackOrder } from '../lib/storefront-client';
+import { trackStorefrontEvent } from '../lib/storefront-analytics';
 import type { TrackOrderResponse } from '../lib/types';
 
 export function TrackOrderClient() {
@@ -14,6 +15,15 @@ export function TrackOrderClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<TrackOrderResponse | null>(null);
+
+  useEffect(() => {
+    trackStorefrontEvent('sf_order_tracking_viewed', {
+      metadata: {
+        page: 'track-order',
+        hasOrderCodePreset: Boolean(initialOrderCode),
+      },
+    }).catch(() => undefined);
+  }, [initialOrderCode]);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

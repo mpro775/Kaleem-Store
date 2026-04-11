@@ -95,9 +95,9 @@ const statusColors: Record<ProductStatus, "default" | "primary" | "secondary" | 
 };
 
 const statusLabels: Record<ProductStatus, string> = {
-  draft: 'ظ…ط³ظˆط¯ط©',
-  active: 'ظ†ط´ط·',
-  archived: 'ظ…ط¤ط±ط´ظپ',
+  draft: 'مسودة',
+  active: 'نشط',
+  archived: 'مؤرشف',
 };
 
 export function ProductsPanel({ request }: ProductsPanelProps) {
@@ -154,7 +154,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
       setCategories(categoriesData ?? []);
       setAttributes(attributesData ?? []);
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ظ…ظٹظ„ ط§ظ„ظ…ظ†طھط¬ط§طھ', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحميل المنتجات', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -197,7 +197,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
         setFormMaxOrderQuantity(d.maxOrderQuantity != null ? String(d.maxOrderQuantity) : '');
       }
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ظ…ظٹظ„ طھظپط§طµظٹظ„ ط§ظ„ظ…ظ†طھط¬', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحميل تفاصيل المنتج', type: 'error' });
       setViewMode('list');
     } finally {
       setDetailLoading(false);
@@ -249,12 +249,12 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
         })),
       });
       if (created) {
-        setMessage({ text: 'طھظ… ط¥ظ†ط´ط§ط، ط§ظ„ظ…ظ†طھط¬ ط¨ظ†ط¬ط§ط­. ظٹظ…ظƒظ†ظƒ ط§ظ„ط¢ظ† ط¥ط¶ط§ظپط© ظ…طھط؛ظٹط±ط§طھ ظˆطµظˆط±.', type: 'success' });
+        setMessage({ text: 'تم إنشاء المنتج بنجاح. يمكنك الآن إضافة متغيرات وصور.', type: 'success' });
         await loadCatalog();
         await loadProductDetails(created.id);
       }
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط¥ظ†ط´ط§ط، ط§ظ„ظ…ظ†طھط¬', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر إنشاء المنتج', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -277,16 +277,16 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
       });
       await loadCatalog();
       await loadProductDetails(selectedProduct.id);
-      setMessage({ text: 'طھظ… طھط­ط¯ظٹط« ط§ظ„ظ…ظ†طھط¬ ط¨ظ†ط¬ط§ط­', type: 'success' });
+      setMessage({ text: 'تم تحديث المنتج بنجاح', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ط¯ظٹط« ط§ظ„ظ…ظ†طھط¬', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحديث المنتج', type: 'error' });
     } finally {
       setActionLoading(false);
     }
   }
 
   async function deleteProduct(): Promise<void> {
-    if (!selectedProduct || !window.confirm('ظ‡ظ„ ط£ظ†طھ ظ…طھط£ظƒط¯ ظ…ظ† ط­ط°ظپ ظ‡ط°ط§ ط§ظ„ظ…ظ†طھط¬ ظ†ظ‡ط§ط¦ظٹط§ظ‹طں')) return;
+    if (!selectedProduct || !window.confirm('هل أنت متأكد من حذف هذا المنتج نهائياً؟')) return;
     setActionLoading(true);
     setMessage({ text: '', type: 'info' });
     try {
@@ -295,9 +295,9 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
       setProductForm(productFormDefault);
       await loadCatalog();
       setViewMode('list');
-      setMessage({ text: 'طھظ… ط­ط°ظپ ط§ظ„ظ…ظ†طھط¬ ط¨ظ†ط¬ط§ط­', type: 'success' });
+      setMessage({ text: 'تم حذف المنتج بنجاح', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط­ط°ظپ ط§ظ„ظ…ظ†طھط¬', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر حذف المنتج', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -314,9 +314,9 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
       });
       setVariantForm(createVariantFormDefault());
       await loadProductDetails(selectedProduct.id);
-      setMessage({ text: 'طھظ…طھ ط¥ط¶ط§ظپط© ط§ظ„ظ…طھط؛ظٹط± ط¨ظ†ط¬ط§ط­', type: 'success' });
+      setMessage({ text: 'تمت إضافة المتغير بنجاح', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط¥ط¶ط§ظپط© ط§ظ„ظ…طھط؛ظٹط±', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر إضافة المتغير', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -334,9 +334,9 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
         }),
       });
       await loadProductDetails(selectedProduct.id);
-      setMessage({ text: 'طھظ… طھط­ط¯ظٹط« ط®طµط§ط¦طµ ط§ظ„ظ…طھط؛ظٹط± ط¨ظ†ط¬ط§ط­', type: 'success' });
+      setMessage({ text: 'تم تحديث خصائص المتغير بنجاح', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ط¯ظٹط« ط§ظ„ط®طµط§ط¦طµ', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحديث الخصائص', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -357,13 +357,13 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
       titleAr: (variant as any).titleAr ?? '',
       titleEn: (variant as any).titleEn ?? '',
     });
-    setMessage({ text: 'طھظ… طھط­ظ…ظٹظ„ ط¨ظٹط§ظ†ط§طھ ط§ظ„ظ…طھط؛ظٹط± ظ„ظ„طھط¹ط¯ظٹظ„', type: 'info' });
+    setMessage({ text: 'تم تحميل بيانات المتغير للتعديل', type: 'info' });
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   }
 
-  async function uploadAndAttachImage(): Promise<void> {
+  async function uploadAndAttachImage(isPrimary: boolean): Promise<void> {
     if (!selectedProduct || !imageFile) {
-      setMessage({ text: 'ط§ط®طھط± ظ…ظ„ظپ طµظˆط±ط© ط£ظˆظ„ط§ظ‹', type: 'error' });
+      setMessage({ text: 'اختر ملف صورة أولاً', type: 'error' });
       return;
     }
     setActionLoading(true);
@@ -372,15 +372,15 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
       const mediaAsset = await uploadMediaAsset(request, imageFile);
       await request(`/products/${selectedProduct.id}/images`, {
         method: 'POST',
-        body: JSON.stringify(buildAttachImagePayload(imageForm, mediaAsset.id)),
+        body: JSON.stringify(buildAttachImagePayload(imageForm, mediaAsset.id, isPrimary)),
       });
 
       setImageForm(imageFormDefault);
       setImageFile(null);
       await loadProductDetails(selectedProduct.id);
-      setMessage({ text: 'طھظ… ط±ظپط¹ ط§ظ„طµظˆط±ط© ظˆط±ط¨ط·ظ‡ط§ ط¨ط§ظ„ظ…ظ†طھط¬', type: 'success' });
+      setMessage({ text: isPrimary ? 'تم رفع الصورة الرئيسية بنجاح' : 'تم رفع الصورة الإضافية بنجاح', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط±ظپط¹ ط§ظ„طµظˆط±ط©', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر رفع الصورة', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -399,7 +399,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
             color="inherit"
             sx={{ fontWeight: 700 }}
           >
-            ط§ظ„ط¹ظˆط¯ط© ظ„ظ„ظ…ظ†طھط¬ط§طھ
+            العودة للمنتجات
           </Button>
           {selectedProduct && (
             <Button 
@@ -408,7 +408,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
               onClick={() => deleteProduct().catch(() => undefined)}
               disabled={actionLoading}
             >
-              ط­ط°ظپ ط§ظ„ظ…ظ†طھط¬
+              حذف المنتج
             </Button>
           )}
         </Box>
@@ -429,7 +429,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
                 <InventoryIcon color="primary" />
                 <Typography variant="h6" fontWeight={800}>
-                  {selectedProduct ? 'طھط¹ط¯ظٹظ„ ط§ظ„ظ…ظ†طھط¬' : 'ظ…ظ†طھط¬ ط¬ط¯ظٹط¯'}
+                  {selectedProduct ? 'تعديل المنتج' : 'منتج جديد'}
                 </Typography>
               </Box>
               <Divider sx={{ mb: 4 }} />
@@ -439,7 +439,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                   <Box>
                     <Stack spacing={2}>
                       <TextField 
-                        label="ط§ط³ظ… ط§ظ„ظ…ظ†طھط¬" 
+                        label="اسم المنتج" 
                         fullWidth 
                         value={productForm.title} 
                         onChange={(event) => setProductForm((prev) => ({ ...prev, title: event.target.value }))} 
@@ -447,7 +447,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                       />
                       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                         <TextField 
-                          label="ط§ظ„ط§ط³ظ… (ط¹ط±ط¨ظٹ)" 
+                          label="الاسم (عربي)" 
                           fullWidth 
                           value={productForm.titleAr} 
                           onChange={(event) => setProductForm((prev) => ({ ...prev, titleAr: event.target.value }))} 
@@ -466,14 +466,14 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                   <Box>
                     <TextField 
                       select 
-                      label="ط§ظ„ط­ط§ظ„ط©" 
+                      label="الحالة" 
                       fullWidth 
                       value={productForm.status} 
                       onChange={(event) => setProductForm((prev) => ({ ...prev, status: event.target.value as ProductStatus }))}
                     >
-                      <MenuItem value="draft">ظ…ط³ظˆط¯ط©</MenuItem>
-                      <MenuItem value="active">ظ†ط´ط·</MenuItem>
-                      <MenuItem value="archived">ظ…ط¤ط±ط´ظپ</MenuItem>
+                      <MenuItem value="draft">مسودة</MenuItem>
+                      <MenuItem value="active">نشط</MenuItem>
+                      <MenuItem value="archived">مؤرشف</MenuItem>
                     </TextField>
                   </Box>
                 </Box>
@@ -481,23 +481,23 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
                   <Box>
                     <TextField 
-                      label="ط±ط§ط¨ط· ط§ظ„ظ…ظ†طھط¬ (Slug)" 
+                      label="رابط المنتج (Slug)" 
                       fullWidth 
                       value={productForm.slug} 
                       onChange={(event) => setProductForm((prev) => ({ ...prev, slug: event.target.value }))} 
                       dir="ltr"
-                      helperText="ط§ط®طھظٹط§ط±ظٹ: ط³ظٹطھظ… طھظˆظ„ظٹط¯ظ‡ طھظ„ظ‚ط§ط¦ظٹط§ظ‹ ط¥ط°ط§ طھظڈط±ظƒ ظپط§ط±ط؛ط§ظ‹."
+                      helperText="اختياري: سيتم توليده تلقائياً إذا تُرك فارغاً."
                     />
                   </Box>
                   <Box>
                     <TextField 
                       select 
-                      label="ط§ظ„طھطµظ†ظٹظپ" 
+                      label="التصنيف" 
                       fullWidth 
                       value={productForm.categoryId} 
                       onChange={(event) => setProductForm((prev) => ({ ...prev, categoryId: event.target.value }))}
                     >
-                      <MenuItem value="">ط¨ط¯ظˆظ† طھطµظ†ظٹظپ</MenuItem>
+                      <MenuItem value="">بدون تصنيف</MenuItem>
                       {categories.map((category) => (
                         <MenuItem key={category.id} value={category.id}>
                           {category.name}
@@ -508,7 +508,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                 </Box>
 
                 <TextField 
-                  label="ط§ظ„ظˆطµظپ" 
+                  label="الوصف" 
                   fullWidth 
                   multiline 
                   minRows={4} 
@@ -517,7 +517,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                 />
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                   <TextField 
-                    label="ط§ظ„ظˆطµظپ (ط¹ط±ط¨ظٹ)" 
+                    label="الوصف (عربي)" 
                     fullWidth 
                     multiline 
                     minRows={3} 
@@ -539,60 +539,60 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                 {/* Additional Information Accordion */}
                 <Accordion disableGutters elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, '&:before': { display: 'none' } }}>
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Typography fontWeight={700}>ظ…ط¹ظ„ظˆظ…ط§طھ ط¥ط¶ط§ظپظٹط©</Typography>
+                    <Typography fontWeight={700}>معلومات إضافية</Typography>
                   </AccordionSummary>
                   <AccordionDetails>
                     <Stack spacing={3}>
-                      {/* ظ‚ط³ظ… ط§ظ„ط¹ظ„ط§ظ…ط© ط§ظ„طھط¬ط§ط±ظٹط© ظˆط§ظ„ظˆط²ظ† */}
-                      <Typography variant="subtitle2" fontWeight={700}>ط§ظ„ط¹ظ„ط§ظ…ط© ط§ظ„طھط¬ط§ط±ظٹط© ظˆط§ظ„ظˆط²ظ†</Typography>
+                      {/* قسم العلامة التجارية والوزن */}
+                      <Typography variant="subtitle2" fontWeight={700}>العلامة التجارية والوزن</Typography>
                       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2 }}>
-                        <TextField size="small" label="ط§ظ„ط¹ظ„ط§ظ…ط© ط§ظ„طھط¬ط§ط±ظٹط©" fullWidth value={formBrand} onChange={(e) => setFormBrand(e.target.value)} />
-                        <TextField size="small" label="ط§ظ„ظˆط²ظ† (ظƒط¬ظ…)" type="number" fullWidth value={formWeight} onChange={(e) => setFormWeight(e.target.value)} />
-                        <TextField size="small" label="ط³ط¹ط± ط§ظ„طھظƒظ„ظپط©" type="number" fullWidth value={formCostPrice} onChange={(e) => setFormCostPrice(e.target.value)} />
+                        <TextField size="small" label="العلامة التجارية" fullWidth value={formBrand} onChange={(e) => setFormBrand(e.target.value)} />
+                        <TextField size="small" label="الوزن (كجم)" type="number" fullWidth value={formWeight} onChange={(e) => setFormWeight(e.target.value)} />
+                        <TextField size="small" label="سعر التكلفة" type="number" fullWidth value={formCostPrice} onChange={(e) => setFormCostPrice(e.target.value)} />
                       </Box>
 
-                      {/* ظ‚ط³ظ… ط§ظ„ط£ط¨ط¹ط§ط¯ */}
-                      <Typography variant="subtitle2" fontWeight={700}>ط§ظ„ط£ط¨ط¹ط§ط¯</Typography>
+                      {/* قسم الأبعاد */}
+                      <Typography variant="subtitle2" fontWeight={700}>الأبعاد</Typography>
                       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2 }}>
-                        <TextField size="small" label="ط§ظ„ط·ظˆظ„ (ط³ظ…)" type="number" fullWidth value={formDimensionsLength} onChange={(e) => setFormDimensionsLength(e.target.value)} />
-                        <TextField size="small" label="ط§ظ„ط¹ط±ط¶ (ط³ظ…)" type="number" fullWidth value={formDimensionsWidth} onChange={(e) => setFormDimensionsWidth(e.target.value)} />
-                        <TextField size="small" label="ط§ظ„ط§ط±طھظپط§ط¹ (ط³ظ…)" type="number" fullWidth value={formDimensionsHeight} onChange={(e) => setFormDimensionsHeight(e.target.value)} />
+                        <TextField size="small" label="الطول (سم)" type="number" fullWidth value={formDimensionsLength} onChange={(e) => setFormDimensionsLength(e.target.value)} />
+                        <TextField size="small" label="العرض (سم)" type="number" fullWidth value={formDimensionsWidth} onChange={(e) => setFormDimensionsWidth(e.target.value)} />
+                        <TextField size="small" label="الارتفاع (سم)" type="number" fullWidth value={formDimensionsHeight} onChange={(e) => setFormDimensionsHeight(e.target.value)} />
                       </Box>
 
-                      {/* ظ‚ط³ظ… SEO */}
-                      <Typography variant="subtitle2" fontWeight={700}>طھط­ط³ظٹظ† ظ…ط­ط±ظƒط§طھ ط§ظ„ط¨ط­ط« (SEO)</Typography>
+                      {/* قسم SEO */}
+                      <Typography variant="subtitle2" fontWeight={700}>تحسين محركات البحث (SEO)</Typography>
                       <Stack spacing={2}>
-                        <TextField size="small" label="ط¹ظ†ظˆط§ظ† SEO" fullWidth value={formSeoTitle} onChange={(e) => setFormSeoTitle(e.target.value)} />
-                        <TextField size="small" label="ظˆطµظپ SEO" fullWidth multiline minRows={2} value={formSeoDescription} onChange={(e) => setFormSeoDescription(e.target.value)} />
+                        <TextField size="small" label="عنوان SEO" fullWidth value={formSeoTitle} onChange={(e) => setFormSeoTitle(e.target.value)} />
+                        <TextField size="small" label="وصف SEO" fullWidth multiline minRows={2} value={formSeoDescription} onChange={(e) => setFormSeoDescription(e.target.value)} />
                       </Stack>
 
-                      {/* ظ‚ط³ظ… ط§ظ„ظƒظ„ظ…ط§طھ ط§ظ„ظ…ظپطھط§ط­ظٹط© */}
-                      <Typography variant="subtitle2" fontWeight={700}>ط§ظ„ظƒظ„ظ…ط§طھ ط§ظ„ظ…ظپطھط§ط­ظٹط©</Typography>
-                      <TextField size="small" label="ط§ظ„ظƒظ„ظ…ط§طھ ط§ظ„ظ…ظپطھط§ط­ظٹط© (ظ…ظپطµظˆظ„ط© ط¨ظپظˆط§طµظ„)" fullWidth value={formTags} onChange={(e) => setFormTags(e.target.value)} helperText="ظ…ط«ط§ظ„: ط¥ظ„ظƒطھط±ظˆظ†ظٹط§طھ, ظ‡ظˆط§طھظپ, ط°ظƒظٹ" />
+                      {/* قسم الكلمات المفتاحية */}
+                      <Typography variant="subtitle2" fontWeight={700}>الكلمات المفتاحية</Typography>
+                      <TextField size="small" label="الكلمات المفتاحية (مفصولة بفواصل)" fullWidth value={formTags} onChange={(e) => setFormTags(e.target.value)} helperText="مثال: إلكترونيات, هواتف, ذكي" />
 
-                      {/* ظ‚ط³ظ… ط§ظ„ط®ظٹط§ط±ط§طھ */}
-                      <Typography variant="subtitle2" fontWeight={700}>ط§ظ„ط®ظٹط§ط±ط§طھ</Typography>
+                      {/* قسم الخيارات */}
+                      <Typography variant="subtitle2" fontWeight={700}>الخيارات</Typography>
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-                        <FormControlLabel control={<Switch checked={formIsFeatured} onChange={(e) => setFormIsFeatured(e.target.checked)} />} label="ظ…ظ†طھط¬ ظ…ظ…ظٹط²" />
-                        <FormControlLabel control={<Switch checked={formIsTaxable} onChange={(e) => setFormIsTaxable(e.target.checked)} />} label="ط®ط§ط¶ط¹ ظ„ظ„ط¶ط±ظٹط¨ط©" />
+                        <FormControlLabel control={<Switch checked={formIsFeatured} onChange={(e) => setFormIsFeatured(e.target.checked)} />} label="منتج مميز" />
+                        <FormControlLabel control={<Switch checked={formIsTaxable} onChange={(e) => setFormIsTaxable(e.target.checked)} />} label="خاضع للضريبة" />
                       </Box>
                       {formIsTaxable && (
-                        <TextField size="small" label="ظ†ط³ط¨ط© ط§ظ„ط¶ط±ظٹط¨ط© (%)" type="number" fullWidth value={formTaxRate} onChange={(e) => setFormTaxRate(e.target.value)} sx={{ maxWidth: 300 }} />
+                        <TextField size="small" label="نسبة الضريبة (%)" type="number" fullWidth value={formTaxRate} onChange={(e) => setFormTaxRate(e.target.value)} sx={{ maxWidth: 300 }} />
                       )}
                       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, maxWidth: 600 }}>
-                        <TextField size="small" label="ط§ظ„ط­ط¯ ط§ظ„ط£ط¯ظ†ظ‰ ظ„ظ„ط·ظ„ط¨" type="number" fullWidth value={formMinOrderQuantity} onChange={(e) => setFormMinOrderQuantity(e.target.value)} />
-                        <TextField size="small" label="ط§ظ„ط­ط¯ ط§ظ„ط£ظ‚طµظ‰ ظ„ظ„ط·ظ„ط¨" type="number" fullWidth value={formMaxOrderQuantity} onChange={(e) => setFormMaxOrderQuantity(e.target.value)} />
+                        <TextField size="small" label="الحد الأدنى للطلب" type="number" fullWidth value={formMinOrderQuantity} onChange={(e) => setFormMinOrderQuantity(e.target.value)} />
+                        <TextField size="small" label="الحد الأقصى للطلب" type="number" fullWidth value={formMaxOrderQuantity} onChange={(e) => setFormMaxOrderQuantity(e.target.value)} />
                       </Box>
 
-                      {/* ظ‚ط³ظ… ط§ظ„طھظ‚ظٹظٹظ… (ط¹ط±ط¶ ظپظ‚ط·) */}
+                      {/* قسم التقييم (عرض فقط) */}
                       {selectedProduct && (selectedProduct as any).ratingAvg != null && (
                         <>
-                          <Typography variant="subtitle2" fontWeight={700}>ط§ظ„طھظ‚ظٹظٹظ… (ط¹ط±ط¶ ظپظ‚ط·)</Typography>
+                          <Typography variant="subtitle2" fontWeight={700}>التقييم (عرض فقط)</Typography>
                           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                             <StarIcon sx={{ color: 'warning.main' }} />
-                            <Typography variant="body2">ظ…طھظˆط³ط· ط§ظ„طھظ‚ظٹظٹظ…: {(selectedProduct as any).ratingAvg?.toFixed(1) ?? '-'}</Typography>
+                            <Typography variant="body2">متوسط التقييم: {(selectedProduct as any).ratingAvg?.toFixed(1) ?? '-'}</Typography>
                             <Typography variant="body2" color="text.secondary">|</Typography>
-                            <Typography variant="body2" color="text.secondary">ط¹ط¯ط¯ ط§ظ„طھظ‚ظٹظٹظ…ط§طھ: {(selectedProduct as any).ratingCount ?? 0}</Typography>
+                            <Typography variant="body2" color="text.secondary">عدد التقييمات: {(selectedProduct as any).ratingCount ?? 0}</Typography>
                           </Box>
                         </>
                       )}
@@ -608,7 +608,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                     size="large"
                     sx={{ px: 4 }}
                   >
-                    {actionLoading ? 'ط¬ط§ط±ظگ ط§ظ„ط­ظپط¸...' : selectedProduct ? 'ط­ظپط¸ ط§ظ„طھط¹ط¯ظٹظ„ط§طھ' : 'ط¥ظ†ط´ط§ط، ط§ظ„ظ…ظ†طھط¬'}
+                    {actionLoading ? 'جارِ الحفظ...' : selectedProduct ? 'حفظ التعديلات' : 'إنشاء المنتج'}
                   </Button>
                 </Box>
               </Stack>
@@ -619,22 +619,22 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
               <Paper elevation={0} sx={{ p: { xs: 3, md: 4 }, borderRadius: 4, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
                   <StyleIcon color="primary" />
-                  <Typography variant="h6" fontWeight={800}>ط§ظ„ظ…طھط؛ظٹط±ط§طھ ظˆط§ظ„ط£ط³ط¹ط§ط± (Variants)</Typography>
+                  <Typography variant="h6" fontWeight={800}>المتغيرات والأسعار (Variants)</Typography>
                 </Box>
                 <Divider sx={{ mb: 4 }} />
                 
                 {/* List of existing variants */}
                 {selectedProduct.variants && selectedProduct.variants.length > 0 && (
                   <Box sx={{ mb: 4 }}>
-                    <Typography variant="subtitle2" fontWeight={700} gutterBottom>ط§ظ„ظ…طھط؛ظٹط±ط§طھ ط§ظ„ظ…ط¶ط§ظپط©:</Typography>
+                    <Typography variant="subtitle2" fontWeight={700} gutterBottom>المتغيرات المضافة:</Typography>
                     <TableContainer component={Box} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
                       <Table size="small">
                         <TableHead sx={{ bgcolor: 'background.default' }}>
                           <TableRow>
-                            <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ط¹ظ†ظˆط§ظ†</TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ط³ط¹ط±</TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ظ…ط®ط²ظˆظ†</TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ط®طµط§ط¦طµ</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>العنوان</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>السعر</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>المخزون</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>الخصائص</TableCell>
                             <TableCell align="left"></TableCell>
                           </TableRow>
                         </TableHead>
@@ -655,7 +655,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                                 </Typography>
                               </TableCell>
                               <TableCell align="left">
-                                <Button size="small" onClick={() => selectVariantForEdit(variant)}>طھط¹ط¯ظٹظ„</Button>
+                                <Button size="small" onClick={() => selectVariantForEdit(variant)}>تعديل</Button>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -668,24 +668,24 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                 {/* Add/Edit Variant Form */}
                 <Box sx={{ bgcolor: 'background.default', p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
                   <Typography variant="subtitle1" fontWeight={700} mb={2}>
-                    {selectedVariantId ? 'طھط¹ط¯ظٹظ„ ط®طµط§ط¦طµ ط§ظ„ظ…طھط؛ظٹط± ط§ظ„ظ…ط­ط¯ط¯' : 'ط¥ط¶ط§ظپط© ظ…طھط؛ظٹط± ط¬ط¯ظٹط¯'}
+                    {selectedVariantId ? 'تعديل خصائص المتغير المحدد' : 'إضافة متغير جديد'}
                   </Typography>
                   
                   <Stack spacing={3}>
                     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2 }}>
                       <Box>
-                        <TextField size="small" label="ط¹ظ†ظˆط§ظ† ط§ظ„ظ…طھط؛ظٹط±" fullWidth value={variantForm.title} onChange={(e) => setVariantForm({ ...variantForm, title: e.target.value })} placeholder="ظ…ط«ط§ظ„: ط£ط­ظ…ط± / ظƒط¨ظٹط±" />
+                        <TextField size="small" label="عنوان المتغير" fullWidth value={variantForm.title} onChange={(e) => setVariantForm({ ...variantForm, title: e.target.value })} placeholder="مثال: أحمر / كبير" />
                       </Box>
                       <Box>
-                        <TextField size="small" label="SKU (ط±ظ…ط² ط§ظ„طھط®ط²ظٹظ†)" fullWidth value={variantForm.sku} onChange={(e) => setVariantForm({ ...variantForm, sku: e.target.value })} />
+                        <TextField size="small" label="SKU (رمز التخزين)" fullWidth value={variantForm.sku} onChange={(e) => setVariantForm({ ...variantForm, sku: e.target.value })} />
                       </Box>
                       <Box>
-                        <TextField size="small" label="ط§ظ„ط¨ط§ط±ظƒظˆط¯ (ط§ط®طھظٹط§ط±ظٹ)" fullWidth value={variantForm.barcode} onChange={(e) => setVariantForm({ ...variantForm, barcode: e.target.value })} />
+                        <TextField size="small" label="الباركود (اختياري)" fullWidth value={variantForm.barcode} onChange={(e) => setVariantForm({ ...variantForm, barcode: e.target.value })} />
                       </Box>
                     </Box>
                     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                       <Box>
-                        <TextField size="small" label="ط¹ظ†ظˆط§ظ† ط§ظ„ظ…ظˆط¯ظٹظ„ (ط¹ط±ط¨ظٹ)" fullWidth value={variantForm.titleAr} onChange={(e) => setVariantForm({ ...variantForm, titleAr: e.target.value })} dir="rtl" />
+                        <TextField size="small" label="عنوان الموديل (عربي)" fullWidth value={variantForm.titleAr} onChange={(e) => setVariantForm({ ...variantForm, titleAr: e.target.value })} dir="rtl" />
                       </Box>
                       <Box>
                         <TextField size="small" label="Variant Title (English)" fullWidth value={variantForm.titleEn} onChange={(e) => setVariantForm({ ...variantForm, titleEn: e.target.value })} dir="ltr" />
@@ -694,21 +694,21 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                     
                     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(4, 1fr)' }, gap: 2 }}>
                       <Box>
-                        <TextField size="small" label="ط§ظ„ط³ط¹ط±" type="number" fullWidth value={variantForm.price} onChange={(e) => setVariantForm({ ...variantForm, price: e.target.value })} />
+                        <TextField size="small" label="السعر" type="number" fullWidth value={variantForm.price} onChange={(e) => setVariantForm({ ...variantForm, price: e.target.value })} />
                       </Box>
                       <Box>
-                        <TextField size="small" label="ط§ظ„ط³ط¹ط± ظ‚ط¨ظ„ ط§ظ„ط®طµظ… (ط§ط®طھظٹط§ط±ظٹ)" type="number" fullWidth value={variantForm.compareAtPrice} onChange={(e) => setVariantForm({ ...variantForm, compareAtPrice: e.target.value })} />
+                        <TextField size="small" label="السعر قبل الخصم (اختياري)" type="number" fullWidth value={variantForm.compareAtPrice} onChange={(e) => setVariantForm({ ...variantForm, compareAtPrice: e.target.value })} />
                       </Box>
                       <Box>
-                        <TextField size="small" label="ط§ظ„ظƒظ…ظٹط© ط§ظ„ظ…طھظˆظپط±ط©" type="number" fullWidth value={variantForm.stockQuantity} onChange={(e) => setVariantForm({ ...variantForm, stockQuantity: e.target.value })} />
+                        <TextField size="small" label="الكمية المتوفرة" type="number" fullWidth value={variantForm.stockQuantity} onChange={(e) => setVariantForm({ ...variantForm, stockQuantity: e.target.value })} />
                       </Box>
                       <Box>
-                        <TextField size="small" label="طھظ†ط¨ظٹظ‡ ط§ظ†ط®ظپط§ط¶ ط§ظ„ظ…ط®ط²ظˆظ†" type="number" fullWidth value={variantForm.lowStockThreshold} onChange={(e) => setVariantForm({ ...variantForm, lowStockThreshold: e.target.value })} />
+                        <TextField size="small" label="تنبيه انخفاض المخزون" type="number" fullWidth value={variantForm.lowStockThreshold} onChange={(e) => setVariantForm({ ...variantForm, lowStockThreshold: e.target.value })} />
                       </Box>
                     </Box>
 
                     <Box>
-                      <Typography variant="body2" fontWeight={700} mb={1}>ط±ط¨ط· ط¨ط®طµط§ط¦طµ ط§ظ„ظ…ظ†طھط¬ (ط§ظ„ط£ظ„ظˆط§ظ†طŒ ط§ظ„ظ…ظ‚ط§ط³ط§طھطŒ ط§ظ„ط®):</Typography>
+                      <Typography variant="body2" fontWeight={700} mb={1}>ربط بخصائص المنتج (الألوان، المقاسات، الخ):</Typography>
                       {attributes.length > 0 ? (
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2 }}>
                           {attributes.map((attribute) => (
@@ -726,7 +726,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                                   })
                                 }
                               >
-                                <MenuItem value="">ط¨ط¯ظˆظ† ط§ط®طھظٹط§ط±</MenuItem>
+                                <MenuItem value="">بدون اختيار</MenuItem>
                                 {(attribute.values ?? []).map((val) => (
                                   <MenuItem key={val.id} value={val.id}>{val.value}</MenuItem>
                                 ))}
@@ -735,25 +735,25 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                           ))}
                         </Box>
                       ) : (
-                        <Typography variant="caption" color="text.secondary">ظ„ظ… ظٹطھظ… ط¥ظ†ط´ط§ط، ط£ظٹ ط®طµط§ط¦طµ ظپظٹ ظ‚ط³ظ… "ط§ظ„ط®طµط§ط¦طµ" ط¨ط¹ط¯.</Typography>
+                        <Typography variant="caption" color="text.secondary">لم يتم إنشاء أي خصائص في قسم "الخصائص" بعد.</Typography>
                       )}
                     </Box>
 
-                    <FormControlLabel control={<Checkbox checked={variantForm.isDefault} onChange={(e) => setVariantForm({ ...variantForm, isDefault: e.target.checked })} />} label="طھط¹ظٹظٹظ† ظƒظ…طھط؛ظٹط± ط§ظپطھط±ط§ط¶ظٹ ظٹط¸ظ‡ط± ط£ظˆظ„ط§ظ‹" />
+                    <FormControlLabel control={<Checkbox checked={variantForm.isDefault} onChange={(e) => setVariantForm({ ...variantForm, isDefault: e.target.checked })} />} label="تعيين كمتغير افتراضي يظهر أولاً" />
 
                     <Box sx={{ display: 'flex', gap: 1 }}>
                       {selectedVariantId ? (
                         <>
                           <Button variant="contained" onClick={() => updateVariantAttributes().catch(() => undefined)} disabled={actionLoading}>
-                            ط­ظپط¸ طھط¹ط¯ظٹظ„ط§طھ ط§ظ„ط®طµط§ط¦طµ
+                            حفظ تعديلات الخصائص
                           </Button>
                           <Button variant="outlined" onClick={() => { setSelectedVariantId(''); setVariantForm(createVariantFormDefault()); }}>
-                            ط¥ظ„ط؛ط§ط، ط§ظ„طھط¹ط¯ظٹظ„ ظˆ ط¥ط¶ط§ظپط© ط¬ط¯ظٹط¯
+                            إلغاء التعديل و إضافة جديد
                           </Button>
                         </>
                       ) : (
                         <Button variant="contained" color="secondary" onClick={() => addVariant().catch(() => undefined)} disabled={actionLoading}>
-                          ط¥ط¶ط§ظپط© ط§ظ„ظ…طھط؛ظٹط±
+                          إضافة المتغير
                         </Button>
                       )}
                     </Box>
@@ -767,7 +767,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
               <Paper elevation={0} sx={{ p: { xs: 3, md: 4 }, borderRadius: 4, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
                   <ImageIcon color="primary" />
-                  <Typography variant="h6" fontWeight={800}>ط§ظ„طµظˆط± ظˆط§ظ„ظˆط³ط§ط¦ط·</Typography>
+                  <Typography variant="h6" fontWeight={800}>الصور والوسائط</Typography>
                 </Box>
                 <Divider sx={{ mb: 4 }} />
                 
@@ -777,7 +777,8 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                     {selectedProduct.images.map((img) => (
                       <Paper key={img.id} sx={{ p: 1, borderRadius: 2, border: '1px solid', borderColor: 'divider', width: 120, textAlign: 'center' }}>
                         <Box component="img" src={img.url} alt={img.altText || ''} sx={{ width: '100%', height: 100, objectFit: 'cover', borderRadius: 1, mb: 1, bgcolor: 'background.default' }} />
-                        <Typography variant="caption" noWrap display="block" color="text.secondary">ط§ظ„طھط±طھظٹط¨: {img.sortOrder}</Typography>
+                        {img.isPrimary && <Chip size="small" color="primary" label="الرئيسية" sx={{ mb: 0.5 }} />}
+                        <Typography variant="caption" noWrap display="block" color="text.secondary">الترتيب: {img.sortOrder}</Typography>
                       </Paper>
                     ))}
                   </Box>
@@ -785,28 +786,33 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
 
                 {/* Upload Form */}
                 <Box sx={{ bgcolor: 'background.default', p: 3, borderRadius: 3, border: '1px dashed', borderColor: 'primary.main' }}>
-                  <Typography variant="subtitle2" fontWeight={700} mb={2}>ط¥ط¶ط§ظپط© طµظˆط±ط© ط¬ط¯ظٹط¯ط©</Typography>
+                  <Typography variant="subtitle2" fontWeight={700} mb={2}>إضافة صورة جديدة</Typography>
                   <Stack spacing={2}>
                     <TextField size="small" type="file" inputProps={{ accept: 'image/*' }} onChange={(e) => setImageFile((e.target as HTMLInputElement).files?.[0] ?? null)} fullWidth />
                     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2 }}>
                       <Box>
-                        <TextField size="small" label="ظ†طµ ط¨ط¯ظٹظ„ (Alt)" fullWidth value={imageForm.altText} onChange={(e) => setImageForm({ ...imageForm, altText: e.target.value })} />
+                        <TextField size="small" label="نص بديل (Alt)" fullWidth value={imageForm.altText} onChange={(e) => setImageForm({ ...imageForm, altText: e.target.value })} />
                       </Box>
                       <Box>
-                        <TextField size="small" label="ط§ظ„طھط±طھظٹط¨ (0 ظٹط¸ظ‡ط± ط£ظˆظ„ط§ظ‹)" type="number" fullWidth value={imageForm.sortOrder} onChange={(e) => setImageForm({ ...imageForm, sortOrder: e.target.value })} />
+                        <TextField size="small" label="الترتيب (0 يظهر أولاً)" type="number" fullWidth value={imageForm.sortOrder} onChange={(e) => setImageForm({ ...imageForm, sortOrder: e.target.value })} />
                       </Box>
                       <Box>
-                        <TextField size="small" select label="ط±ط¨ط· ط¨ظ…طھط؛ظٹط± (ط§ط®طھظٹط§ط±ظٹ)" fullWidth value={imageForm.variantId} onChange={(e) => setImageForm({ ...imageForm, variantId: e.target.value })}>
-                          <MenuItem value="">ط¨ط¯ظˆظ† ط±ط¨ط· (طµظˆط±ط© ط¹ط§ظ…ط©)</MenuItem>
+                        <TextField size="small" select label="ربط بمتغير (اختياري)" fullWidth value={imageForm.variantId} onChange={(e) => setImageForm({ ...imageForm, variantId: e.target.value })}>
+                          <MenuItem value="">بدون ربط (صورة عامة)</MenuItem>
                           {(selectedProduct?.variants ?? []).map(v => (
                             <MenuItem key={v.id} value={v.id}>{v.title}</MenuItem>
                           ))}
                         </TextField>
                       </Box>
                     </Box>
-                    <Button variant="contained" onClick={() => uploadAndAttachImage().catch(() => undefined)} disabled={actionLoading || !imageFile} sx={{ width: 'fit-content' }}>
-                      {actionLoading ? 'ط¬ط§ط±ظگ ط§ظ„ط±ظپط¹...' : 'ط±ظپط¹ ط§ظ„طµظˆط±ط© ظˆط­ظپط¸'}
-                    </Button>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                      <Button variant="contained" onClick={() => uploadAndAttachImage(true).catch(() => undefined)} disabled={actionLoading || !imageFile} sx={{ width: 'fit-content' }}>
+                        {actionLoading ? 'جارِ الرفع...' : 'رفع كصورة رئيسية'}
+                      </Button>
+                      <Button variant="outlined" onClick={() => uploadAndAttachImage(false).catch(() => undefined)} disabled={actionLoading || !imageFile} sx={{ width: 'fit-content' }}>
+                        {actionLoading ? 'جارِ الرفع...' : 'رفع كصورة إضافية'}
+                      </Button>
+                    </Stack>
                   </Stack>
                 </Box>
               </Paper>
@@ -823,10 +829,10 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1, flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Typography variant="h4" fontWeight={800} gutterBottom>
-            ط§ظ„ظ…ظ†طھط¬ط§طھ
+            المنتجات
           </Typography>
           <Typography color="text.secondary">
-            ط£ط¶ظپ ظ…ظ†طھط¬ط§طھظƒ ظˆظ†ط¸ظ… ط§ظ„ظƒطھط§ظ„ظˆط¬ ط§ظ„ط®ط§طµ ط¨ظ…طھط¬ط±ظƒ ط¨ط³ظ‡ظˆظ„ط©.
+            أضف منتجاتك ونظم الكتالوج الخاص بمتجرك بسهولة.
           </Typography>
         </Box>
         <Button 
@@ -837,7 +843,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
           size="large"
           sx={{ borderRadius: 2 }}
         >
-          ظ…ظ†طھط¬ ط¬ط¯ظٹط¯
+          منتج جديد
         </Button>
       </Box>
 
@@ -848,7 +854,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
       {/* Filter and Search Bar */}
       <Paper elevation={0} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', display: 'flex', gap: 2, alignItems: 'center' }}>
         <TextField 
-          placeholder="ط§ط¨ط­ط« ط¨ط§ط³ظ… ط§ظ„ظ…ظ†طھط¬ ط£ظˆ ط§ظ„ط±ط§ط¨ط·..." 
+          placeholder="ابحث باسم المنتج أو الرابط..." 
           value={searchQuery} 
           onChange={(event) => setSearchQuery(event.target.value)} 
           size="small"
@@ -867,7 +873,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
           disabled={loading}
           sx={{ height: 40 }}
         >
-          طھط­ط¯ظٹط« ط§ظ„ظ‚ط§ط¦ظ…ط©
+          تحديث القائمة
         </Button>
       </Paper>
 
@@ -878,11 +884,11 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
             <TableHead sx={{ bgcolor: 'background.default' }}>
               <TableRow>
                 <TableCell sx={{ width: 60 }}></TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>ط§ط³ظ… ط§ظ„ظ…ظ†طھط¬</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>ط§ظ„طھطµظ†ظٹظپ</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ط­ط§ظ„ط©</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ظ…طھط؛ظٹط±ط§طھ</TableCell>
-                <TableCell align="left" sx={{ fontWeight: 700 }}>ط§ظ„ط¥ط¬ط±ط§ط،ط§طھ</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>اسم المنتج</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>التصنيف</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>الحالة</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>المتغيرات</TableCell>
+                <TableCell align="left" sx={{ fontWeight: 700 }}>الإجراءات</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -895,12 +901,12 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
               ) : filteredProducts.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
-                    <Typography color="text.secondary">ظ„ط§ طھظˆط¬ط¯ ظ…ظ†طھط¬ط§طھ.</Typography>
+                    <Typography color="text.secondary">لا توجد منتجات.</Typography>
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredProducts.map((product) => {
-                  const categoryName = categories.find(c => c.id === product.categoryId)?.name || 'ط¨ط¯ظˆظ† طھطµظ†ظٹظپ';
+                  const categoryName = categories.find(c => c.id === product.categoryId)?.name || 'بدون تصنيف';
                   return (
                     <TableRow key={product.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
                       <TableCell>
@@ -932,7 +938,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" color="text.secondary">
-                          {product.variants?.length || 0} ظ…طھط؛ظٹط±
+                          {product.variants?.length || 0} متغير
                         </Typography>
                       </TableCell>
                       <TableCell align="left">
@@ -943,7 +949,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                           onClick={() => loadProductDetails(product.id).catch(() => undefined)}
                           sx={{ borderRadius: 1.5 }}
                         >
-                          طھط¹ط¯ظٹظ„
+                          تعديل
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -1114,15 +1120,17 @@ function buildVariantPayload(form: ReturnType<typeof createVariantFormDefault>) 
   return payload;
 }
 
-function buildAttachImagePayload(form: typeof imageFormDefault, mediaAssetId: string) {
+function buildAttachImagePayload(form: typeof imageFormDefault, mediaAssetId: string, isPrimary: boolean) {
   const payload: {
     mediaAssetId: string;
     variantId?: string;
     altText?: string;
     sortOrder: number;
+    isPrimary: boolean;
   } = {
     mediaAssetId,
     sortOrder: Number(form.sortOrder || '0'),
+    isPrimary,
   };
 
   const variantId = form.variantId.trim();
@@ -1168,7 +1176,7 @@ function buildVariantValueSelection(
 function formatVariantAttributes(attributes: Record<string, string>): string {
   const entries = Object.entries(attributes);
   if (entries.length === 0) {
-    return 'ظ„ط§ ظٹظˆط¬ط¯';
+    return 'لا يوجد';
   }
 
   return entries.map(([key, value]) => `${key}:${value}`).join(', ');
@@ -1185,7 +1193,7 @@ async function uploadMediaAsset(request: MerchantRequester, file: File): Promise
   });
 
   if (!presigned) {
-    throw new Error('طھط¹ط°ط± ط§ظ„ط­طµظˆظ„ ط¹ظ„ظ‰ ط±ط§ط¨ط· ط§ظ„ط±ظپط¹ ط§ظ„ظ…ظˆظ‚ظ‘ط¹');
+    throw new Error('تعذر الحصول على رابط الرفع الموقّع');
   }
 
   const uploadResponse = await fetch(presigned.uploadUrl, {
@@ -1195,7 +1203,7 @@ async function uploadMediaAsset(request: MerchantRequester, file: File): Promise
   });
 
   if (!uploadResponse.ok) {
-    throw new Error('ظپط´ظ„ ط±ظپط¹ ط§ظ„ظˆط³ط§ط¦ط· ط§ظ„ظ…ط¨ط§ط´ط±');
+    throw new Error('فشل رفع الوسائط المباشر');
   }
 
   const etag = uploadResponse.headers.get('etag') ?? undefined;
@@ -1222,7 +1230,7 @@ async function uploadMediaAsset(request: MerchantRequester, file: File): Promise
   });
 
   if (!mediaAsset) {
-    throw new Error('طھط¹ط°ط± طھط£ظƒظٹط¯ ط§ظ„ظˆط³ط§ط¦ط· ط§ظ„ظ…ط±ظپظˆط¹ط©');
+    throw new Error('تعذر تأكيد الوسائط المرفوعة');
   }
 
   return mediaAsset;

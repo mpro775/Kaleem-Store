@@ -54,6 +54,7 @@ export interface ProductImageResponse {
   url: string;
   altText: string | null;
   sortOrder: number;
+  isPrimary: boolean;
 }
 
 export interface ProductResponse {
@@ -421,6 +422,9 @@ export class ProductsService {
     await this.validateVariantOwnership(currentUser.storeId, productId, input.variantId ?? null);
     await this.validateMediaAsset(currentUser.storeId, input.mediaAssetId);
 
+    const imageCount = await this.productsRepository.countProductImages(currentUser.storeId, productId);
+    const shouldSetPrimary = input.isPrimary ?? imageCount === 0;
+
     const image = await this.productsRepository.attachImage({
       storeId: currentUser.storeId,
       productId,
@@ -428,6 +432,7 @@ export class ProductsService {
       mediaAssetId: input.mediaAssetId,
       altText: input.altText?.trim() ?? null,
       sortOrder: input.sortOrder ?? 0,
+      isPrimary: shouldSetPrimary,
     });
 
     await this.logProductAction('products.image_attached', currentUser, productId, context);
@@ -618,6 +623,7 @@ export class ProductsService {
       url: record.public_url,
       altText: record.alt_text,
       sortOrder: record.sort_order,
+      isPrimary: record.is_primary,
     };
   }
 }

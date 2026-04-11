@@ -48,16 +48,17 @@ export class ThemesService {
     input: UpdateThemeDraftDto,
     context: RequestContextData,
   ): Promise<ThemeStateResponse> {
-    validateThemeConfig(input.config);
+    const normalizedConfig = validateThemeConfig(input.config);
     await this.getOrCreateTheme(currentUser.storeId);
-    const updated = await this.themesRepository.updateDraft(currentUser.storeId, input.config);
+    const updated = await this.themesRepository.updateDraft(currentUser.storeId, normalizedConfig);
     await this.logAudit('themes.draft_updated', currentUser, context, { version: updated.version });
     return this.toStateResponse(updated);
   }
 
   async publish(currentUser: AuthUser, context: RequestContextData): Promise<ThemeStateResponse> {
     const current = await this.getOrCreateTheme(currentUser.storeId);
-    validateThemeConfig(current.draft_config);
+    const normalizedDraft = validateThemeConfig(current.draft_config);
+    await this.themesRepository.updateDraft(currentUser.storeId, normalizedDraft);
 
     const published = await this.themesRepository.publishDraft(currentUser.storeId);
     await this.outboxService.enqueue({
@@ -129,8 +130,7 @@ export class ThemesService {
 
   private safeConfig(config: Record<string, unknown>): Record<string, unknown> {
     try {
-      validateThemeConfig(config);
-      return config;
+      return validateThemeConfig(config);
     } catch {
       return this.buildDefaultThemeConfig();
     }
@@ -156,49 +156,144 @@ export class ThemesService {
 
   private buildDefaultThemeConfig(): Record<string, unknown> {
     return {
+      schemaVersion: 2,
       globals: {
-        primaryColor: '#1f4f46',
-        accentColor: '#c86f31',
-        background: '#f4efe7',
-        fontFamily: 'Lora, serif',
+        color: {
+          bg: '#f4efe7',
+          surface: '#fff9f0',
+          text: '#2f2418',
+          textMuted: '#6d5b46',
+          primary: '#1f4f46',
+          accent: '#c86f31',
+          danger: '#b23a2f',
+        },
+        typography: {
+          bodyFontFamily: 'Tajawal, Cairo, sans-serif',
+          headingFontFamily: 'Lora, serif',
+          baseFontSize: 16,
+        },
+        radius: {
+          sm: 10,
+          md: 14,
+          lg: 22,
+        },
+        spacing: {
+          unit: 8,
+        },
+        motion: {
+          enabled: true,
+          durationFast: 140,
+          durationBase: 260,
+        },
+      },
+      layout: {
+        contentMaxWidth: 1120,
+        headerSticky: true,
       },
       sections: [
         {
           id: 'announcement-main',
           type: 'announcement_bar',
           enabled: true,
+          variant: 'default',
           settings: { message: 'Free shipping for orders above 300 SAR' },
         },
-        { id: 'header-main', type: 'header', enabled: true, settings: { sticky: true } },
-        { id: 'hero-main', type: 'hero', enabled: true, settings: { headline: 'Welcome to Kaleem Store' } },
-        { id: 'categories-main', type: 'categories_grid', enabled: true, settings: {} },
-        { id: 'featured-main', type: 'featured_products', enabled: true, settings: { limit: 8 } },
+        { id: 'header-main', type: 'header', enabled: true, variant: 'default', settings: { sticky: true } },
+        {
+          id: 'hero-main',
+          type: 'hero',
+          enabled: true,
+          variant: 'spotlight',
+          settings: {
+            headline: 'Welcome to Kaleem Store',
+            subheadline: 'Fast mobile-first shopping experience with secure checkout.',
+            primaryCtaLabel: 'Browse products',
+            primaryCtaHref: '/categories',
+          },
+        },
+        { id: 'categories-main', type: 'categories_grid', enabled: true, variant: 'grid', settings: {} },
+        {
+          id: 'featured-main',
+          type: 'featured_products',
+          enabled: true,
+          variant: 'cards',
+          settings: { limit: 8 },
+        },
         {
           id: 'rich-text-main',
           type: 'rich_text',
           enabled: true,
+          variant: 'highlight',
           settings: { title: 'Why customers trust us', body: 'Fast delivery, curated products, and secure checkout.' },
         },
         {
           id: 'testimonials-main',
           type: 'testimonials',
           enabled: true,
+          variant: 'cards',
           settings: {
             title: 'Loved by shoppers',
-            items: [
-              { quote: 'Great quality and fast support.', author: 'Reem' },
-              { quote: 'Checkout was smooth on mobile.', author: 'Faisal' },
-            ],
           },
+          blocks: [
+            {
+              id: 'testimonial-1',
+              type: 'testimonial_item',
+              settings: { quote: 'Great quality and fast support.', author: 'Reem' },
+            },
+            {
+              id: 'testimonial-2',
+              type: 'testimonial_item',
+              settings: { quote: 'Checkout was smooth on mobile.', author: 'Faisal' },
+            },
+          ],
         },
         {
           id: 'newsletter-main',
           type: 'newsletter_signup',
           enabled: true,
+          variant: 'default',
           settings: { title: 'Get weekly deals', ctaLabel: 'Subscribe' },
         },
-        { id: 'offers-main', type: 'offers_banner', enabled: true, settings: {} },
-        { id: 'footer-main', type: 'footer', enabled: true, settings: {} },
+        { id: 'offers-main', type: 'offers_banner', enabled: true, variant: 'default', settings: {} },
+        {
+          id: 'faq-main',
+          type: 'faq',
+          enabled: true,
+          variant: 'list',
+          settings: { title: 'Frequently asked questions' },
+          blocks: [
+            {
+              id: 'faq-1',
+              type: 'faq_item',
+              settings: { question: 'How long does shipping take?', answer: 'Usually within 24-72 hours.' },
+            },
+            {
+              id: 'faq-2',
+              type: 'faq_item',
+              settings: { question: 'Can I return items?', answer: 'Yes, according to our return policy.' },
+            },
+          ],
+        },
+        {
+          id: 'trust-main',
+          type: 'trust_badges',
+          enabled: true,
+          variant: 'inline',
+          settings: { title: 'Why choose us' },
+          blocks: [
+            {
+              id: 'trust-1',
+              type: 'trust_badge',
+              settings: { label: 'Secure Payment', description: 'Trusted payment methods and secure checkout.' },
+            },
+            {
+              id: 'trust-2',
+              type: 'trust_badge',
+              settings: { label: 'Fast Delivery', description: 'Quick shipping with live order tracking.' },
+            },
+          ],
+        },
+        { id: 'footer-main', type: 'footer', enabled: true, variant: 'default', settings: {} },
       ],
     };
   }
@@ -228,8 +323,8 @@ export class ThemesService {
     return {
       storeId: theme.store_id,
       version: theme.version,
-      draftConfig: theme.draft_config,
-      publishedConfig: theme.published_config,
+      draftConfig: this.safeConfig(theme.draft_config),
+      publishedConfig: this.safeConfig(theme.published_config),
     };
   }
 }

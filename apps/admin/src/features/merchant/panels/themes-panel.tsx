@@ -1,22 +1,36 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useReducer, useState } from 'react';
 import {
   Alert,
   Box,
   Button,
-  Checkbox,
-  FormControlLabel,
+  Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  FormControl,
+  IconButton,
+  InputLabel,
+  MenuItem,
   Paper,
+  Select,
   Stack,
+  Switch,
   TextField,
   Typography,
-  Divider,
-  CircularProgress,
-  Grid,
 } from '@mui/material';
 import PaletteIcon from '@mui/icons-material/Palette';
 import SettingsSuggestIcon from '@mui/icons-material/SettingsSuggest';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import UndoIcon from '@mui/icons-material/Undo';
+import RedoIcon from '@mui/icons-material/Redo';
+import AddIcon from '@mui/icons-material/Add';
 
 import type { MerchantRequester } from '../merchant-dashboard.types';
 import type { PreviewTokenResponse, ThemeState } from '../types';
@@ -26,7 +40,94 @@ interface ThemesPanelProps {
   apiBaseUrl: string;
 }
 
-const sectionKeys = [
+type SectionType =
+  | 'announcement_bar'
+  | 'header'
+  | 'hero'
+  | 'categories_grid'
+  | 'featured_products'
+  | 'rich_text'
+  | 'testimonials'
+  | 'newsletter_signup'
+  | 'offers_banner'
+  | 'faq'
+  | 'trust_badges'
+  | 'footer';
+
+type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'switch';
+
+interface SettingField {
+  key: string;
+  label: string;
+  type: FieldType;
+  min?: number;
+  max?: number;
+  step?: number;
+  helperText?: string;
+  options?: Array<{ value: string; label: string }>;
+}
+
+interface BlockModel {
+  id: string;
+  type: string;
+  settings: Record<string, unknown>;
+}
+
+interface SectionModel {
+  id: string;
+  type: SectionType;
+  enabled: boolean;
+  variant: string;
+  settings: Record<string, unknown>;
+  blocks: BlockModel[];
+}
+
+interface ThemeEditorModel {
+  globals: {
+    primaryColor: string;
+    accentColor: string;
+    background: string;
+    fontFamily: string;
+  };
+  sections: SectionModel[];
+}
+
+interface SectionDefinition {
+  type: SectionType;
+  label: string;
+  variants: Array<{ value: string; label: string }>;
+  settingsSchema: SettingField[];
+  defaultSettings: Record<string, unknown>;
+  blockDefinition?: {
+    type: string;
+    label: string;
+    schema: SettingField[];
+    defaults: Record<string, unknown>;
+    maxItems: number;
+  };
+}
+
+interface PublishSummary {
+  globalChangedKeys: string[];
+  addedSections: string[];
+  removedSections: string[];
+  movedSections: string[];
+  changedSections: string[];
+}
+
+interface EditorState {
+  model: ThemeEditorModel;
+  history: ThemeEditorModel[];
+  historyIndex: number;
+}
+
+type EditorAction =
+  | { type: 'reset'; model: ThemeEditorModel }
+  | { type: 'update'; updater: (draft: ThemeEditorModel) => void }
+  | { type: 'undo' }
+  | { type: 'redo' };
+
+const sectionOrder: SectionType[] = [
   'announcement_bar',
   'header',
   'hero',
@@ -36,117 +137,367 @@ const sectionKeys = [
   'testimonials',
   'newsletter_signup',
   'offers_banner',
+  'faq',
+  'trust_badges',
   'footer',
-] as const;
+];
 
-type SectionKey = (typeof sectionKeys)[number];
-
-const sectionLabels: Record<SectionKey, string> = {
-  announcement_bar: 'ط§ظ„ط´ط±ظٹط· ط§ظ„ط¥ط¹ظ„ط§ظ†ظٹ ط§ظ„ط¹ظ„ظˆظٹ',
-  header: 'ط§ظ„طھط±ظˆظٹط³ط© (ط§ظ„ط±ط£ط³)',
-  hero: 'ظ‚ط³ظ… ط§ظ„ط¨ط§ظ†ط± ط§ظ„ط±ط¦ظٹط³ظٹ',
-  categories_grid: 'ط´ط¨ظƒط© ط§ظ„طھطµظ†ظٹظپط§طھ',
-  featured_products: 'ط§ظ„ظ…ظ†طھط¬ط§طھ ط§ظ„ظ…ظ…ظٹط²ط©',
-  rich_text: 'ظ†طµ طھط±ظˆظٹط¬ظٹ ط؛ظ†ظٹ',
-  testimonials: 'ط¢ط±ط§ط، ط§ظ„ط¹ظ…ظ„ط§ط،',
-  newsletter_signup: 'ط§ظ„ط§ط´طھط±ط§ظƒ ط¨ط§ظ„ظ†ط´ط±ط© ط§ظ„ط¨ط±ظٹط¯ظٹط©',
-  offers_banner: 'ط¨ط§ظ†ط± ط§ظ„ط¹ط±ظˆط¶',
-  footer: 'ط§ظ„طھط°ظٹظٹظ„ (ط£ط³ظپظ„ ط§ظ„طµظپط­ط©)',
-};
-
-interface ThemeEditorForm {
-  primaryColor: string;
-  accentColor: string;
-  background: string;
-  fontFamily: string;
-  heroHeadline: string;
-  sectionEnabled: Record<SectionKey, boolean>;
-}
-
-const defaultForm: ThemeEditorForm = {
-  primaryColor: '#502E91',
-  accentColor: '#8F00FF',
-  background: '#FAFAFF',
-  fontFamily: 'Tajawal, Cairo, sans-serif',
-  heroHeadline: 'ظ…ط±ط­ط¨ط§ظ‹ ط¨ظƒ ظپظٹ ظ…طھط¬ط±ظ†ط§',
-  sectionEnabled: {
-    announcement_bar: true,
-    header: true,
-    hero: true,
-    categories_grid: true,
-    featured_products: true,
-    rich_text: true,
-    testimonials: true,
-    newsletter_signup: true,
-    offers_banner: true,
-    footer: true,
+const sectionDefinitions: Record<SectionType, SectionDefinition> = {
+  announcement_bar: {
+    type: 'announcement_bar',
+    label: 'الشريط الإعلاني',
+    variants: [
+      { value: 'default', label: 'افتراضي' },
+      { value: 'minimal', label: 'بسيط' },
+    ],
+    settingsSchema: [{ key: 'message', label: 'نص الإعلان', type: 'text' }],
+    defaultSettings: { message: 'شحن مجاني للطلبات فوق 300 ريال' },
+  },
+  header: {
+    type: 'header',
+    label: 'الترويسة',
+    variants: [
+      { value: 'default', label: 'افتراضي' },
+      { value: 'centered', label: 'متمركز' },
+    ],
+    settingsSchema: [{ key: 'sticky', label: 'ترويسة ثابتة', type: 'switch' }],
+    defaultSettings: { sticky: true },
+  },
+  hero: {
+    type: 'hero',
+    label: 'القسم الرئيسي',
+    variants: [
+      { value: 'spotlight', label: 'Spotlight' },
+      { value: 'split', label: 'Split' },
+      { value: 'compact', label: 'Compact' },
+    ],
+    settingsSchema: [
+      { key: 'headline', label: 'العنوان الرئيسي', type: 'text' },
+      { key: 'subheadline', label: 'النص التوضيحي', type: 'textarea' },
+      { key: 'primaryCtaLabel', label: 'نص الزر', type: 'text' },
+      { key: 'primaryCtaHref', label: 'رابط الزر', type: 'text' },
+    ],
+    defaultSettings: {
+      headline: 'مرحباً بك في متجرنا',
+      subheadline: 'تجربة تسوق سريعة وآمنة مع خيارات دفع مرنة.',
+      primaryCtaLabel: 'تصفح المنتجات',
+      primaryCtaHref: '/categories',
+    },
+  },
+  categories_grid: {
+    type: 'categories_grid',
+    label: 'شبكة التصنيفات',
+    variants: [
+      { value: 'grid', label: 'Grid' },
+      { value: 'tiles', label: 'Tiles' },
+    ],
+    settingsSchema: [],
+    defaultSettings: {},
+  },
+  featured_products: {
+    type: 'featured_products',
+    label: 'المنتجات المميزة',
+    variants: [
+      { value: 'cards', label: 'Cards' },
+      { value: 'minimal', label: 'Minimal' },
+    ],
+    settingsSchema: [{ key: 'limit', label: 'عدد المنتجات', type: 'number', min: 1, max: 24 }],
+    defaultSettings: { limit: 8 },
+  },
+  rich_text: {
+    type: 'rich_text',
+    label: 'النص الترويجي',
+    variants: [
+      { value: 'default', label: 'افتراضي' },
+      { value: 'highlight', label: 'مميز' },
+    ],
+    settingsSchema: [
+      { key: 'title', label: 'العنوان', type: 'text' },
+      { key: 'body', label: 'المحتوى', type: 'textarea' },
+    ],
+    defaultSettings: {
+      title: 'لماذا يثق العملاء بنا؟',
+      body: 'توصيل سريع، منتجات مختارة، ودفع آمن.',
+    },
+  },
+  testimonials: {
+    type: 'testimonials',
+    label: 'آراء العملاء',
+    variants: [
+      { value: 'cards', label: 'Cards' },
+      { value: 'quotes', label: 'Quotes' },
+    ],
+    settingsSchema: [{ key: 'title', label: 'العنوان', type: 'text' }],
+    defaultSettings: { title: 'مفضل لدى المتسوقين' },
+    blockDefinition: {
+      type: 'testimonial_item',
+      label: 'رأي عميل',
+      schema: [
+        { key: 'author', label: 'اسم العميل', type: 'text' },
+        { key: 'quote', label: 'النص', type: 'textarea' },
+      ],
+      defaults: { author: 'عميل', quote: 'تجربة ممتازة' },
+      maxItems: 6,
+    },
+  },
+  newsletter_signup: {
+    type: 'newsletter_signup',
+    label: 'النشرة البريدية',
+    variants: [
+      { value: 'default', label: 'افتراضي' },
+      { value: 'compact', label: 'Compact' },
+    ],
+    settingsSchema: [
+      { key: 'title', label: 'العنوان', type: 'text' },
+      { key: 'ctaLabel', label: 'نص الدعوة', type: 'text' },
+    ],
+    defaultSettings: { title: 'احصل على عروض أسبوعية', ctaLabel: 'اشترك' },
+  },
+  offers_banner: {
+    type: 'offers_banner',
+    label: 'بانر العروض',
+    variants: [
+      { value: 'default', label: 'افتراضي' },
+      { value: 'subtle', label: 'هادئ' },
+    ],
+    settingsSchema: [],
+    defaultSettings: {},
+  },
+  faq: {
+    type: 'faq',
+    label: 'الأسئلة الشائعة',
+    variants: [
+      { value: 'list', label: 'List' },
+      { value: 'cards', label: 'Cards' },
+    ],
+    settingsSchema: [{ key: 'title', label: 'العنوان', type: 'text' }],
+    defaultSettings: { title: 'أسئلة شائعة' },
+    blockDefinition: {
+      type: 'faq_item',
+      label: 'سؤال/جواب',
+      schema: [
+        { key: 'question', label: 'السؤال', type: 'text' },
+        { key: 'answer', label: 'الجواب', type: 'textarea' },
+      ],
+      defaults: { question: 'سؤال', answer: 'إجابة' },
+      maxItems: 8,
+    },
+  },
+  trust_badges: {
+    type: 'trust_badges',
+    label: 'شارات الثقة',
+    variants: [
+      { value: 'inline', label: 'Inline' },
+      { value: 'grid', label: 'Grid' },
+    ],
+    settingsSchema: [{ key: 'title', label: 'العنوان', type: 'text' }],
+    defaultSettings: { title: 'تسوق بثقة' },
+    blockDefinition: {
+      type: 'trust_badge',
+      label: 'شارة',
+      schema: [
+        { key: 'label', label: 'العنوان', type: 'text' },
+        { key: 'description', label: 'الوصف', type: 'textarea' },
+      ],
+      defaults: { label: 'دفع آمن', description: 'بوابات دفع موثوقة' },
+      maxItems: 6,
+    },
+  },
+  footer: {
+    type: 'footer',
+    label: 'التذييل',
+    variants: [
+      { value: 'default', label: 'افتراضي' },
+      { value: 'minimal', label: 'Minimal' },
+    ],
+    settingsSchema: [],
+    defaultSettings: {},
   },
 };
 
+const defaultModel = createDefaultModel();
+const visualBuilderEnabled = import.meta.env.VITE_SF_VISUAL_BUILDER_ENABLED !== 'false';
+const rolloutStage = (import.meta.env.VITE_SF_ROLLOUT_STAGE ?? 'internal').trim().toLowerCase();
+
+function cloneModel(model: ThemeEditorModel): ThemeEditorModel {
+  return JSON.parse(JSON.stringify(model)) as ThemeEditorModel;
+}
+
+function reducer(state: EditorState, action: EditorAction): EditorState {
+  if (action.type === 'reset') {
+    const clean = cloneModel(action.model);
+    return {
+      model: clean,
+      history: [cloneModel(clean)],
+      historyIndex: 0,
+    };
+  }
+
+  if (action.type === 'undo') {
+    if (state.historyIndex <= 0) {
+      return state;
+    }
+
+    const nextIndex = state.historyIndex - 1;
+    const snapshot = state.history[nextIndex] ?? state.model;
+    return {
+      ...state,
+      historyIndex: nextIndex,
+      model: cloneModel(snapshot),
+    };
+  }
+
+  if (action.type === 'redo') {
+    if (state.historyIndex >= state.history.length - 1) {
+      return state;
+    }
+
+    const nextIndex = state.historyIndex + 1;
+    const snapshot = state.history[nextIndex] ?? state.model;
+    return {
+      ...state,
+      historyIndex: nextIndex,
+      model: cloneModel(snapshot),
+    };
+  }
+
+  const draft = cloneModel(state.model);
+  action.updater(draft);
+
+  const before = JSON.stringify(state.model);
+  const after = JSON.stringify(draft);
+  if (before === after) {
+    return state;
+  }
+
+  const trimmed = state.history.slice(0, state.historyIndex + 1);
+  const nextHistory = [...trimmed, cloneModel(draft)].slice(-80);
+  return {
+    model: draft,
+    history: nextHistory,
+    historyIndex: nextHistory.length - 1,
+  };
+}
+
 export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
   const [themeState, setThemeState] = useState<ThemeState | null>(null);
-  const [form, setForm] = useState<ThemeEditorForm>(defaultForm);
   const [previewToken, setPreviewToken] = useState<PreviewTokenResponse | null>(null);
-  
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
-  const [message, setMessage] = useState({ text: '', type: 'info' as 'info' | 'success' | 'error' });
+  const [message, setMessage] = useState<{ text: string; type: 'info' | 'success' | 'error' }>({
+    text: '',
+    type: 'info',
+  });
+  const [selectedSectionId, setSelectedSectionId] = useState<string>('');
+  const [draggingSectionId, setDraggingSectionId] = useState<string | null>(null);
+  const [pendingAddType, setPendingAddType] = useState<SectionType>('hero');
+  const [showPublishDialog, setShowPublishDialog] = useState(false);
+  const [publishSummary, setPublishSummary] = useState<PublishSummary | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [isAutosaving, setIsAutosaving] = useState(false);
+  const [lastSavedHash, setLastSavedHash] = useState('');
+  const [hydrated, setHydrated] = useState(false);
+
+  const [editorState, dispatch] = useReducer(reducer, {
+    model: cloneModel(defaultModel),
+    history: [cloneModel(defaultModel)],
+    historyIndex: 0,
+  });
+
+  const currentConfig = useMemo(
+    () => modelToThemeConfig(editorState.model),
+    [editorState.model],
+  );
+  const currentHash = useMemo(() => JSON.stringify(currentConfig), [currentConfig]);
+  const isDirty = hydrated && currentHash !== lastSavedHash;
+
+  const selectedSection =
+    editorState.model.sections.find((section) => section.id === selectedSectionId) ?? null;
 
   useEffect(() => {
     loadDraft().catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!hydrated || !isDirty || actionLoading) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      saveDraft({ autosave: true }).catch(() => undefined);
+    }, 1400);
+
+    return () => window.clearTimeout(timer);
+  }, [hydrated, isDirty, actionLoading, currentHash]);
+
   async function loadDraft(): Promise<void> {
     setLoading(true);
     setMessage({ text: '', type: 'info' });
     try {
       const data = await request<ThemeState>('/themes/draft', { method: 'GET' });
-      if (!data) return;
+      if (!data) {
+        return;
+      }
 
+      const model = themeConfigToModel(data.draftConfig);
+      dispatch({ type: 'reset', model });
+      setSelectedSectionId(model.sections[0]?.id ?? '');
       setThemeState(data);
-      setForm(themeConfigToForm(data.draftConfig));
+
+      const hash = JSON.stringify(data.draftConfig);
+      setLastSavedHash(hash);
+      setLastSavedAt(new Date());
+      setHydrated(true);
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ظ…ظٹظ„ ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ظˆط§ط¬ظ‡ط©', type: 'error' });
+      setMessage({
+        text: error instanceof Error ? error.message : 'تعذر تحميل إعدادات الواجهة',
+        type: 'error',
+      });
     } finally {
       setLoading(false);
     }
   }
 
-  async function saveDraft(): Promise<void> {
-    setActionLoading(true);
-    setMessage({ text: '', type: 'info' });
+  async function saveDraft(options?: { autosave?: boolean }): Promise<void> {
+    if (options?.autosave) {
+      setIsAutosaving(true);
+    } else {
+      setActionLoading(true);
+      setMessage({ text: '', type: 'info' });
+    }
+
     try {
       const data = await request<ThemeState>('/themes/draft', {
         method: 'PUT',
-        body: JSON.stringify({ config: formToThemeConfig(form) }),
+        body: JSON.stringify({ config: currentConfig }),
       });
 
       if (data) {
         setThemeState(data);
+        setLastSavedHash(JSON.stringify(data.draftConfig));
+      } else {
+        setLastSavedHash(currentHash);
       }
-      setMessage({ text: 'طھظ… ط­ظپط¸ ظ…ط³ظˆط¯ط© ط§ظ„طھط¹ط¯ظٹظ„ط§طھ ط¨ظ†ط¬ط§ط­. ط±ط§ط¬ط¹ظ‡ط§ ظ‚ط¨ظ„ ط§ظ„ظ†ط´ط±.', type: 'success' });
-    } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط­ظپط¸ ط§ظ„ظ…ط³ظˆط¯ط©', type: 'error' });
-    } finally {
-      setActionLoading(false);
-    }
-  }
 
-  async function publishTheme(): Promise<void> {
-    if (!window.confirm('ظ‡ظ„ ط£ظ†طھ ظ…طھط£ظƒط¯ ظ…ظ† ظ†ط´ط± ظ‡ط°ظ‡ ط§ظ„طھط¹ط¯ظٹظ„ط§طھ ظ„طھط¸ظ‡ط± ظ„ظ„ط¹ظ…ظ„ط§ط، ط§ظ„ط¢ظ†طں')) return;
-    setActionLoading(true);
-    setMessage({ text: '', type: 'info' });
-    try {
-      const data = await request<ThemeState>('/themes/publish', { method: 'POST' });
-      if (data) {
-        setThemeState(data);
+      setLastSavedAt(new Date());
+
+      if (!options?.autosave) {
+        setMessage({ text: 'تم حفظ المسودة بنجاح.', type: 'success' });
       }
-      setMessage({ text: 'طھظ… ظ†ط´ط± ط§ظ„ظˆط§ط¬ظ‡ط© ط§ظ„ظ…ط­ط¯ط«ط© ط¨ظ†ط¬ط§ط­.', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ظ†ط´ط± ط§ظ„ظˆط§ط¬ظ‡ط©', type: 'error' });
+      if (!options?.autosave) {
+        setMessage({
+          text: error instanceof Error ? error.message : 'تعذر حفظ المسودة',
+          type: 'error',
+        });
+      }
     } finally {
-      setActionLoading(false);
+      if (options?.autosave) {
+        setIsAutosaving(false);
+      } else {
+        setActionLoading(false);
+      }
     }
   }
 
@@ -159,12 +510,120 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
         body: JSON.stringify({ expiresInMinutes: 30 }),
       });
       setPreviewToken(token);
-      setMessage({ text: 'طھظ… ط¥ظ†ط´ط§ط، ط±ظ…ط² ط§ظ„ظ…ط¹ط§ظٹظ†ط© ط¨ظ†ط¬ط§ط­.', type: 'success' });
+      setMessage({ text: 'تم إنشاء رابط المعاينة.', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط¥ظ†ط´ط§ط، ط±ظ…ط² ط§ظ„ظ…ط¹ط§ظٹظ†ط©', type: 'error' });
+      setMessage({
+        text: error instanceof Error ? error.message : 'تعذر إنشاء رابط المعاينة',
+        type: 'error',
+      });
     } finally {
       setActionLoading(false);
     }
+  }
+
+  function openPublishDialog(): void {
+    const summary = buildPublishSummary(themeState?.publishedConfig ?? {}, currentConfig);
+    setPublishSummary(summary);
+    setShowPublishDialog(true);
+  }
+
+  async function confirmPublish(): Promise<void> {
+    setActionLoading(true);
+    setShowPublishDialog(false);
+    setMessage({ text: '', type: 'info' });
+
+    try {
+      if (isDirty) {
+        await saveDraft({ autosave: true });
+      }
+
+      const data = await request<ThemeState>('/themes/publish', { method: 'POST' });
+      if (data) {
+        setThemeState(data);
+        setLastSavedHash(JSON.stringify(data.draftConfig));
+      }
+
+      setMessage({ text: 'تم نشر التعديلات بنجاح.', type: 'success' });
+    } catch (error) {
+      setMessage({
+        text: error instanceof Error ? error.message : 'تعذر نشر الواجهة',
+        type: 'error',
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  function updateModel(updater: (draft: ThemeEditorModel) => void): void {
+    dispatch({ type: 'update', updater });
+  }
+
+  function reorderSections(fromId: string, toId: string): void {
+    if (fromId === toId) {
+      return;
+    }
+
+    updateModel((draft) => {
+      const fromIndex = draft.sections.findIndex((item) => item.id === fromId);
+      const toIndex = draft.sections.findIndex((item) => item.id === toId);
+      if (fromIndex < 0 || toIndex < 0) {
+        return;
+      }
+
+      const [moved] = draft.sections.splice(fromIndex, 1);
+      if (!moved) {
+        return;
+      }
+      draft.sections.splice(toIndex, 0, moved);
+    });
+  }
+
+  function addSection(type: SectionType): void {
+    const definition = sectionDefinitions[type];
+    const nextSection: SectionModel = {
+      id: `${type}-${Date.now()}`,
+      type,
+      enabled: true,
+      variant: definition.variants[0]?.value ?? 'default',
+      settings: { ...definition.defaultSettings },
+      blocks: definition.blockDefinition
+        ? [
+            {
+              id: `${type}-block-1-${Date.now()}`,
+              type: definition.blockDefinition.type,
+              settings: { ...definition.blockDefinition.defaults },
+            },
+          ]
+        : [],
+    };
+
+    updateModel((draft) => {
+      draft.sections.push(nextSection);
+    });
+    setSelectedSectionId(nextSection.id);
+  }
+
+  function duplicateSection(sectionId: string): void {
+    const source = editorState.model.sections.find((entry) => entry.id === sectionId);
+    if (!source) {
+      return;
+    }
+
+    const copy = cloneSection(source);
+    updateModel((draft) => {
+      const index = draft.sections.findIndex((entry) => entry.id === sectionId);
+      draft.sections.splice(index + 1, 0, copy);
+    });
+    setSelectedSectionId(copy.id);
+  }
+
+  function removeSection(sectionId: string): void {
+    updateModel((draft) => {
+      draft.sections = draft.sections.filter((entry) => entry.id !== sectionId);
+    });
+
+    const fallback = editorState.model.sections.find((entry) => entry.id !== sectionId);
+    setSelectedSectionId(fallback?.id ?? '');
   }
 
   if (loading) {
@@ -175,334 +634,802 @@ export function ThemesPanel({ request, apiBaseUrl }: ThemesPanelProps) {
     );
   }
 
+  if (!visualBuilderEnabled) {
+    return (
+      <Alert severity="warning">
+        Visual Builder is disabled for this rollout stage. Set `VITE_SF_VISUAL_BUILDER_ENABLED=true` to enable it.
+      </Alert>
+    );
+  }
+
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1, flexWrap: 'wrap', gap: 2 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
         <Box>
-          <Typography variant="h4" fontWeight={800} gutterBottom>
-            ظˆط§ط¬ظ‡ط© ط§ظ„ظ…طھط¬ط± ظˆط§ظ„طھط®طµظٹطµ
+          <Typography variant="h4" fontWeight={800}>
+            Studio تخصيص المتجر
           </Typography>
           <Typography color="text.secondary">
-            طھط­ظƒظ… ظپظٹ ط£ظ„ظˆط§ظ† ط§ظ„ظ…طھط¬ط±طŒ ط§ظ„ط®ط·ظˆط·طŒ ظˆط¥ط®ظپط§ط، ط£ظˆ ط¥ط¸ظ‡ط§ط± ط£ظ‚ط³ط§ظ… ط§ظ„طµظپط­ط© ط§ظ„ط±ط¦ظٹط³ظٹط©.
+            محرر بصري كامل: شجرة أقسام، خصائص ديناميكية، معاينة لحظية، Undo/Redo، وحفظ تلقائي.
           </Typography>
         </Box>
-        <Stack direction="row" spacing={1.5}>
-          <Button 
-            variant="outlined" 
-            onClick={() => loadDraft().catch(() => undefined)}
-            disabled={actionLoading}
-          >
-            طھط¬ط§ظ‡ظ„ ط§ظ„طھط¹ط¯ظٹظ„ط§طھ
+        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+          <Chip size="small" variant="outlined" label={`Rollout: ${rolloutStage}`} />
+          <Chip
+            size="small"
+            color={isDirty ? 'warning' : 'success'}
+            label={isDirty ? 'يوجد تغييرات غير منشورة' : 'المسودة محفوظة'}
+          />
+          {isAutosaving ? <Chip size="small" label="جاري الحفظ التلقائي..." /> : null}
+          {lastSavedAt ? <Chip size="small" variant="outlined" label={`آخر حفظ: ${lastSavedAt.toLocaleTimeString('ar-SA')}`} /> : null}
+
+          <Button variant="outlined" startIcon={<UndoIcon />} onClick={() => dispatch({ type: 'undo' })} disabled={editorState.historyIndex <= 0 || actionLoading}>
+            Undo
           </Button>
-          <Button 
-            variant="outlined" 
-            color="primary"
-            onClick={() => saveDraft().catch(() => undefined)}
-            disabled={actionLoading}
-          >
-            ط­ظپط¸ ظƒظ…ط³ظˆط¯ط©
+          <Button variant="outlined" startIcon={<RedoIcon />} onClick={() => dispatch({ type: 'redo' })} disabled={editorState.historyIndex >= editorState.history.length - 1 || actionLoading}>
+            Redo
           </Button>
-          <Button 
-            variant="contained" 
-            color="primary"
-            onClick={() => publishTheme().catch(() => undefined)}
-            disabled={actionLoading}
-            disableElevation
-          >
-            ظ†ط´ط± ط§ظ„طھط¹ط¯ظٹظ„ط§طھ
+          <Button variant="outlined" onClick={() => loadDraft().catch(() => undefined)} disabled={actionLoading}>
+            إعادة تحميل
+          </Button>
+          <Button variant="outlined" onClick={() => saveDraft().catch(() => undefined)} disabled={actionLoading}>
+            حفظ يدوي
+          </Button>
+          <Button variant="contained" color="primary" onClick={openPublishDialog} disabled={actionLoading}>
+            نشر التعديلات
           </Button>
         </Stack>
       </Box>
 
-      {message.text && (
-        <Alert severity={message.type} sx={{ borderRadius: 2 }}>{message.text}</Alert>
-      )}
+      {message.text ? <Alert severity={message.type}>{message.text}</Alert> : null}
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 3 }}>
-        {/* Colors and Branding */}
-        <Box>
-          <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', height: '100%' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-              <PaletteIcon color="primary" />
-              <Typography variant="h6" fontWeight={800}>ط§ظ„ط£ظ„ظˆط§ظ† ظˆط§ظ„ط®ط·ظˆط·</Typography>
-            </Box>
-            <Divider sx={{ mb: 4 }} />
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', xl: '320px 1fr 380px' } }}>
+        <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
+          <Stack direction="row" alignItems="center" spacing={1} mb={1.5}>
+            <SettingsSuggestIcon color="primary" />
+            <Typography variant="h6" fontWeight={800}>شجرة الأقسام</Typography>
+          </Stack>
+          <Divider sx={{ mb: 1.5 }} />
 
-            <Stack spacing={3}>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <TextField 
-                  fullWidth 
-                  label="ط§ظ„ظ„ظˆظ† ط§ظ„ط£ط³ط§ط³ظٹ" 
-                  value={form.primaryColor} 
-                  onChange={(event) => setForm((prev) => ({ ...prev, primaryColor: event.target.value }))} 
-                  dir="ltr"
-                  InputProps={{
-                    startAdornment: <Box sx={{ width: 24, height: 24, borderRadius: 1, bgcolor: form.primaryColor, mr: 1, border: '1px solid', borderColor: 'divider' }} />
-                  }}
-                />
-                <TextField 
-                  fullWidth 
-                  label="ظ„ظˆظ† ط§ظ„طھظ…ظٹظٹط² (Accent)" 
-                  value={form.accentColor} 
-                  onChange={(event) => setForm((prev) => ({ ...prev, accentColor: event.target.value }))} 
-                  dir="ltr"
-                  InputProps={{
-                    startAdornment: <Box sx={{ width: 24, height: 24, borderRadius: 1, bgcolor: form.accentColor, mr: 1, border: '1px solid', borderColor: 'divider' }} />
-                  }}
-                />
-              </Box>
-
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <TextField 
-                  fullWidth 
-                  label="ظ„ظˆظ† ط§ظ„ط®ظ„ظپظٹط© ط§ظ„ط¹ط§ظ…ط©" 
-                  value={form.background} 
-                  onChange={(event) => setForm((prev) => ({ ...prev, background: event.target.value }))} 
-                  dir="ltr"
-                  InputProps={{
-                    startAdornment: <Box sx={{ width: 24, height: 24, borderRadius: 1, bgcolor: form.background, mr: 1, border: '1px solid', borderColor: 'divider' }} />
-                  }}
-                />
-              </Box>
-
-              <TextField 
-                fullWidth 
-                label="ط§ظ„ط®ط· ط§ظ„ط±ط¦ظٹط³ظٹ (CSS Font Family)" 
-                value={form.fontFamily} 
-                onChange={(event) => setForm((prev) => ({ ...prev, fontFamily: event.target.value }))} 
-                dir="ltr"
-                helperText="ظ…ط«ط§ظ„: Tajawal, Cairo, sans-serif"
-              />
-            </Stack>
-          </Paper>
-        </Box>
-
-        {/* Section Toggles */}
-        <Box>
-          <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', height: '100%' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-              <SettingsSuggestIcon color="primary" />
-              <Typography variant="h6" fontWeight={800}>ط£ظ‚ط³ط§ظ… ط§ظ„طµظپط­ط© ط§ظ„ط±ط¦ظٹط³ظٹط©</Typography>
-            </Box>
-            <Divider sx={{ mb: 4 }} />
-
-            <TextField 
-              fullWidth 
-              label="ط¹ظ†ظˆط§ظ† ط§ظ„ط¨ط§ظ†ط± ط§ظ„ط±ط¦ظٹط³ظٹ (Hero)" 
-              value={form.heroHeadline} 
-              onChange={(event) => setForm((prev) => ({ ...prev, heroHeadline: event.target.value }))} 
-              sx={{ mb: 3 }}
-            />
-
-            <Typography variant="subtitle2" fontWeight={700} mb={2}>طھظپط¹ظٹظ„ ظˆط¥ظ„ط؛ط§ط، ط§ظ„ط£ظ‚ط³ط§ظ…:</Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
-              {sectionKeys.map((key) => (
-                <Paper key={key} variant="outlined" sx={{ p: 1, px: 2, display: 'flex', alignItems: 'center', bgcolor: form.sectionEnabled[key] ? 'background.default' : 'transparent' }}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={form.sectionEnabled[key]}
-                        onChange={(event) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            sectionEnabled: {
-                              ...prev.sectionEnabled,
-                              [key]: event.target.checked,
-                            },
-                          }))
-                        }
-                      />
+          <Stack spacing={1}>
+            {editorState.model.sections.map((section) => {
+              const isSelected = selectedSectionId === section.id;
+              const label = sectionDefinitions[section.type].label;
+              return (
+                <Paper
+                  key={section.id}
+                  variant="outlined"
+                  draggable
+                  onDragStart={() => setDraggingSectionId(section.id)}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={() => {
+                    if (draggingSectionId) {
+                      reorderSections(draggingSectionId, section.id);
                     }
-                    label={<Typography variant="body2" fontWeight={form.sectionEnabled[key] ? 700 : 500}>{sectionLabels[key]}</Typography>}
-                    sx={{ m: 0, width: '100%' }}
-                  />
-                </Paper>
-              ))}
-            </Box>
-          </Paper>
-        </Box>
-
-        {/* Status and Preview */}
-        <Box sx={{ gridColumn: { xs: 'span 1', lg: 'span 2' } }}>
-          <Paper elevation={0} sx={{ p: 3, borderRadius: 4, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'center', justifyContent: 'space-between' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <CheckCircleIcon color="success" fontSize="large" />
-              <Box>
-                <Typography variant="h6" fontWeight={800}>ط­ط§ظ„ط© ط§ظ„ظˆط§ط¬ظ‡ط© ط§ظ„ط­ط§ظ„ظٹط©</Typography>
-                {themeState ? (
-                  <Typography variant="body2" color="text.secondary">
-                    ط§ظ„ط¥طµط¯ط§ط± ط§ظ„ظ…ظ†ط´ظˆط±: {themeState.version}
-                  </Typography>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">ظ„ط§ طھظˆط¬ط¯ ط¨ظٹط§ظ†ط§طھ ظ„ظ„ط¥طµط¯ط§ط±.</Typography>
-                )}
-              </Box>
-            </Box>
-
-            <Stack direction="row" spacing={2} alignItems="center">
-              {previewToken && (
-                <Button 
-                  variant="text" 
-                  color="primary"
-                  href={`${apiBaseUrl}/sf/theme?previewToken=${previewToken.previewToken}`}
-                  target="_blank"
-                  sx={{ fontWeight: 700 }}
+                    setDraggingSectionId(null);
+                  }}
+                  sx={{
+                    p: 1,
+                    borderColor: isSelected ? 'primary.main' : 'divider',
+                    backgroundColor: isSelected ? 'action.selected' : 'transparent',
+                  }}
                 >
-                  ظپطھط­ ط±ط§ط¨ط· ط§ظ„ظ…ط¹ط§ظٹظ†ط©
-                </Button>
-              )}
-              <Button 
-                variant="outlined" 
-                startIcon={<VisibilityIcon />} 
-                onClick={() => createPreviewToken().catch(() => undefined)}
-                disabled={actionLoading}
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <DragIndicatorIcon fontSize="small" color="action" />
+                    <Button
+                      size="small"
+                      onClick={() => setSelectedSectionId(section.id)}
+                      sx={{ justifyContent: 'flex-start', flex: 1, textTransform: 'none' }}
+                    >
+                      <Stack alignItems="flex-start" spacing={0.2}>
+                        <Typography variant="body2" fontWeight={700}>{label}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {section.variant} {section.enabled ? '• ظاهر' : '• مخفي'}
+                        </Typography>
+                      </Stack>
+                    </Button>
+                    <Switch
+                      size="small"
+                      checked={section.enabled}
+                      onChange={(event) =>
+                        updateModel((draft) => {
+                          const target = draft.sections.find((entry) => entry.id === section.id);
+                          if (target) {
+                            target.enabled = event.target.checked;
+                          }
+                        })
+                      }
+                    />
+                    <IconButton size="small" onClick={() => duplicateSection(section.id)}>
+                      <ContentCopyIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" color="error" onClick={() => removeSection(section.id)}>
+                      <DeleteOutlineIcon fontSize="small" />
+                    </IconButton>
+                  </Stack>
+                </Paper>
+              );
+            })}
+          </Stack>
+
+          <Divider sx={{ my: 1.5 }} />
+          <Stack direction="row" spacing={1}>
+            <FormControl size="small" fullWidth>
+              <InputLabel id="add-section-select-label">إضافة قسم</InputLabel>
+              <Select
+                labelId="add-section-select-label"
+                value={pendingAddType}
+                label="إضافة قسم"
+                onChange={(event) => setPendingAddType(event.target.value as SectionType)}
               >
-                ط¥ظ†ط´ط§ط، ط±ط§ط¨ط· ظ…ط¹ط§ظٹظ†ط©
+                {sectionOrder.map((type) => (
+                  <MenuItem key={type} value={type}>{sectionDefinitions[type].label}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => addSection(pendingAddType)}>
+              إضافة
+            </Button>
+          </Stack>
+        </Paper>
+
+        <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
+          <Stack direction="row" alignItems="center" spacing={1} mb={1.5}>
+            <PaletteIcon color="primary" />
+            <Typography variant="h6" fontWeight={800}>لوحة الخصائص</Typography>
+          </Stack>
+          <Divider sx={{ mb: 1.5 }} />
+
+          <Typography variant="subtitle2" color="text.secondary" mb={1}>الهوية العامة</Typography>
+          <Stack spacing={1.2} mb={2}>
+            <TextField
+              size="small"
+              label="اللون الأساسي"
+              value={editorState.model.globals.primaryColor}
+              onChange={(event) =>
+                updateModel((draft) => {
+                  draft.globals.primaryColor = event.target.value;
+                })
+              }
+              dir="ltr"
+            />
+            <TextField
+              size="small"
+              label="لون التمييز"
+              value={editorState.model.globals.accentColor}
+              onChange={(event) =>
+                updateModel((draft) => {
+                  draft.globals.accentColor = event.target.value;
+                })
+              }
+              dir="ltr"
+            />
+            <TextField
+              size="small"
+              label="لون الخلفية"
+              value={editorState.model.globals.background}
+              onChange={(event) =>
+                updateModel((draft) => {
+                  draft.globals.background = event.target.value;
+                })
+              }
+              dir="ltr"
+            />
+            <TextField
+              size="small"
+              label="الخط الرئيسي"
+              value={editorState.model.globals.fontFamily}
+              onChange={(event) =>
+                updateModel((draft) => {
+                  draft.globals.fontFamily = event.target.value;
+                })
+              }
+              dir="ltr"
+            />
+          </Stack>
+
+          <Divider sx={{ mb: 1.5 }} />
+          {!selectedSection ? (
+            <Alert severity="info">اختر قسماً من الشجرة لتعديل خصائصه.</Alert>
+          ) : (
+            <SectionSettingsEditor
+              section={selectedSection}
+              onChange={(updater) =>
+                updateModel((draft) => {
+                  const target = draft.sections.find((entry) => entry.id === selectedSection.id);
+                  if (!target) {
+                    return;
+                  }
+                  updater(target);
+                })
+              }
+            />
+          )}
+        </Paper>
+
+        <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
+          <Stack direction="row" alignItems="center" spacing={1} mb={1.5}>
+            <VisibilityIcon color="primary" />
+            <Typography variant="h6" fontWeight={800}>Live Preview</Typography>
+          </Stack>
+          <Divider sx={{ mb: 1.5 }} />
+
+          <LivePreview model={editorState.model} />
+
+          <Divider sx={{ my: 1.5 }} />
+          <Stack direction="row" spacing={1}>
+            {previewToken ? (
+              <Button
+                fullWidth
+                variant="outlined"
+                href={`${apiBaseUrl}/sf/theme?previewToken=${previewToken.previewToken}`}
+                target="_blank"
+              >
+                فتح المعاينة الحقيقية
               </Button>
+            ) : null}
+            <Button fullWidth variant="outlined" onClick={() => createPreviewToken().catch(() => undefined)}>
+              إنشاء رابط معاينة
+            </Button>
+          </Stack>
+
+          <Box sx={{ mt: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <CheckCircleIcon color="success" fontSize="small" />
+            <Typography variant="caption" color="text.secondary">
+              الإصدار المنشور: {themeState?.version ?? '-'}
+            </Typography>
+          </Box>
+        </Paper>
+      </Box>
+
+      <Dialog open={showPublishDialog} onClose={() => setShowPublishDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>ملخص النشر</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" mb={1.5}>
+            راجع التغييرات قبل النشر النهائي:
+          </Typography>
+          <Stack spacing={1}>
+            <SummaryRow label="متغيرات عامة تغيرت" value={publishSummary?.globalChangedKeys.length ?? 0} />
+            <SummaryRow label="أقسام مضافة" value={publishSummary?.addedSections.length ?? 0} />
+            <SummaryRow label="أقسام محذوفة" value={publishSummary?.removedSections.length ?? 0} />
+            <SummaryRow label="أقسام تغير ترتيبها" value={publishSummary?.movedSections.length ?? 0} />
+            <SummaryRow label="أقسام تغير محتواها" value={publishSummary?.changedSections.length ?? 0} />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowPublishDialog(false)}>إلغاء</Button>
+          <Button variant="contained" onClick={() => confirmPublish().catch(() => undefined)}>
+            تأكيد النشر
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+}
+
+function SectionSettingsEditor({
+  section,
+  onChange,
+}: {
+  section: SectionModel;
+  onChange: (updater: (target: SectionModel) => void) => void;
+}) {
+  const definition = sectionDefinitions[section.type];
+
+  return (
+    <Stack spacing={1.3}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Typography variant="subtitle1" fontWeight={700}>{definition.label}</Typography>
+        <Chip size="small" label={section.id} variant="outlined" />
+      </Stack>
+
+      <FormControl size="small" fullWidth>
+        <InputLabel id="section-variant-label">النمط</InputLabel>
+        <Select
+          labelId="section-variant-label"
+          label="النمط"
+          value={section.variant}
+          onChange={(event) =>
+            onChange((target) => {
+              target.variant = event.target.value;
+            })
+          }
+        >
+          {definition.variants.map((variant) => (
+            <MenuItem key={variant.value} value={variant.value}>{variant.label}</MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      {definition.settingsSchema.map((field) => (
+        <DynamicField
+          key={field.key}
+          field={field}
+          value={section.settings[field.key]}
+          onChange={(value) =>
+            onChange((target) => {
+              target.settings[field.key] = value;
+            })
+          }
+        />
+      ))}
+
+      {definition.blockDefinition ? (
+        <BlocksEditor
+          section={section}
+          definition={definition.blockDefinition}
+          onChange={onChange}
+        />
+      ) : null}
+    </Stack>
+  );
+}
+
+function DynamicField({
+  field,
+  value,
+  onChange,
+}: {
+  field: SettingField;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  if (field.type === 'switch') {
+    return (
+      <Paper variant="outlined" sx={{ p: 1, px: 1.4 }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Typography variant="body2">{field.label}</Typography>
+          <Switch checked={Boolean(value)} onChange={(event) => onChange(event.target.checked)} />
+        </Stack>
+      </Paper>
+    );
+  }
+
+  if (field.type === 'select') {
+    return (
+      <FormControl size="small" fullWidth>
+        <InputLabel id={`${field.key}-label`}>{field.label}</InputLabel>
+        <Select
+          labelId={`${field.key}-label`}
+          label={field.label}
+          value={typeof value === 'string' ? value : ''}
+          onChange={(event) => onChange(event.target.value)}
+        >
+          {(field.options ?? []).map((option) => (
+            <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+    );
+  }
+
+  if (field.type === 'number') {
+    return (
+      <TextField
+        size="small"
+        type="number"
+        label={field.label}
+        inputProps={{ min: field.min, max: field.max, step: field.step ?? 1 }}
+        value={typeof value === 'number' ? value : ''}
+        onChange={(event) => onChange(Number(event.target.value))}
+        helperText={field.helperText}
+        fullWidth
+      />
+    );
+  }
+
+  if (field.type === 'textarea') {
+    return (
+      <TextField
+        size="small"
+        multiline
+        minRows={3}
+        label={field.label}
+        value={typeof value === 'string' ? value : ''}
+        onChange={(event) => onChange(event.target.value)}
+        helperText={field.helperText}
+        fullWidth
+      />
+    );
+  }
+
+  return (
+    <TextField
+      size="small"
+      label={field.label}
+      value={typeof value === 'string' ? value : ''}
+      onChange={(event) => onChange(event.target.value)}
+      helperText={field.helperText}
+      fullWidth
+    />
+  );
+}
+
+function BlocksEditor({
+  section,
+  definition,
+  onChange,
+}: {
+  section: SectionModel;
+  definition: NonNullable<SectionDefinition['blockDefinition']>;
+  onChange: (updater: (target: SectionModel) => void) => void;
+}) {
+  return (
+    <Paper variant="outlined" sx={{ p: 1.2, mt: 0.7 }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
+        <Typography variant="subtitle2">{definition.label}</Typography>
+        <Button
+          size="small"
+          startIcon={<AddIcon />}
+          disabled={section.blocks.length >= definition.maxItems}
+          onClick={() =>
+            onChange((target) => {
+              target.blocks.push({
+                id: `${target.type}-block-${Date.now()}`,
+                type: definition.type,
+                settings: { ...definition.defaults },
+              });
+            })
+          }
+        >
+          إضافة
+        </Button>
+      </Stack>
+
+      <Stack spacing={1}>
+        {section.blocks.map((block) => (
+          <Paper key={block.id} variant="outlined" sx={{ p: 1 }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
+              <Typography variant="caption" color="text.secondary">{block.id}</Typography>
+              <IconButton
+                size="small"
+                color="error"
+                onClick={() =>
+                  onChange((target) => {
+                    target.blocks = target.blocks.filter((entry) => entry.id !== block.id);
+                  })
+                }
+              >
+                <DeleteOutlineIcon fontSize="small" />
+              </IconButton>
+            </Stack>
+
+            <Stack spacing={1}>
+              {definition.schema.map((field) => (
+                <DynamicField
+                  key={`${block.id}-${field.key}`}
+                  field={field}
+                  value={block.settings[field.key]}
+                  onChange={(value) =>
+                    onChange((target) => {
+                      const targetBlock = target.blocks.find((entry) => entry.id === block.id);
+                      if (targetBlock) {
+                        targetBlock.settings[field.key] = value;
+                      }
+                    })
+                  }
+                />
+              ))}
             </Stack>
           </Paper>
-        </Box>
+        ))}
+      </Stack>
+    </Paper>
+  );
+}
 
+function LivePreview({ model }: { model: ThemeEditorModel }) {
+  return (
+    <Box
+      sx={{
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 2,
+        p: 1,
+        bgcolor: model.globals.background,
+      }}
+    >
+      <Box
+        sx={{
+          borderRadius: 1.5,
+          p: 1.2,
+          bgcolor: 'rgba(255,255,255,0.85)',
+          border: '1px solid rgba(0,0,0,0.08)',
+          display: 'grid',
+          gap: 0.8,
+        }}
+      >
+        <Typography sx={{ fontSize: 12, fontFamily: model.globals.fontFamily, color: model.globals.primaryColor }}>
+          Preview reflects current draft instantly
+        </Typography>
+        {model.sections.filter((section) => section.enabled).map((section) => {
+          const title = sectionDefinitions[section.type].label;
+          const highlight = pickPreviewText(section);
+          return (
+            <Paper
+              key={section.id}
+              variant="outlined"
+              sx={{ p: 0.8, borderRadius: 1.2, borderColor: 'rgba(0,0,0,0.09)', bgcolor: 'rgba(255,255,255,0.8)' }}
+            >
+              <Typography variant="caption" sx={{ display: 'block', fontWeight: 700, color: model.globals.primaryColor }}>
+                {title} • {section.variant}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {highlight}
+              </Typography>
+            </Paper>
+          );
+        })}
       </Box>
     </Box>
   );
 }
 
-function themeConfigToForm(config: Record<string, unknown>): ThemeEditorForm {
-  const globals = asRecord(config.globals);
-  const sections = Array.isArray(config.sections) ? config.sections : [];
-  const sectionEnabled = { ...defaultForm.sectionEnabled };
+function SummaryRow({ label, value }: { label: string; value: number }) {
+  return (
+    <Stack direction="row" justifyContent="space-between" alignItems="center">
+      <Typography variant="body2">{label}</Typography>
+      <Chip size="small" label={String(value)} />
+    </Stack>
+  );
+}
 
-  for (const section of sections) {
-    const sectionRecord = asRecord(section);
-    const type = sectionRecord.type;
-    if (typeof type === 'string' && isSectionKey(type)) {
-      sectionEnabled[type] = sectionRecord.enabled !== false;
+function pickPreviewText(section: SectionModel): string {
+  if (typeof section.settings.headline === 'string') {
+    return section.settings.headline;
+  }
+  if (typeof section.settings.title === 'string') {
+    return section.settings.title;
+  }
+  if (typeof section.settings.message === 'string') {
+    return section.settings.message;
+  }
+  if (section.blocks[0]) {
+    const first = section.blocks[0];
+    const values = Object.values(first.settings).find((value) => typeof value === 'string');
+    if (typeof values === 'string') {
+      return values;
     }
   }
 
-  const heroHeadline = resolveHeroHeadline(sections);
-
-  return {
-    primaryColor:
-      typeof globals.primaryColor === 'string' ? globals.primaryColor : defaultForm.primaryColor,
-    accentColor:
-      typeof globals.accentColor === 'string' ? globals.accentColor : defaultForm.accentColor,
-    background:
-      typeof globals.background === 'string' ? globals.background : defaultForm.background,
-    fontFamily:
-      typeof globals.fontFamily === 'string' ? globals.fontFamily : defaultForm.fontFamily,
-    heroHeadline,
-    sectionEnabled,
-  };
+  return 'No custom text';
 }
 
-function formToThemeConfig(form: ThemeEditorForm): Record<string, unknown> {
+function cloneSection(section: SectionModel): SectionModel {
+  const cloned = JSON.parse(JSON.stringify(section)) as SectionModel;
+  cloned.id = `${section.type}-copy-${Date.now()}`;
+  cloned.blocks = cloned.blocks.map((block) => ({
+    ...block,
+    id: `${block.type}-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+  }));
+  return cloned;
+}
+
+function createDefaultModel(): ThemeEditorModel {
   return {
     globals: {
-      primaryColor: form.primaryColor,
-      accentColor: form.accentColor,
-      background: form.background,
-      fontFamily: form.fontFamily,
+      primaryColor: '#1f4f46',
+      accentColor: '#c86f31',
+      background: '#f4efe7',
+      fontFamily: 'Tajawal, Cairo, sans-serif',
     },
-    sections: [
-      {
-        id: 'announcement-main',
-        type: 'announcement_bar',
-        enabled: form.sectionEnabled.announcement_bar,
-         settings: { message: 'ط´ط­ظ† ظ…ط¬ط§ظ†ظٹ ظ„ظ„ط·ظ„ط¨ط§طھ ظپظˆظ‚ 300 ط±ظٹط§ظ„' },
-      },
-      {
-        id: 'header-main',
-        type: 'header',
-        enabled: form.sectionEnabled.header,
-        settings: { sticky: true },
-      },
-      {
-        id: 'hero-main',
-        type: 'hero',
-        enabled: form.sectionEnabled.hero,
-        settings: { headline: form.heroHeadline },
-      },
-      {
-        id: 'categories-main',
-        type: 'categories_grid',
-        enabled: form.sectionEnabled.categories_grid,
-        settings: {},
-      },
-      {
-        id: 'featured-main',
-        type: 'featured_products',
-        enabled: form.sectionEnabled.featured_products,
-        settings: { limit: 8 },
-      },
-      {
-        id: 'rich-text-main',
-        type: 'rich_text',
-        enabled: form.sectionEnabled.rich_text,
-        settings: {
-           title: 'ظ„ظ…ط§ط°ط§ ظٹط«ظ‚ ط§ظ„ط¹ظ…ظ„ط§ط، ط¨ظ†ط§طں',
-           body: 'طھظˆطµظٹظ„ ط³ط±ظٹط¹طŒ ظ…ظ†طھط¬ط§طھ ظ…ط®طھط§ط±ط©طŒ ظˆط¯ظپط¹ ط¢ظ…ظ†.',
-        },
-      },
-      {
-        id: 'testimonials-main',
-        type: 'testimonials',
-        enabled: form.sectionEnabled.testimonials,
-        settings: {
-           title: 'ظ…ظپط¶ظ„ ظ„ط¯ظ‰ ط§ظ„ظ…طھط³ظˆظ‚ظٹظ†',
-           items: [
-             { quote: 'ط¬ظˆط¯ط© ظ…ظ…طھط§ط²ط© ظˆط¯ط¹ظ… ط³ط±ظٹط¹.', author: 'ط±ظٹظ…' },
-             { quote: 'طھط¬ط±ط¨ط© ط¯ظپط¹ ط³ظ„ط³ط© ط¹ظ„ظ‰ ط§ظ„ط¬ظˆط§ظ„.', author: 'ظپظٹطµظ„' },
-           ],
-        },
-      },
-      {
-        id: 'newsletter-main',
-        type: 'newsletter_signup',
-        enabled: form.sectionEnabled.newsletter_signup,
-         settings: { title: 'ط§ط­طµظ„ ط¹ظ„ظ‰ ط¹ط±ظˆط¶ ط£ط³ط¨ظˆط¹ظٹط©', ctaLabel: 'ط§ط´طھط±ظƒ' },
-      },
-      {
-        id: 'offers-main',
-        type: 'offers_banner',
-        enabled: form.sectionEnabled.offers_banner,
-        settings: {},
-      },
-      {
-        id: 'footer-main',
-        type: 'footer',
-        enabled: form.sectionEnabled.footer,
-        settings: {},
-      },
-    ],
+    sections: sectionOrder.map((type, index) => {
+      const definition = sectionDefinitions[type];
+      const section: SectionModel = {
+        id: `${type}-${index + 1}`,
+        type,
+        enabled: true,
+        variant: definition.variants[0]?.value ?? 'default',
+        settings: { ...definition.defaultSettings },
+        blocks: [],
+      };
+
+      if (definition.blockDefinition) {
+        section.blocks = [
+          {
+            id: `${type}-block-1`,
+            type: definition.blockDefinition.type,
+            settings: { ...definition.blockDefinition.defaults },
+          },
+        ];
+      }
+
+      return section;
+    }),
   };
 }
 
-function resolveHeroHeadline(sections: unknown[]): string {
-  for (const section of sections) {
-    const sectionRecord = asRecord(section);
-    if (sectionRecord.type !== 'hero') {
+function themeConfigToModel(config: Record<string, unknown>): ThemeEditorModel {
+  const globals = asRecord(config.globals);
+  const color = asRecord(globals.color);
+  const typography = asRecord(globals.typography);
+  const sectionsRaw = Array.isArray(config.sections) ? config.sections : [];
+
+  const model: ThemeEditorModel = {
+    globals: {
+      primaryColor: readString(color.primary ?? globals.primaryColor, defaultModel.globals.primaryColor),
+      accentColor: readString(color.accent ?? globals.accentColor, defaultModel.globals.accentColor),
+      background: readString(color.bg ?? globals.background, defaultModel.globals.background),
+      fontFamily: readString(typography.bodyFontFamily ?? globals.fontFamily, defaultModel.globals.fontFamily),
+    },
+    sections: [],
+  };
+
+  const seenIds = new Set<string>();
+  for (const raw of sectionsRaw) {
+    const section = asRecord(raw);
+    const type = section.type;
+    if (typeof type !== 'string' || !isSectionType(type)) {
       continue;
     }
 
-    const settings = asRecord(sectionRecord.settings);
-    if (typeof settings.headline === 'string') {
-      return settings.headline;
+    const definition = sectionDefinitions[type];
+    const id = readString(section.id, `${type}-${model.sections.length + 1}`);
+    if (seenIds.has(id)) {
+      continue;
     }
+    seenIds.add(id);
+
+    const blocksRaw = Array.isArray(section.blocks) ? section.blocks : [];
+    const blocks = blocksRaw
+      .map((item, index) => {
+        const block = asRecord(item);
+        return {
+          id: readString(block.id, `${type}-block-${index + 1}`),
+          type: readString(block.type, definition.blockDefinition?.type ?? 'item'),
+          settings: asRecord(block.settings),
+        };
+      })
+      .slice(0, definition.blockDefinition?.maxItems ?? 0);
+
+    model.sections.push({
+      id,
+      type,
+      enabled: section.enabled !== false,
+      variant: resolveVariant(readString(section.variant, ''), definition),
+      settings: { ...definition.defaultSettings, ...asRecord(section.settings) },
+      blocks,
+    });
   }
 
-  return defaultForm.heroHeadline;
+  if (model.sections.length === 0) {
+    return cloneModel(defaultModel);
+  }
+
+  return model;
 }
 
-function isSectionKey(value: string): value is SectionKey {
-  return sectionKeys.includes(value as SectionKey);
+function modelToThemeConfig(model: ThemeEditorModel): Record<string, unknown> {
+  return {
+    schemaVersion: 2,
+    globals: {
+      color: {
+        bg: model.globals.background,
+        surface: '#fff9f0',
+        text: '#2f2418',
+        textMuted: '#6d5b46',
+        primary: model.globals.primaryColor,
+        accent: model.globals.accentColor,
+        danger: '#b23a2f',
+      },
+      typography: {
+        bodyFontFamily: model.globals.fontFamily,
+        headingFontFamily: 'Lora, serif',
+        baseFontSize: 16,
+      },
+      radius: {
+        sm: 10,
+        md: 14,
+        lg: 22,
+      },
+      spacing: {
+        unit: 8,
+      },
+      motion: {
+        enabled: true,
+        durationFast: 140,
+        durationBase: 260,
+      },
+    },
+    layout: {
+      contentMaxWidth: 1120,
+      headerSticky: true,
+    },
+    sections: model.sections.map((section) => ({
+      id: section.id,
+      type: section.type,
+      enabled: section.enabled,
+      variant: section.variant,
+      settings: section.settings,
+      ...(section.blocks.length > 0 ? { blocks: section.blocks } : {}),
+    })),
+  };
+}
+
+function resolveVariant(value: string, definition: SectionDefinition): string {
+  if (definition.variants.some((variant) => variant.value === value)) {
+    return value;
+  }
+
+  return definition.variants[0]?.value ?? 'default';
+}
+
+function isSectionType(value: string): value is SectionType {
+  return sectionOrder.includes(value as SectionType);
+}
+
+function readString(value: unknown, fallback: string): string {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback;
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
-  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-    return value as Record<string, unknown>;
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function buildPublishSummary(
+  publishedConfig: Record<string, unknown>,
+  draftConfig: Record<string, unknown>,
+): PublishSummary {
+  const publishedGlobals = extractGlobalKeys(publishedConfig);
+  const draftGlobals = extractGlobalKeys(draftConfig);
+
+  const globalChangedKeys = Object.keys(draftGlobals).filter(
+    (key) => publishedGlobals[key] !== draftGlobals[key],
+  );
+
+  const publishedSections = extractSectionMap(publishedConfig);
+  const draftSections = extractSectionMap(draftConfig);
+
+  const publishedIds = Object.keys(publishedSections);
+  const draftIds = Object.keys(draftSections);
+
+  const addedSections = draftIds.filter((id) => !publishedSections[id]);
+  const removedSections = publishedIds.filter((id) => !draftSections[id]);
+  const changedSections = draftIds.filter(
+    (id) => publishedSections[id] && publishedSections[id] !== draftSections[id],
+  );
+
+  const movedSections: string[] = [];
+  const shared = draftIds.filter((id) => publishedSections[id]);
+  for (const id of shared) {
+    if (publishedIds.indexOf(id) !== draftIds.indexOf(id)) {
+      movedSections.push(id);
+    }
   }
 
-  return {};
+  return {
+    globalChangedKeys,
+    addedSections,
+    removedSections,
+    movedSections,
+    changedSections,
+  };
+}
+
+function extractGlobalKeys(config: Record<string, unknown>): Record<string, string> {
+  const globals = asRecord(config.globals);
+  const color = asRecord(globals.color);
+  const typography = asRecord(globals.typography);
+
+  return {
+    primary: readString(color.primary, ''),
+    accent: readString(color.accent, ''),
+    background: readString(color.bg, ''),
+    font: readString(typography.bodyFontFamily, ''),
+  };
+}
+
+function extractSectionMap(config: Record<string, unknown>): Record<string, string> {
+  const sections = Array.isArray(config.sections) ? config.sections : [];
+  const map: Record<string, string> = {};
+  for (const section of sections) {
+    const value = asRecord(section);
+    if (typeof value.id !== 'string') {
+      continue;
+    }
+    map[value.id] = JSON.stringify(value);
+  }
+  return map;
 }

@@ -55,13 +55,13 @@ const statusColors: Record<string, "default" | "primary" | "secondary" | "error"
 };
 
 const statusLabels: Record<string, string> = {
-  new: 'ط¬ط¯ظٹط¯',
-  confirmed: 'ظ…ط¤ظƒط¯',
-  preparing: 'ظ‚ظٹط¯ ط§ظ„طھط¬ظ‡ظٹط²',
-  out_for_delivery: 'ظپظٹ ط§ظ„ط·ط±ظٹظ‚',
-  completed: 'ظ…ظƒطھظ…ظ„',
-  cancelled: 'ظ…ظ„ط؛ظ‰',
-  returned: 'ظ…ط³طھط±ط¬ط¹',
+  new: 'جديد',
+  confirmed: 'مؤكد',
+  preparing: 'قيد التجهيز',
+  out_for_delivery: 'في الطريق',
+  completed: 'مكتمل',
+  cancelled: 'ملغى',
+  returned: 'مسترجع',
 };
 
 export function OrdersPanel({ request }: OrdersPanelProps) {
@@ -90,7 +90,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
       const data = await request<{ items: Order[] }>(`/orders${query}`, { method: 'GET' });
       setOrders(data?.items ?? []);
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ظ…ظٹظ„ ط§ظ„ط·ظ„ط¨ط§طھ', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحميل الطلبات', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -107,7 +107,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
         setStatusNote('');
       }
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ظ…ظٹظ„ طھظپط§طµظٹظ„ ط§ظ„ط·ظ„ط¨', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحميل تفاصيل الطلب', type: 'error' });
     } finally {
       setDetailLoading(false);
     }
@@ -127,9 +127,9 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
         setOrderDetail(data);
       }
       await loadOrders(); // Refresh background list
-      setMessage({ text: 'طھظ… طھط­ط¯ظٹط« ط­ط§ظ„ط© ط§ظ„ط·ظ„ط¨ ط¨ظ†ط¬ط§ط­', type: 'success' });
+      setMessage({ text: 'تم تحديث حالة الطلب بنجاح', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ط¯ظٹط« ط­ط§ظ„ط© ط§ظ„ط·ظ„ط¨', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحديث حالة الطلب', type: 'error' });
     }
   }
 
@@ -149,7 +149,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
             color="inherit"
             sx={{ fontWeight: 700 }}
           >
-            ط§ظ„ط¹ظˆط¯ط© ظ„ظ„ط·ظ„ط¨ط§طھ
+            العودة للطلبات
           </Button>
         </Box>
 
@@ -171,10 +171,10 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
                   <Box>
                     <Typography variant="h5" fontWeight={800} gutterBottom>
-                      ط·ظ„ط¨ {orderDetail.orderCode}
+                      طلب {orderDetail.orderCode}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      طھط§ط±ظٹط® ط§ظ„ط¥ظ†ط´ط§ط،: {new Date(orderDetail.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      تاريخ الإنشاء: {new Date(orderDetail.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </Typography>
                   </Box>
                   <Chip 
@@ -187,16 +187,16 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
                 
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                   <ShoppingBagIcon color="primary" />
-                  <Typography variant="h6" fontWeight={700}>ط§ظ„ظ…ظ†طھط¬ط§طھ ط§ظ„ظ…ط·ظ„ظˆط¨ط©</Typography>
+                  <Typography variant="h6" fontWeight={700}>المنتجات المطلوبة</Typography>
                 </Box>
                 
                 <TableContainer>
                   <Table size="small">
                     <TableHead>
                       <TableRow sx={{ bgcolor: 'background.default' }}>
-                        <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ظ…ظ†طھط¬</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 700 }}>ط§ظ„ظƒظ…ظٹط©</TableCell>
-                        <TableCell align="left" sx={{ fontWeight: 700 }}>ط§ظ„ط¥ط¬ظ…ط§ظ„ظٹ</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>المنتج</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 700 }}>الكمية</TableCell>
+                        <TableCell align="left" sx={{ fontWeight: 700 }}>الإجمالي</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -220,7 +220,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
               <Paper elevation={0} sx={{ p: 3, borderRadius: 4, border: '1px solid', borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
                   <LocalShippingIcon color="primary" />
-                  <Typography variant="h6" fontWeight={700}>ط³ط¬ظ„ ط­ط§ظ„ط© ط§ظ„ط·ظ„ط¨</Typography>
+                  <Typography variant="h6" fontWeight={700}>سجل حالة الطلب</Typography>
                 </Box>
                 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, position: 'relative' }}>
@@ -259,13 +259,13 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
               <Paper elevation={0} sx={{ p: 3, borderRadius: 4, border: '1px solid', borderColor: 'primary.main', bgcolor: 'primary.50' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                   <EditNoteIcon color="primary" />
-                  <Typography variant="h6" fontWeight={700} color="primary.dark">طھط­ط¯ظٹط« ط§ظ„ط­ط§ظ„ط©</Typography>
+                  <Typography variant="h6" fontWeight={700} color="primary.dark">تحديث الحالة</Typography>
                 </Box>
                 
                 <Stack spacing={2}>
                   <TextField
                     select
-                    label="ط§ظ„ط­ط§ظ„ط© ط§ظ„ط¬ط¯ظٹط¯ط©"
+                    label="الحالة الجديدة"
                     value={nextStatus}
                     onChange={(event) => setNextStatus(event.target.value as OrderStatus)}
                     fullWidth
@@ -278,7 +278,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
                     ))}
                   </TextField>
                   <TextField 
-                    label="ظ…ظ„ط§ط­ط¸ط© (ط§ط®طھظٹط§ط±ظٹ)" 
+                    label="ملاحظة (اختياري)" 
                     value={statusNote} 
                     onChange={(event) => setStatusNote(event.target.value)} 
                     multiline
@@ -291,7 +291,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
                     onClick={() => updateOrderStatus().catch(() => undefined)}
                     disableElevation
                   >
-                    طھط£ظƒظٹط¯ ط§ظ„طھط­ط¯ظٹط«
+                    تأكيد التحديث
                   </Button>
                 </Stack>
               </Paper>
@@ -300,11 +300,11 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
               <Paper elevation={0} sx={{ p: 3, borderRadius: 4, border: '1px solid', borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                   <ReceiptLongIcon color="primary" />
-                  <Typography variant="h6" fontWeight={700}>ظ…ظ„ط®طµ ط§ظ„ط¯ظپط¹</Typography>
+                  <Typography variant="h6" fontWeight={700}>ملخص الدفع</Typography>
                 </Box>
 
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
-                  <Typography color="text.secondary">ط§ظ„ط¥ط¬ظ…ط§ظ„ظٹ</Typography>
+                  <Typography color="text.secondary">الإجمالي</Typography>
                   <Typography fontWeight={800} variant="h6" color="primary.main">
                     {orderDetail.total} {orderDetail.currencyCode}
                   </Typography>
@@ -315,11 +315,11 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
                 {orderDetail.payment ? (
                   <Stack spacing={1.5}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2" color="text.secondary">ط·ط±ظٹظ‚ط© ط§ظ„ط¯ظپط¹:</Typography>
+                      <Typography variant="body2" color="text.secondary">طريقة الدفع:</Typography>
                       <Typography variant="body2" fontWeight={600}>{orderDetail.payment.method}</Typography>
                     </Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2" color="text.secondary">ط­ط§ظ„ط© ط§ظ„ط¯ظپط¹:</Typography>
+                      <Typography variant="body2" color="text.secondary">حالة الدفع:</Typography>
                       <Chip size="small" label={orderDetail.payment.status} color={orderDetail.payment.status === 'paid' ? 'success' : 'warning'} />
                     </Box>
                     {orderDetail.payment.receiptUrl && (
@@ -330,13 +330,13 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
                         target="_blank" 
                         sx={{ mt: 1 }}
                       >
-                        ط¹ط±ط¶ ط¥ظٹطµط§ظ„ ط§ظ„ط¯ظپط¹
+                        عرض إيصال الدفع
                       </Button>
                     )}
                   </Stack>
                 ) : (
                   <Typography variant="body2" color="text.secondary" textAlign="center">
-                    ظ„ط§ طھظˆط¬ط¯ ط¨ظٹط§ظ†ط§طھ ط¯ظپط¹ ظ…ط³ط¬ظ„ط©.
+                    لا توجد بيانات دفع مسجلة.
                   </Typography>
                 )}
               </Paper>
@@ -354,10 +354,10 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1 }}>
         <Box>
           <Typography variant="h4" fontWeight={800} gutterBottom>
-            ط§ظ„ط·ظ„ط¨ط§طھ
+            الطلبات
           </Typography>
           <Typography color="text.secondary">
-            ط¥ط¯ط§ط±ط© ط¬ظ…ظٹط¹ ط§ظ„ط·ظ„ط¨ط§طھ ط§ظ„ظˆط§ط±ط¯ط© ظˆطھط­ط¯ظٹط« ط­ط§ظ„ط§طھ ط§ظ„ط´ط­ظ† ظˆط§ظ„طھظˆطµظٹظ„.
+            إدارة جميع الطلبات الواردة وتحديث حالات الشحن والتوصيل.
           </Typography>
         </Box>
       </Box>
@@ -369,7 +369,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
       {/* Filter and Search Bar */}
       <Paper elevation={0} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
         <TextField 
-          placeholder="ط§ط¨ط­ط« ط¨ط±ظ…ط² ط§ظ„ط·ظ„ط¨..." 
+          placeholder="ابحث برمز الطلب..." 
           value={searchQuery} 
           onChange={(event) => setSearchQuery(event.target.value)} 
           size="small"
@@ -384,7 +384,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
         />
         <TextField 
           select 
-          label="ظپظ„طھط±ط© ط¨ط§ظ„ط­ط§ظ„ط©" 
+          label="فلترة بالحالة" 
           value={statusFilter} 
           onChange={(event) => setStatusFilter(event.target.value)}
           size="small"
@@ -397,7 +397,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
             ),
           }}
         >
-          <MenuItem value="">ط§ظ„ظƒظ„</MenuItem>
+          <MenuItem value="">الكل</MenuItem>
           {statusOptions.map((status) => (
             <MenuItem key={status} value={status}>
               {statusLabels[status] || status}
@@ -410,7 +410,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
           disableElevation
           sx={{ height: 40 }}
         >
-          ط¨ط­ط« ظˆطھط­ط¯ظٹط«
+          بحث وتحديث
         </Button>
       </Paper>
 
@@ -420,11 +420,11 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
           <Table>
             <TableHead sx={{ bgcolor: 'background.default' }}>
               <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>ط±ظ‚ظ… ط§ظ„ط·ظ„ط¨</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>ط§ظ„طھط§ط±ظٹط®</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ط­ط§ظ„ط©</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ط¥ط¬ظ…ط§ظ„ظٹ</TableCell>
-                <TableCell align="left" sx={{ fontWeight: 700 }}>ط§ظ„ط¥ط¬ط±ط§ط،ط§طھ</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>رقم الطلب</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>التاريخ</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>الحالة</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>الإجمالي</TableCell>
+                <TableCell align="left" sx={{ fontWeight: 700 }}>الإجراءات</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -437,7 +437,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
               ) : orders.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
-                    <Typography color="text.secondary">ظ„ط§ طھظˆط¬ط¯ ط·ظ„ط¨ط§طھ ظ…ط·ط§ط¨ظ‚ط© ظ„ظ„ط¨ط­ط«.</Typography>
+                    <Typography color="text.secondary">لا توجد طلبات مطابقة للبحث.</Typography>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -465,7 +465,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
                         onClick={() => loadOrderDetail(order.id).catch(() => undefined)}
                         sx={{ borderRadius: 1.5 }}
                       >
-                        ط¥ط¯ط§ط±ط©
+                        إدارة
                       </Button>
                     </TableCell>
                   </TableRow>

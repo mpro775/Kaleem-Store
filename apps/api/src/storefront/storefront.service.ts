@@ -40,9 +40,14 @@ import { StoresRepository } from '../stores/stores.repository';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { StoreResolverService } from './store-resolver.service';
 import { StorefrontTrackingService } from './storefront-tracking.service';
+import {
+  type StorefrontAnalyticsEventName,
+  type StorefrontEventType,
+} from './constants/storefront-event.constants';
 import type { AddCartItemDto } from './dto/add-cart-item.dto';
 import type { CheckoutDto } from './dto/checkout.dto';
 import type { ListStorefrontFiltersQueryDto } from './dto/list-storefront-filters-query.dto';
+import type { TrackStorefrontEventDto } from './dto/track-storefront-event.dto';
 import type { ThemeQueryDto } from './dto/theme-query.dto';
 
 export interface StorefrontProductResponse {
@@ -358,6 +363,30 @@ export class StorefrontService {
     };
   }
 
+  async trackCustomEvent(
+    request: Request,
+    input: TrackStorefrontEventDto,
+  ): Promise<{ accepted: true }> {
+    const store = await this.storeResolverService.resolve(request);
+    const eventType = this.mapAnalyticsEventToEventType(input.eventName);
+
+    await this.storefrontTrackingService.trackEvent(request, {
+      storeId: store.id,
+      eventType,
+      ...(input.cartId ? { cartId: input.cartId } : {}),
+      ...(input.orderId ? { orderId: input.orderId } : {}),
+      ...(input.productId ? { productId: input.productId } : {}),
+      ...(input.variantId ? { variantId: input.variantId } : {}),
+      metadata: {
+        eventName: input.eventName,
+        ...(input.sessionId ? { clientSessionId: input.sessionId } : {}),
+        ...(input.metadata ?? {}),
+      },
+    });
+
+    return { accepted: true };
+  }
+
   async addCartItem(request: Request, input: AddCartItemDto): Promise<StorefrontCartResponse> {
     const store = await this.storeResolverService.resolve(request);
     await this.inventoryService.releaseExpiredReservations(store.id);
@@ -632,6 +661,30 @@ export class StorefrontService {
       sortOrder: image.sort_order,
       variantId: image.variant_id,
     };
+  }
+
+  private mapAnalyticsEventToEventType(eventName: StorefrontAnalyticsEventName): StorefrontEventType {
+    if (eventName === 'sf_checkout_completed') {
+      return 'checkout_complete';
+    }
+
+    if (
+      eventName === 'sf_checkout_started' ||
+      eventName === 'sf_checkout_step_completed' ||
+      eventName === 'sf_checkout_submitted'
+    ) {
+      return 'checkout_start';
+    }
+
+    if (eventName === 'sf_add_to_cart_clicked' || eventName === 'sf_cart_item_updated') {
+      return 'add_to_cart';
+    }
+
+    if (eventName === 'sf_product_viewed') {
+      return 'product_view';
+    }
+
+    return 'store_visit';
   }
 
   private extractPublishedSectionSummary(

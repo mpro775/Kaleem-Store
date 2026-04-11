@@ -126,7 +126,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
       setOffers(offerData ?? []);
       setAdvancedOffers(advancedOfferData ?? []);
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ظ…ظٹظ„ ط§ظ„ط¹ط±ظˆط¶', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحميل العروض', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -158,10 +158,10 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
       });
       setCouponForm(couponFormDefault);
       await loadAll();
-      setMessage({ text: 'طھظ… ط¥ظ†ط´ط§ط، ظƒظˆط¨ظˆظ† ط§ظ„ط®طµظ… ط¨ظ†ط¬ط§ط­', type: 'success' });
+      setMessage({ text: 'تم إنشاء كوبون الخصم بنجاح', type: 'success' });
       setViewMode('list');
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط¥ظ†ط´ط§ط، ط§ظ„ظƒظˆط¨ظˆظ†', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر إنشاء الكوبون', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -177,10 +177,10 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
         body: JSON.stringify(buildCouponUpdatePayload(couponForm)),
       });
       await loadAll();
-      setMessage({ text: 'طھظ… طھط­ط¯ظٹط« ظƒظˆط¨ظˆظ† ط§ظ„ط®طµظ… ط¨ظ†ط¬ط§ط­', type: 'success' });
+      setMessage({ text: 'تم تحديث كوبون الخصم بنجاح', type: 'success' });
       setViewMode('list');
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ط¯ظٹط« ط§ظ„ظƒظˆط¨ظˆظ†', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحديث الكوبون', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -196,10 +196,10 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
       });
       setOfferForm(offerFormDefault);
       await loadAll();
-      setMessage({ text: 'طھظ… ط¥ظ†ط´ط§ط، ط§ظ„ط¹ط±ط¶ ط§ظ„طھظ„ظ‚ط§ط¦ظٹ ط¨ظ†ط¬ط§ط­', type: 'success' });
+      setMessage({ text: 'تم إنشاء العرض التلقائي بنجاح', type: 'success' });
       setViewMode('list');
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط¥ظ†ط´ط§ط، ط§ظ„ط¹ط±ط¶', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر إنشاء العرض', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -215,10 +215,10 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
         body: JSON.stringify(buildOfferUpdatePayload(offerForm)),
       });
       await loadAll();
-      setMessage({ text: 'طھظ… طھط­ط¯ظٹط« ط§ظ„ط¹ط±ط¶ ط§ظ„طھظ„ظ‚ط§ط¦ظٹ ط¨ظ†ط¬ط§ط­', type: 'success' });
+      setMessage({ text: 'تم تحديث العرض التلقائي بنجاح', type: 'success' });
       setViewMode('list');
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ط¯ظٹط« ط§ظ„ط¹ط±ط¶', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحديث العرض', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -234,10 +234,10 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
       });
       setAdvancedOfferForm(advancedOfferFormDefault);
       await loadAll();
-      setMessage({ text: 'طھظ… ط¥ظ†ط´ط§ط، ط§ظ„ط¹ط±ط¶ ط§ظ„ظ…طھظ‚ط¯ظ… ط¨ظ†ط¬ط§ط­', type: 'success' });
+      setMessage({ text: 'تم إنشاء العرض المتقدم بنجاح', type: 'success' });
       setViewMode('list');
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط¥ظ†ط´ط§ط، ط§ظ„ط¹ط±ط¶ ط§ظ„ظ…طھظ‚ط¯ظ…', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر إنشاء العرض المتقدم', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -253,10 +253,10 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
         body: JSON.stringify(buildAdvancedOfferUpdatePayload(advancedOfferForm)),
       });
       await loadAll();
-      setMessage({ text: 'طھظ… طھط­ط¯ظٹط« ط§ظ„ط¹ط±ط¶ ط§ظ„ظ…طھظ‚ط¯ظ… ط¨ظ†ط¬ط§ط­', type: 'success' });
+      setMessage({ text: 'تم تحديث العرض المتقدم بنجاح', type: 'success' });
       setViewMode('list');
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ط¯ظٹط« ط§ظ„ط¹ط±ط¶ ط§ظ„ظ…طھظ‚ط¯ظ…', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحديث العرض المتقدم', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -318,7 +318,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
             color="inherit"
             sx={{ fontWeight: 700 }}
           >
-            ط§ظ„ط¹ظˆط¯ط© ظ„ظ„ظ‚ط§ط¦ظ…ط©
+            العودة للقائمة
           </Button>
         </Box>
 
@@ -333,32 +333,32 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
             <Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
                 <DiscountIcon color="primary" />
-                <Typography variant="h6" fontWeight={800}>{selectedCouponId ? 'طھط¹ط¯ظٹظ„ ظƒظˆط¨ظˆظ† ط§ظ„ط®طµظ…' : 'ظƒظˆط¨ظˆظ† ط®طµظ… ط¬ط¯ظٹط¯'}</Typography>
+                <Typography variant="h6" fontWeight={800}>{selectedCouponId ? 'تعديل كوبون الخصم' : 'كوبون خصم جديد'}</Typography>
               </Box>
               <Divider sx={{ mb: 4 }} />
               
               <Stack spacing={3}>
-                <TextField label="ط±ظ…ط² ط§ظ„ظƒظˆط¨ظˆظ† (Code)" fullWidth value={couponForm.code} onChange={(event) => setCouponForm((prev) => ({ ...prev, code: event.target.value.toUpperCase() }))} dir="ltr" />
+                <TextField label="رمز الكوبون (Code)" fullWidth value={couponForm.code} onChange={(event) => setCouponForm((prev) => ({ ...prev, code: event.target.value.toUpperCase() }))} dir="ltr" />
                 
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3 }}>
-                  <TextField select label="ظ†ظˆط¹ ط§ظ„ط®طµظ…" fullWidth value={couponForm.discountType} onChange={(event) => setCouponForm((prev) => ({ ...prev, discountType: event.target.value as DiscountType }))}>
-                    <MenuItem value="percent">ظ†ط³ط¨ط© ظ…ط¦ظˆظٹط© (%)</MenuItem>
-                    <MenuItem value="fixed">ظ…ط¨ظ„ط؛ ط«ط§ط¨طھ</MenuItem>
+                  <TextField select label="نوع الخصم" fullWidth value={couponForm.discountType} onChange={(event) => setCouponForm((prev) => ({ ...prev, discountType: event.target.value as DiscountType }))}>
+                    <MenuItem value="percent">نسبة مئوية (%)</MenuItem>
+                    <MenuItem value="fixed">مبلغ ثابت</MenuItem>
                   </TextField>
-                  <TextField label="ظ‚ظٹظ…ط© ط§ظ„ط®طµظ…" type="number" inputProps={{ min: 0, step: 0.01 }} fullWidth value={couponForm.discountValue} onChange={(event) => setCouponForm((prev) => ({ ...prev, discountValue: event.target.value }))} />
+                  <TextField label="قيمة الخصم" type="number" inputProps={{ min: 0, step: 0.01 }} fullWidth value={couponForm.discountValue} onChange={(event) => setCouponForm((prev) => ({ ...prev, discountValue: event.target.value }))} />
                 </Box>
                 
-                <TextField label="ط§ظ„ط­ط¯ ط§ظ„ط£ط¯ظ†ظ‰ ظ„ظ„ط·ظ„ط¨ (ط§ط®طھظٹط§ط±ظٹ)" type="number" inputProps={{ min: 0, step: 0.01 }} fullWidth value={couponForm.minOrderAmount} onChange={(event) => setCouponForm((prev) => ({ ...prev, minOrderAmount: event.target.value }))} />
+                <TextField label="الحد الأدنى للطلب (اختياري)" type="number" inputProps={{ min: 0, step: 0.01 }} fullWidth value={couponForm.minOrderAmount} onChange={(event) => setCouponForm((prev) => ({ ...prev, minOrderAmount: event.target.value }))} />
                 
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3 }}>
-                  <TextField label="طھط§ط±ظٹط® ط§ظ„ط¨ط¯ط،" type="datetime-local" InputLabelProps={{ shrink: true }} fullWidth value={couponForm.startsAt} onChange={(event) => setCouponForm((prev) => ({ ...prev, startsAt: event.target.value }))} />
-                  <TextField label="طھط§ط±ظٹط® ط§ظ„ط§ظ†طھظ‡ط§ط،" type="datetime-local" InputLabelProps={{ shrink: true }} fullWidth value={couponForm.endsAt} onChange={(event) => setCouponForm((prev) => ({ ...prev, endsAt: event.target.value }))} />
+                  <TextField label="تاريخ البدء" type="datetime-local" InputLabelProps={{ shrink: true }} fullWidth value={couponForm.startsAt} onChange={(event) => setCouponForm((prev) => ({ ...prev, startsAt: event.target.value }))} />
+                  <TextField label="تاريخ الانتهاء" type="datetime-local" InputLabelProps={{ shrink: true }} fullWidth value={couponForm.endsAt} onChange={(event) => setCouponForm((prev) => ({ ...prev, endsAt: event.target.value }))} />
                 </Box>
 
-                <TextField label="ط§ظ„ط­ط¯ ط§ظ„ط£ظ‚طµظ‰ ظ„ط¹ط¯ط¯ ط§ظ„ط§ط³طھط®ط¯ط§ظ…ط§طھ (ط§ط®طھظٹط§ط±ظٹ)" type="number" inputProps={{ min: 1 }} fullWidth value={couponForm.maxUses} onChange={(event) => setCouponForm((prev) => ({ ...prev, maxUses: event.target.value }))} />
-                <FormControlLabel control={<Checkbox checked={couponForm.isActive} onChange={(event) => setCouponForm((prev) => ({ ...prev, isActive: event.target.checked }))} />} label="ط§ظ„ظƒظˆط¨ظˆظ† ظپط¹ط§ظ„" />
+                <TextField label="الحد الأقصى لعدد الاستخدامات (اختياري)" type="number" inputProps={{ min: 1 }} fullWidth value={couponForm.maxUses} onChange={(event) => setCouponForm((prev) => ({ ...prev, maxUses: event.target.value }))} />
+                <FormControlLabel control={<Checkbox checked={couponForm.isActive} onChange={(event) => setCouponForm((prev) => ({ ...prev, isActive: event.target.checked }))} />} label="الكوبون فعال" />
                 <Button variant="contained" size="large" onClick={() => (selectedCouponId ? updateCoupon() : createCoupon()).catch(() => undefined)} disabled={actionLoading}>
-                  {actionLoading ? 'ط¬ط§ط±ظگ ط§ظ„ط­ظپط¸...' : 'ط­ظپط¸ ط§ظ„ظƒظˆط¨ظˆظ†'}
+                  {actionLoading ? 'جارِ الحفظ...' : 'حفظ الكوبون'}
                 </Button>
               </Stack>
             </Box>
@@ -369,40 +369,40 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
             <Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
                 <LocalOfferIcon color="primary" />
-                <Typography variant="h6" fontWeight={800}>{selectedOfferId ? 'طھط¹ط¯ظٹظ„ ط§ظ„ط¹ط±ط¶ ط§ظ„طھظ„ظ‚ط§ط¦ظٹ' : 'ط¹ط±ط¶ طھظ„ظ‚ط§ط¦ظٹ ط¬ط¯ظٹط¯'}</Typography>
+                <Typography variant="h6" fontWeight={800}>{selectedOfferId ? 'تعديل العرض التلقائي' : 'عرض تلقائي جديد'}</Typography>
               </Box>
               <Divider sx={{ mb: 4 }} />
               
               <Stack spacing={3}>
-                <TextField label="ط§ط³ظ… ط§ظ„ط¹ط±ط¶" fullWidth value={offerForm.name} onChange={(event) => setOfferForm((prev) => ({ ...prev, name: event.target.value }))} />
-                <TextField select label="ظٹط·ط¨ظ‚ ط¹ظ„ظ‰" fullWidth value={offerForm.targetType} onChange={(event) => setOfferForm((prev) => ({ ...prev, targetType: event.target.value as OfferTargetType }))}>
-                  <MenuItem value="cart">ظƒط§ظ…ظ„ ط§ظ„ط³ظ„ط©</MenuItem>
-                  <MenuItem value="product">ظ…ظ†طھط¬ ظ…ط­ط¯ط¯</MenuItem>
-                  <MenuItem value="category">طھطµظ†ظٹظپ ظ…ط­ط¯ط¯</MenuItem>
+                <TextField label="اسم العرض" fullWidth value={offerForm.name} onChange={(event) => setOfferForm((prev) => ({ ...prev, name: event.target.value }))} />
+                <TextField select label="يطبق على" fullWidth value={offerForm.targetType} onChange={(event) => setOfferForm((prev) => ({ ...prev, targetType: event.target.value as OfferTargetType }))}>
+                  <MenuItem value="cart">كامل السلة</MenuItem>
+                  <MenuItem value="product">منتج محدد</MenuItem>
+                  <MenuItem value="category">تصنيف محدد</MenuItem>
                 </TextField>
                 {offerForm.targetType === 'product' && (
-                  <TextField label="ظ…ط¹ط±ظ‘ظپ ط§ظ„ظ…ظ†طھط¬ ط§ظ„ظ…ط³طھظ‡ط¯ظپ" fullWidth value={offerForm.targetProductId} onChange={(event) => setOfferForm((prev) => ({ ...prev, targetProductId: event.target.value }))} />
+                  <TextField label="معرّف المنتج المستهدف" fullWidth value={offerForm.targetProductId} onChange={(event) => setOfferForm((prev) => ({ ...prev, targetProductId: event.target.value }))} />
                 )}
                 {offerForm.targetType === 'category' && (
-                  <TextField label="ظ…ط¹ط±ظ‘ظپ ط§ظ„طھطµظ†ظٹظپ ط§ظ„ظ…ط³طھظ‡ط¯ظپ" fullWidth value={offerForm.targetCategoryId} onChange={(event) => setOfferForm((prev) => ({ ...prev, targetCategoryId: event.target.value }))} />
+                  <TextField label="معرّف التصنيف المستهدف" fullWidth value={offerForm.targetCategoryId} onChange={(event) => setOfferForm((prev) => ({ ...prev, targetCategoryId: event.target.value }))} />
                 )}
                 
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3 }}>
-                  <TextField select label="ظ†ظˆط¹ ط§ظ„ط®طµظ…" fullWidth value={offerForm.discountType} onChange={(event) => setOfferForm((prev) => ({ ...prev, discountType: event.target.value as DiscountType }))}>
-                    <MenuItem value="percent">ظ†ط³ط¨ط© ظ…ط¦ظˆظٹط© (%)</MenuItem>
-                    <MenuItem value="fixed">ظ…ط¨ظ„ط؛ ط«ط§ط¨طھ</MenuItem>
+                  <TextField select label="نوع الخصم" fullWidth value={offerForm.discountType} onChange={(event) => setOfferForm((prev) => ({ ...prev, discountType: event.target.value as DiscountType }))}>
+                    <MenuItem value="percent">نسبة مئوية (%)</MenuItem>
+                    <MenuItem value="fixed">مبلغ ثابت</MenuItem>
                   </TextField>
-                  <TextField label="ظ‚ظٹظ…ط© ط§ظ„ط®طµظ…" type="number" inputProps={{ min: 0, step: 0.01 }} fullWidth value={offerForm.discountValue} onChange={(event) => setOfferForm((prev) => ({ ...prev, discountValue: event.target.value }))} />
+                  <TextField label="قيمة الخصم" type="number" inputProps={{ min: 0, step: 0.01 }} fullWidth value={offerForm.discountValue} onChange={(event) => setOfferForm((prev) => ({ ...prev, discountValue: event.target.value }))} />
                 </Box>
                 
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3 }}>
-                  <TextField label="طھط§ط±ظٹط® ط§ظ„ط¨ط¯ط،" type="datetime-local" InputLabelProps={{ shrink: true }} fullWidth value={offerForm.startsAt} onChange={(event) => setOfferForm((prev) => ({ ...prev, startsAt: event.target.value }))} />
-                  <TextField label="طھط§ط±ظٹط® ط§ظ„ط§ظ†طھظ‡ط§ط،" type="datetime-local" InputLabelProps={{ shrink: true }} fullWidth value={offerForm.endsAt} onChange={(event) => setOfferForm((prev) => ({ ...prev, endsAt: event.target.value }))} />
+                  <TextField label="تاريخ البدء" type="datetime-local" InputLabelProps={{ shrink: true }} fullWidth value={offerForm.startsAt} onChange={(event) => setOfferForm((prev) => ({ ...prev, startsAt: event.target.value }))} />
+                  <TextField label="تاريخ الانتهاء" type="datetime-local" InputLabelProps={{ shrink: true }} fullWidth value={offerForm.endsAt} onChange={(event) => setOfferForm((prev) => ({ ...prev, endsAt: event.target.value }))} />
                 </Box>
 
-                <FormControlLabel control={<Checkbox checked={offerForm.isActive} onChange={(event) => setOfferForm((prev) => ({ ...prev, isActive: event.target.checked }))} />} label="ط§ظ„ط¹ط±ط¶ ظپط¹ط§ظ„" />
+                <FormControlLabel control={<Checkbox checked={offerForm.isActive} onChange={(event) => setOfferForm((prev) => ({ ...prev, isActive: event.target.checked }))} />} label="العرض فعال" />
                 <Button variant="contained" size="large" onClick={() => (selectedOfferId ? updateOffer() : createOffer()).catch(() => undefined)} disabled={actionLoading}>
-                  {actionLoading ? 'ط¬ط§ط±ظگ ط§ظ„ط­ظپط¸...' : 'ط­ظپط¸ ط§ظ„ط¹ط±ط¶'}
+                  {actionLoading ? 'جارِ الحفظ...' : 'حفظ العرض'}
                 </Button>
               </Stack>
             </Box>
@@ -413,25 +413,25 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
             <Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
                 <StarBorderIcon color="primary" />
-                <Typography variant="h6" fontWeight={800}>{selectedAdvancedOfferId ? 'طھط¹ط¯ظٹظ„ ط§ظ„ط¹ط±ط¶ ط§ظ„ظ…طھظ‚ط¯ظ…' : 'ط¹ط±ط¶ ظ…طھظ‚ط¯ظ… ط¬ط¯ظٹط¯'}</Typography>
+                <Typography variant="h6" fontWeight={800}>{selectedAdvancedOfferId ? 'تعديل العرض المتقدم' : 'عرض متقدم جديد'}</Typography>
               </Box>
               <Divider sx={{ mb: 4 }} />
               
               <Stack spacing={3}>
-                <TextField label="ط§ظ„ط§ط³ظ…" fullWidth value={advancedOfferForm.name} onChange={(event) => setAdvancedOfferForm((prev) => ({ ...prev, name: event.target.value }))} />
-                <TextField label="ط§ظ„ظˆطµظپ (ط§ط®طھظٹط§ط±ظٹ)" fullWidth multiline minRows={2} value={advancedOfferForm.description} onChange={(event) => setAdvancedOfferForm((prev) => ({ ...prev, description: event.target.value }))} />
+                <TextField label="الاسم" fullWidth value={advancedOfferForm.name} onChange={(event) => setAdvancedOfferForm((prev) => ({ ...prev, name: event.target.value }))} />
+                <TextField label="الوصف (اختياري)" fullWidth multiline minRows={2} value={advancedOfferForm.description} onChange={(event) => setAdvancedOfferForm((prev) => ({ ...prev, description: event.target.value }))} />
                 
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3 }}>
-                  <TextField select label="ظ†ظˆط¹ ط§ظ„ط¹ط±ط¶ ط§ظ„ظ…طھظ‚ط¯ظ…" fullWidth value={advancedOfferForm.offerType} onChange={(event) => setAdvancedOfferForm((prev) => ({ ...prev, offerType: event.target.value as AdvancedOfferType }))}>
-                    <MenuItem value="bxgy">ط§ط´طھط± X ظˆط§ط­طµظ„ ط¹ظ„ظ‰ Y (BXGY)</MenuItem>
-                    <MenuItem value="bundle">ط­ط²ظ…ط© ظ…ظ†طھط¬ط§طھ (Bundle)</MenuItem>
-                    <MenuItem value="tiered_discount">ط®طµظ… طھط¯ط±ظٹط¬ظٹ (Tiered)</MenuItem>
+                  <TextField select label="نوع العرض المتقدم" fullWidth value={advancedOfferForm.offerType} onChange={(event) => setAdvancedOfferForm((prev) => ({ ...prev, offerType: event.target.value as AdvancedOfferType }))}>
+                    <MenuItem value="bxgy">اشتر X واحصل على Y (BXGY)</MenuItem>
+                    <MenuItem value="bundle">حزمة منتجات (Bundle)</MenuItem>
+                    <MenuItem value="tiered_discount">خصم تدريجي (Tiered)</MenuItem>
                   </TextField>
-                  <TextField label="ط§ظ„ط£ظˆظ„ظˆظٹط© (ط£ط¹ظ„ظ‰ ط±ظ‚ظ… ظٹظڈظ†ظپط° ط£ظˆظ„ط§ظ‹)" type="number" fullWidth value={advancedOfferForm.priority} onChange={(event) => setAdvancedOfferForm((prev) => ({ ...prev, priority: event.target.value }))} />
+                  <TextField label="الأولوية (أعلى رقم يُنفذ أولاً)" type="number" fullWidth value={advancedOfferForm.priority} onChange={(event) => setAdvancedOfferForm((prev) => ({ ...prev, priority: event.target.value }))} />
                 </Box>
                 
                 <TextField 
-                  label="ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ط¹ط±ط¶ (JSON)" 
+                  label="إعدادات العرض (JSON)" 
                   fullWidth 
                   multiline 
                   minRows={6} 
@@ -442,13 +442,13 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
                 />
                 
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3 }}>
-                  <TextField label="طھط§ط±ظٹط® ط§ظ„ط¨ط¯ط،" type="datetime-local" InputLabelProps={{ shrink: true }} fullWidth value={advancedOfferForm.startsAt} onChange={(event) => setAdvancedOfferForm((prev) => ({ ...prev, startsAt: event.target.value }))} />
-                  <TextField label="طھط§ط±ظٹط® ط§ظ„ط§ظ†طھظ‡ط§ط،" type="datetime-local" InputLabelProps={{ shrink: true }} fullWidth value={advancedOfferForm.endsAt} onChange={(event) => setAdvancedOfferForm((prev) => ({ ...prev, endsAt: event.target.value }))} />
+                  <TextField label="تاريخ البدء" type="datetime-local" InputLabelProps={{ shrink: true }} fullWidth value={advancedOfferForm.startsAt} onChange={(event) => setAdvancedOfferForm((prev) => ({ ...prev, startsAt: event.target.value }))} />
+                  <TextField label="تاريخ الانتهاء" type="datetime-local" InputLabelProps={{ shrink: true }} fullWidth value={advancedOfferForm.endsAt} onChange={(event) => setAdvancedOfferForm((prev) => ({ ...prev, endsAt: event.target.value }))} />
                 </Box>
 
-                <FormControlLabel control={<Checkbox checked={advancedOfferForm.isActive} onChange={(event) => setAdvancedOfferForm((prev) => ({ ...prev, isActive: event.target.checked }))} />} label="ط§ظ„ط¹ط±ط¶ ظپط¹ط§ظ„" />
+                <FormControlLabel control={<Checkbox checked={advancedOfferForm.isActive} onChange={(event) => setAdvancedOfferForm((prev) => ({ ...prev, isActive: event.target.checked }))} />} label="العرض فعال" />
                 <Button variant="contained" size="large" onClick={() => (selectedAdvancedOfferId ? updateAdvancedOffer() : createAdvancedOffer()).catch(() => undefined)} disabled={actionLoading}>
-                  {actionLoading ? 'ط¬ط§ط±ظگ ط§ظ„ط­ظپط¸...' : 'ط­ظپط¸ ط§ظ„ط¹ط±ط¶'}
+                  {actionLoading ? 'جارِ الحفظ...' : 'حفظ العرض'}
                 </Button>
               </Stack>
             </Box>
@@ -464,10 +464,10 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1, flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Typography variant="h4" fontWeight={800} gutterBottom>
-            ط§ظ„ط¹ط±ظˆط¶ ط§ظ„طھط³ظˆظٹظ‚ظٹط©
+            العروض التسويقية
           </Typography>
           <Typography color="text.secondary">
-            ظ‚ظ… ط¨ط¥ط¯ط§ط±ط© ظƒظˆط¨ظˆظ†ط§طھ ط§ظ„ط®طµظ…طŒ ط§ظ„ط¹ط±ظˆط¶ ط§ظ„طھظ„ظ‚ط§ط¦ظٹط©طŒ ظˆط¹ط±ظˆط¶ ط§ط´طھط±ظٹ X ظˆط§ط­طµظ„ ط¹ظ„ظ‰ Y.
+            قم بإدارة كوبونات الخصم، العروض التلقائية، وعروض اشتري X واحصل على Y.
           </Typography>
         </Box>
         <Stack direction="row" spacing={1.5}>
@@ -476,7 +476,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
             onClick={() => loadAll().catch(() => undefined)}
             disabled={loading}
           >
-            طھط­ط¯ظٹط« ط§ظ„ظ‚ط§ط¦ظ…ط©
+            تحديث القائمة
           </Button>
           <Button 
             variant="contained" 
@@ -486,7 +486,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
             size="large"
             sx={{ borderRadius: 2 }}
           >
-            {activeTab === 'coupons' ? 'ظƒظˆط¨ظˆظ† ط¬ط¯ظٹط¯' : activeTab === 'offers' ? 'ط¹ط±ط¶ ط¬ط¯ظٹط¯' : 'ط¹ط±ط¶ ظ…طھظ‚ط¯ظ…'}
+            {activeTab === 'coupons' ? 'كوبون جديد' : activeTab === 'offers' ? 'عرض جديد' : 'عرض متقدم'}
           </Button>
         </Stack>
       </Box>
@@ -505,7 +505,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
           sx={{ borderRadius: 999, px: 3, flexShrink: 0 }}
           disableElevation
         >
-          ظƒظˆط¨ظˆظ†ط§طھ ط§ظ„ط®طµظ…
+          كوبونات الخصم
         </Button>
         <Button 
           variant={activeTab === 'offers' ? 'contained' : 'text'} 
@@ -515,7 +515,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
           sx={{ borderRadius: 999, px: 3, flexShrink: 0 }}
           disableElevation
         >
-          ط¹ط±ظˆط¶ طھظ„ظ‚ط§ط¦ظٹط©
+          عروض تلقائية
         </Button>
         <Button 
           variant={activeTab === 'advanced' ? 'contained' : 'text'} 
@@ -525,7 +525,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
           sx={{ borderRadius: 999, px: 3, flexShrink: 0 }}
           disableElevation
         >
-          ط¹ط±ظˆط¶ ظ…طھظ‚ط¯ظ…ط©
+          عروض متقدمة
         </Button>
       </Stack>
 
@@ -535,29 +535,29 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
             <TableHead sx={{ bgcolor: 'background.default' }}>
               {activeTab === 'coupons' && (
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ظƒظˆط¯</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ط®طµظ…</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>ط¹ط¯ط¯ ط§ظ„ط§ط³طھط®ط¯ط§ظ…ط§طھ</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ط­ط§ظ„ط©</TableCell>
-                  <TableCell align="left" sx={{ fontWeight: 700 }}>ط¥ط¬ط±ط§ط،ط§طھ</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>الكود</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>الخصم</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>عدد الاستخدامات</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>الحالة</TableCell>
+                  <TableCell align="left" sx={{ fontWeight: 700 }}>إجراءات</TableCell>
                 </TableRow>
               )}
               {activeTab === 'offers' && (
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 700 }}>ط§ط³ظ… ط§ظ„ط¹ط±ط¶</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ظ‡ط¯ظپ</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ط®طµظ…</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ط­ط§ظ„ط©</TableCell>
-                  <TableCell align="left" sx={{ fontWeight: 700 }}>ط¥ط¬ط±ط§ط،ط§طھ</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>اسم العرض</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>الهدف</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>الخصم</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>الحالة</TableCell>
+                  <TableCell align="left" sx={{ fontWeight: 700 }}>إجراءات</TableCell>
                 </TableRow>
               )}
               {activeTab === 'advanced' && (
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ط§ط³ظ…</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ظ†ظˆط¹</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ط£ظˆظ„ظˆظٹط©</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ط­ط§ظ„ط©</TableCell>
-                  <TableCell align="left" sx={{ fontWeight: 700 }}>ط¥ط¬ط±ط§ط،ط§طھ</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>الاسم</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>النوع</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>الأولوية</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>الحالة</TableCell>
+                  <TableCell align="left" sx={{ fontWeight: 700 }}>إجراءات</TableCell>
                 </TableRow>
               )}
             </TableHead>
@@ -566,48 +566,48 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
                 <TableRow><TableCell colSpan={5} align="center" sx={{ py: 6 }}><CircularProgress /></TableCell></TableRow>
               ) : activeTab === 'coupons' ? (
                 coupons.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} align="center" sx={{ py: 6 }}><Typography color="text.secondary">ظ„ط§ طھظˆط¬ط¯ ظƒظˆط¨ظˆظ†ط§طھ.</Typography></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} align="center" sx={{ py: 6 }}><Typography color="text.secondary">لا توجد كوبونات.</Typography></TableCell></TableRow>
                 ) : (
                   coupons.map((coupon) => (
                     <TableRow key={coupon.id} hover>
                       <TableCell><Typography fontWeight={700} fontFamily="monospace" dir="ltr" display="inline">{coupon.code}</Typography></TableCell>
-                      <TableCell>{coupon.discountType === 'percent' ? `%${coupon.discountValue}` : `${coupon.discountValue} ط«ط§ط¨طھ`}</TableCell>
+                      <TableCell>{coupon.discountType === 'percent' ? `%${coupon.discountValue}` : `${coupon.discountValue} ثابت`}</TableCell>
                       <TableCell>{coupon.usedCount} {coupon.maxUses ? `/ ${coupon.maxUses}` : ''}</TableCell>
-                      <TableCell><Chip size="small" label={coupon.isActive ? 'ظپط¹ط§ظ„' : 'ط؛ظٹط± ظپط¹ط§ظ„'} color={coupon.isActive ? 'success' : 'default'} /></TableCell>
+                      <TableCell><Chip size="small" label={coupon.isActive ? 'فعال' : 'غير فعال'} color={coupon.isActive ? 'success' : 'default'} /></TableCell>
                       <TableCell align="left">
-                        <Button size="small" variant="outlined" startIcon={<EditNoteIcon />} onClick={() => selectCoupon(coupon)}>طھط¹ط¯ظٹظ„</Button>
+                        <Button size="small" variant="outlined" startIcon={<EditNoteIcon />} onClick={() => selectCoupon(coupon)}>تعديل</Button>
                       </TableCell>
                     </TableRow>
                   ))
                 )
               ) : activeTab === 'offers' ? (
                 offers.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} align="center" sx={{ py: 6 }}><Typography color="text.secondary">ظ„ط§ طھظˆط¬ط¯ ط¹ط±ظˆط¶ طھظ„ظ‚ط§ط¦ظٹط©.</Typography></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} align="center" sx={{ py: 6 }}><Typography color="text.secondary">لا توجد عروض تلقائية.</Typography></TableCell></TableRow>
                 ) : (
                   offers.map((offer) => (
                     <TableRow key={offer.id} hover>
                       <TableCell><Typography fontWeight={700}>{offer.name}</Typography></TableCell>
                       <TableCell>{offer.targetType}</TableCell>
-                      <TableCell>{offer.discountType === 'percent' ? `%${offer.discountValue}` : `${offer.discountValue} ط«ط§ط¨طھ`}</TableCell>
-                      <TableCell><Chip size="small" label={offer.isActive ? 'ظپط¹ط§ظ„' : 'ط؛ظٹط± ظپط¹ط§ظ„'} color={offer.isActive ? 'success' : 'default'} /></TableCell>
+                      <TableCell>{offer.discountType === 'percent' ? `%${offer.discountValue}` : `${offer.discountValue} ثابت`}</TableCell>
+                      <TableCell><Chip size="small" label={offer.isActive ? 'فعال' : 'غير فعال'} color={offer.isActive ? 'success' : 'default'} /></TableCell>
                       <TableCell align="left">
-                        <Button size="small" variant="outlined" startIcon={<EditNoteIcon />} onClick={() => selectOffer(offer)}>طھط¹ط¯ظٹظ„</Button>
+                        <Button size="small" variant="outlined" startIcon={<EditNoteIcon />} onClick={() => selectOffer(offer)}>تعديل</Button>
                       </TableCell>
                     </TableRow>
                   ))
                 )
               ) : (
                 advancedOffers.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} align="center" sx={{ py: 6 }}><Typography color="text.secondary">ظ„ط§ طھظˆط¬ط¯ ط¹ط±ظˆط¶ ظ…طھظ‚ط¯ظ…ط©.</Typography></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} align="center" sx={{ py: 6 }}><Typography color="text.secondary">لا توجد عروض متقدمة.</Typography></TableCell></TableRow>
                 ) : (
                   advancedOffers.map((offer) => (
                     <TableRow key={offer.id} hover>
                       <TableCell><Typography fontWeight={700}>{offer.name}</Typography></TableCell>
                       <TableCell><Chip size="small" variant="outlined" label={offer.offerType} /></TableCell>
                       <TableCell>{offer.priority}</TableCell>
-                      <TableCell><Chip size="small" label={offer.isActive ? 'ظپط¹ط§ظ„' : 'ط؛ظٹط± ظپط¹ط§ظ„'} color={offer.isActive ? 'success' : 'default'} /></TableCell>
+                      <TableCell><Chip size="small" label={offer.isActive ? 'فعال' : 'غير فعال'} color={offer.isActive ? 'success' : 'default'} /></TableCell>
                       <TableCell align="left">
-                        <Button size="small" variant="outlined" startIcon={<EditNoteIcon />} onClick={() => selectAdvancedOffer(offer)}>طھط¹ط¯ظٹظ„</Button>
+                        <Button size="small" variant="outlined" startIcon={<EditNoteIcon />} onClick={() => selectAdvancedOffer(offer)}>تعديل</Button>
                       </TableCell>
                     </TableRow>
                   ))

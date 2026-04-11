@@ -18,6 +18,7 @@ import { Public } from '../auth/decorators/public.decorator';
 import { AddCartItemDto } from './dto/add-cart-item.dto';
 import { CheckoutDto } from './dto/checkout.dto';
 import { ListStorefrontFiltersQueryDto } from './dto/list-storefront-filters-query.dto';
+import { TrackStorefrontEventDto } from './dto/track-storefront-event.dto';
 import { ThemeQueryDto } from './dto/theme-query.dto';
 import { TrackOrderQueryDto } from './dto/track-order-query.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
@@ -69,6 +70,13 @@ export class StorefrontController {
   @ApiOkResponse({ description: 'Get storefront public policies' })
   async getPolicies(@Req() request: Request) {
     return this.storefrontService.getPolicies(request);
+  }
+
+  @Post('events')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOkResponse({ description: 'Track storefront analytics event' })
+  async trackEvent(@Req() request: Request, @Body() body: TrackStorefrontEventDto) {
+    return this.storefrontService.trackCustomEvent(request, body);
   }
 
   @Post('cart/items')

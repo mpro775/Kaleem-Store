@@ -1,10 +1,12 @@
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { AnalyticsPageView } from '../../../components/analytics-page-view';
 import { ProductPurchaseCard } from '../../../components/product-purchase-card';
 import { WishlistButton } from '../../../components/wishlist-button';
 import { ProductReviewsSection } from '../../../components/product-reviews-section';
-import { getProduct } from '../../../lib/storefront-server';
+import { getProduct, resolveStore } from '../../../lib/storefront-server';
+import { absoluteUrl, cleanText } from '../../../lib/seo';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,11 +28,37 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   const { slug } = await params;
   try {
     const product = await getProduct(slug);
+    const title = product.seoTitle ?? bilingual(product.titleAr, product.titleEn, product.title);
+    const description =
+      product.seoDescription ??
+      bilingual(product.descriptionAr, product.descriptionEn, product.description ?? '');
+    const canonical = `/products/${encodeURIComponent(slug)}`;
+
     return {
-      title: product.seoTitle ?? bilingual(product.titleAr, product.titleEn, product.title),
-      description:
-        product.seoDescription ??
-        bilingual(product.descriptionAr, product.descriptionEn, product.description ?? ''),
+      title,
+      description,
+      alternates: {
+        canonical,
+      },
+      openGraph: {
+        title,
+        description,
+        url: await absoluteUrl(canonical),
+        type: 'website',
+        images: product.images[0]?.url
+          ? [
+              {
+                url: product.images[0].url,
+                alt: cleanText(product.images[0].altText, title),
+              },
+            ]
+          : undefined,
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+      },
     };
   } catch {
     return { title: 'Product not found' };
@@ -47,8 +75,56 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound();
   }
 
+  const store = await resolveStore();
+
+  const productUrl = await absoluteUrl(`/products/${encodeURIComponent(slug)}`);
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: bilingual(product.titleAr, product.titleEn, product.title),
+    description: cleanText(
+      bilingual(product.descriptionAr, product.descriptionEn, product.description ?? ''),
+      'Product description unavailable.',
+    ),
+    image: product.images.map((image) => image.url),
+    sku: product.variants[0]?.sku,
+    brand: product.brand
+      ? {
+          '@type': 'Brand',
+          name: product.brand,
+        }
+      : undefined,
+    aggregateRating:
+      product.ratingCount > 0
+        ? {
+            '@type': 'AggregateRating',
+            ratingValue: Number(product.ratingAvg.toFixed(2)),
+            reviewCount: product.ratingCount,
+          }
+        : undefined,
+    offers: product.variants.map((variant) => ({
+      '@type': 'Offer',
+      price: variant.price,
+      priceCurrency: store.storeSettings.currencyCode,
+      availability:
+        variant.stockQuantity > 0
+          ? 'https://schema.org/InStock'
+          : 'https://schema.org/OutOfStock',
+      sku: variant.sku,
+      url: productUrl,
+    })),
+  };
+
   return (
     <main className="page-shell stack-lg">
+      <AnalyticsPageView
+        eventName="sf_product_viewed"
+        metadata={{ productId: product.id, slug: product.slug, priceFrom: product.priceFrom }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="product-layout">
         <section className="panel stack-md">
           <div className="product-hero-image">
@@ -69,7 +145,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
             <div className="gallery-strip">
               {product.images.slice(0, 5).map((image) => (
                 <div key={image.id} className="thumb-shell">
-                  <Image src={image.url} alt={image.altText ?? bilingual(product.titleAr, product.titleEn, product.title)} fill sizes="96px" />
+                  <Image
+                    src={image.url}
+                    alt={image.altText ?? bilingual(product.titleAr, product.titleEn, product.title)}
+                    fill
+                    sizes="96px"
+                    loading="lazy"
+                  />
                 </div>
               ))}
             </div>

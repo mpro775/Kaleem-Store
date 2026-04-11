@@ -62,7 +62,7 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
       const data = await request<ShippingZone[]>('/shipping-zones', { method: 'GET' });
       setZones(data ?? []);
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ظ…ظٹظ„ ظ…ظ†ط§ط·ظ‚ ط§ظ„ط´ط­ظ†', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحميل مناطق الشحن', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -90,10 +90,10 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
       });
       setForm(emptyForm);
       await loadZones();
-      setMessage({ text: 'طھظ… ط¥ظ†ط´ط§ط، ظ…ظ†ط·ظ‚ط© ط§ظ„ط´ط­ظ† ط¨ظ†ط¬ط§ط­', type: 'success' });
+      setMessage({ text: 'تم إنشاء منطقة الشحن بنجاح', type: 'success' });
       setViewMode('list');
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط¥ظ†ط´ط§ط، ظ…ظ†ط·ظ‚ط© ط§ظ„ط´ط­ظ†', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر إنشاء منطقة الشحن', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -109,17 +109,17 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
         body: JSON.stringify(buildPayload(form)),
       });
       await loadZones();
-      setMessage({ text: 'طھظ… طھط­ط¯ظٹط« ظ…ظ†ط·ظ‚ط© ط§ظ„ط´ط­ظ† ط¨ظ†ط¬ط§ط­', type: 'success' });
+      setMessage({ text: 'تم تحديث منطقة الشحن بنجاح', type: 'success' });
       setViewMode('list');
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ط¯ظٹط« ظ…ظ†ط·ظ‚ط© ط§ظ„ط´ط­ظ†', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحديث منطقة الشحن', type: 'error' });
     } finally {
       setActionLoading(false);
     }
   }
 
   async function deleteZone(): Promise<void> {
-    if (!selectedId || !window.confirm('ظ‡ظ„ ط£ظ†طھ ظ…طھط£ظƒط¯ ظ…ظ† ط­ط°ظپ ظ…ظ†ط·ظ‚ط© ط§ظ„ط´ط­ظ† ظ‡ط°ظ‡طں')) return;
+    if (!selectedId || !window.confirm('هل أنت متأكد من حذف منطقة الشحن هذه؟')) return;
     setActionLoading(true);
     setMessage({ text: '', type: 'info' });
     try {
@@ -127,10 +127,10 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
       setSelectedId('');
       setForm(emptyForm);
       await loadZones();
-      setMessage({ text: 'طھظ… ط­ط°ظپ ظ…ظ†ط·ظ‚ط© ط§ظ„ط´ط­ظ† ط¨ظ†ط¬ط§ط­', type: 'success' });
+      setMessage({ text: 'تم حذف منطقة الشحن بنجاح', type: 'success' });
       setViewMode('list');
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط­ط°ظپ ظ…ظ†ط·ظ‚ط© ط§ظ„ط´ط­ظ†', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر حذف منطقة الشحن', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -158,7 +158,7 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
             color="inherit"
             sx={{ fontWeight: 700 }}
           >
-            ط§ظ„ط¹ظˆط¯ط© ظ„ظ„ظ…ظ†ط§ط·ظ‚
+            العودة للمناطق
           </Button>
           {selectedId && (
             <Button 
@@ -167,7 +167,7 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
               onClick={() => deleteZone().catch(() => undefined)}
               disabled={actionLoading}
             >
-              ط­ط°ظپ ط§ظ„ظ…ظ†ط·ظ‚ط©
+              حذف المنطقة
             </Button>
           )}
         </Box>
@@ -180,7 +180,7 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
             <LocalShippingIcon color="primary" />
             <Typography variant="h6" fontWeight={800}>
-              {selectedId ? 'طھط¹ط¯ظٹظ„ ظ…ظ†ط·ظ‚ط© ط§ظ„ط´ط­ظ†' : 'ط¥ط¶ط§ظپط© ظ…ظ†ط·ظ‚ط© ط´ط­ظ† ط¬ط¯ظٹط¯ط©'}
+              {selectedId ? 'تعديل منطقة الشحن' : 'إضافة منطقة شحن جديدة'}
             </Typography>
           </Box>
           <Divider sx={{ mb: 4 }} />
@@ -189,17 +189,17 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 3 }}>
               <Box>
                 <TextField 
-                  label="ط§ط³ظ… ط§ظ„ظ…ظ†ط·ظ‚ط© ط§ظ„طھط³ظˆظٹظ‚ظٹ" 
+                  label="اسم المنطقة التسويقي" 
                   fullWidth 
                   value={form.name} 
                   onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} 
-                  placeholder="ظ…ط«ط§ظ„: طھظˆطµظٹظ„ ط¯ط§ط®ظ„ ط§ظ„ط±ظٹط§ط¶"
+                  placeholder="مثال: توصيل داخل الرياض"
                   required
                 />
               </Box>
               <Box>
                 <TextField 
-                  label="ط±ط³ظˆظ… ط§ظ„ط´ط­ظ†" 
+                  label="رسوم الشحن" 
                   type="number" 
                   inputProps={{ min: 0, step: 0.01 }} 
                   fullWidth 
@@ -210,32 +210,32 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
               </Box>
             </Box>
 
-            <Typography variant="subtitle2" fontWeight={700}>ط§ظ„ط§ط³طھظ‡ط¯ط§ظپ ط§ظ„ط¬ط؛ط±ط§ظپظٹ (ط§ط®طھظٹط§ط±ظٹ)</Typography>
+            <Typography variant="subtitle2" fontWeight={700}>الاستهداف الجغرافي (اختياري)</Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
               <Box>
                 <TextField 
-                  label="ط§ظ„ظ…ط¯ظٹظ†ط©" 
+                  label="المدينة" 
                   fullWidth 
                   value={form.city} 
                   onChange={(event) => setForm((prev) => ({ ...prev, city: event.target.value }))} 
-                  placeholder="ظ…ط«ط§ظ„: ط§ظ„ط±ظٹط§ط¶"
-                  helperText="ط¥ط°ط§ طھط±ظƒطھ ظپط§ط±ط؛ط§ظ‹ ط³طھط´ظ…ظ„ ظƒط§ظپط© ط§ظ„ظ…ط¯ظ†"
+                  placeholder="مثال: الرياض"
+                  helperText="إذا تركت فارغاً ستشمل كافة المدن"
                 />
               </Box>
               <Box>
                 <TextField 
-                  label="ط§ظ„ط­ظٹ / ط§ظ„ظ…ظ†ط·ظ‚ط©" 
+                  label="الحي / المنطقة" 
                   fullWidth 
                   value={form.area} 
                   onChange={(event) => setForm((prev) => ({ ...prev, area: event.target.value }))} 
-                  placeholder="ظ…ط«ط§ظ„: ط­ظٹ ط§ظ„ط¹ظ„ظٹط§"
+                  placeholder="مثال: حي العليا"
                 />
               </Box>
             </Box>
 
             <FormControlLabel 
               control={<Checkbox checked={form.isActive} onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))} />} 
-              label={<Typography fontWeight={600}>ط§ظ„ظ…ظ†ط·ظ‚ط© ظ…طھط§ط­ط© ظ„ظ„ط¹ظ…ظ„ط§ط، ط§ظ„ط¢ظ†</Typography>} 
+              label={<Typography fontWeight={600}>المنطقة متاحة للعملاء الآن</Typography>} 
             />
 
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 2 }}>
@@ -246,7 +246,7 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
                 disabled={actionLoading}
                 sx={{ px: 4, borderRadius: 2 }}
               >
-                {actionLoading ? 'ط¬ط§ط±ظگ ط§ظ„ط­ظپط¸...' : selectedId ? 'ط­ظپط¸ ط§ظ„طھط¹ط¯ظٹظ„ط§طھ' : 'ط¥ط¶ط§ظپط© ط§ظ„ظ…ظ†ط·ظ‚ط©'}
+                {actionLoading ? 'جارِ الحفظ...' : selectedId ? 'حفظ التعديلات' : 'إضافة المنطقة'}
               </Button>
             </Box>
           </Stack>
@@ -260,10 +260,10 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1, flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Typography variant="h4" fontWeight={800} gutterBottom>
-            ظ…ظ†ط§ط·ظ‚ ظˆطھظƒط§ظ„ظٹظپ ط§ظ„ط´ط­ظ†
+            مناطق وتكاليف الشحن
           </Typography>
           <Typography color="text.secondary">
-            ط­ط¯ط¯ ط§ظ„ظ…ظ†ط§ط·ظ‚ ط§ظ„طھظٹ طھط´ط­ظ† ط¥ظ„ظٹظ‡ط§ ظˆطھظƒظ„ظپط© ط§ظ„ط´ط­ظ† ظ„ظƒظ„ ظ…ط¯ظٹظ†ط© ط£ظˆ ط­ظٹ.
+            حدد المناطق التي تشحن إليها وتكلفة الشحن لكل مدينة أو حي.
           </Typography>
         </Box>
         <Stack direction="row" spacing={1.5}>
@@ -272,7 +272,7 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
             onClick={() => loadZones().catch(() => undefined)}
             disabled={loading}
           >
-            طھط­ط¯ظٹط«
+            تحديث
           </Button>
           <Button 
             variant="contained" 
@@ -282,7 +282,7 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
             size="large"
             sx={{ borderRadius: 2 }}
           >
-            ط¥ط¶ط§ظپط© ظ…ظ†ط·ظ‚ط©
+            إضافة منطقة
           </Button>
         </Stack>
       </Box>
@@ -296,11 +296,11 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
           <Table>
             <TableHead sx={{ bgcolor: 'background.default' }}>
               <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>ط§ط³ظ… ط§ظ„ظ…ظ†ط·ظ‚ط©</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ط§ط³طھظ‡ط¯ط§ظپ (ظ…ط¯ظٹظ†ط©/ط­ظٹ)</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ط±ط³ظˆظ…</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ط­ط§ظ„ط©</TableCell>
-                <TableCell align="left" sx={{ fontWeight: 700 }}>ط§ظ„ط¥ط¬ط±ط§ط،ط§طھ</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>اسم المنطقة</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>الاستهداف (مدينة/حي)</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>الرسوم</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>الحالة</TableCell>
+                <TableCell align="left" sx={{ fontWeight: 700 }}>الإجراءات</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -313,7 +313,7 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
               ) : zones.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
-                    <Typography color="text.secondary">ظ„ط§ طھظˆط¬ط¯ ظ…ظ†ط§ط·ظ‚ ط´ط­ظ† ظ…ط¶ط§ظپط©.</Typography>
+                    <Typography color="text.secondary">لا توجد مناطق شحن مضافة.</Typography>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -322,16 +322,16 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
                     <TableCell sx={{ fontWeight: 700 }}>{zone.name}</TableCell>
                     <TableCell>
                       <Typography variant="body2" color="text.secondary">
-                        {zone.city ?? 'ظƒط§ظپط© ط§ظ„ظ…ط¯ظ†'} {zone.area ? ` / ${zone.area}` : ''}
+                        {zone.city ?? 'كافة المدن'} {zone.area ? ` / ${zone.area}` : ''}
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography fontWeight={700} color="primary.main">{zone.fee} ط±.ط³</Typography>
+                      <Typography fontWeight={700} color="primary.main">{zone.fee} ر.س</Typography>
                     </TableCell>
                     <TableCell>
                       <Chip 
                         size="small" 
-                        label={zone.isActive ? 'ظ…طھط§ط­' : 'ظ…طھظˆظ‚ظپ'} 
+                        label={zone.isActive ? 'متاح' : 'متوقف'} 
                         color={zone.isActive ? 'success' : 'default'} 
                         sx={{ fontWeight: 700, borderRadius: 1.5 }}
                       />
@@ -344,7 +344,7 @@ export function ShippingPanel({ request }: ShippingPanelProps) {
                         onClick={() => selectZone(zone)}
                         sx={{ borderRadius: 1.5 }}
                       >
-                        طھط¹ط¯ظٹظ„
+                        تعديل
                       </Button>
                     </TableCell>
                   </TableRow>

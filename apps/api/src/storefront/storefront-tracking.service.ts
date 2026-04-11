@@ -2,11 +2,17 @@ import { Injectable } from '@nestjs/common';
 import type { Request } from 'express';
 import { createHash } from 'node:crypto';
 import type { StorefrontEventType } from './constants/storefront-event.constants';
+import { DatabaseService } from '../database/database.service';
 import { StorefrontTrackingRepository } from './storefront-tracking.repository';
 
 @Injectable()
 export class StorefrontTrackingService {
-  constructor(private readonly trackingRepository: StorefrontTrackingRepository) {}
+  private readonly maxEventsPerMinute = 120;
+
+  constructor(
+    private readonly trackingRepository: StorefrontTrackingRepository,
+    private readonly databaseService: DatabaseService,
+  ) {}
 
   async trackEvent(
     request: Request,
@@ -22,6 +28,11 @@ export class StorefrontTrackingService {
     },
   ): Promise<void> {
     const sessionId = this.resolveSessionId(request);
+    const canTrack = await this.shouldTrackEvent(input.storeId, sessionId);
+    if (!canTrack) {
+      return;
+    }
+
     const directAttribution = this.extractAttribution(request);
     const fallbackAttribution =
       directAttribution.utmSource ||
@@ -48,8 +59,90 @@ export class StorefrontTrackingService {
       utmTerm: directAttribution.utmTerm ?? fallbackAttribution?.utm_term ?? null,
       utmContent: directAttribution.utmContent ?? fallbackAttribution?.utm_content ?? null,
       referrer: directAttribution.referrer ?? fallbackAttribution?.referrer ?? null,
-      ...(input.metadata !== undefined ? { metadata: input.metadata } : {}),
+      ...(input.metadata !== undefined
+        ? { metadata: this.sanitizeMetadata(input.metadata) }
+        : {}),
     });
+  }
+
+  private async shouldTrackEvent(storeId: string, sessionId: string): Promise<boolean> {
+    const key = `sf:events:rate:${storeId}:${sessionId}`;
+
+    try {
+      await this.databaseService.pingRedis();
+      const nextCount = await this.databaseService.cache.incr(key);
+      if (nextCount === 1) {
+        await this.databaseService.cache.expire(key, 60);
+      }
+
+      return nextCount <= this.maxEventsPerMinute;
+    } catch {
+      return true;
+    }
+  }
+
+  private sanitizeMetadata(input: Record<string, unknown>): Record<string, unknown> {
+    const entries = Object.entries(input).slice(0, 30);
+    const output: Record<string, unknown> = {};
+
+    for (const [key, value] of entries) {
+      const safeKey = key.trim().slice(0, 80);
+      if (!safeKey) {
+        continue;
+      }
+
+      const normalized = this.normalizeMetadataValue(value, 0);
+      if (normalized !== undefined) {
+        output[safeKey] = normalized;
+      }
+    }
+
+    return output;
+  }
+
+  private normalizeMetadataValue(value: unknown, depth: number): unknown {
+    if (depth > 3) {
+      return undefined;
+    }
+
+    if (
+      value === null ||
+      typeof value === 'boolean' ||
+      typeof value === 'number'
+    ) {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      return value.trim().slice(0, 300);
+    }
+
+    if (Array.isArray(value)) {
+      return value
+        .slice(0, 12)
+        .map((item) => this.normalizeMetadataValue(item, depth + 1))
+        .filter((item) => item !== undefined);
+    }
+
+    if (typeof value === 'object' && value !== null) {
+      const objectEntries = Object.entries(value as Record<string, unknown>).slice(0, 20);
+      const output: Record<string, unknown> = {};
+      for (const [key, item] of objectEntries) {
+        const safeKey = key.trim().slice(0, 80);
+        if (!safeKey) {
+          continue;
+        }
+
+        const normalized = this.normalizeMetadataValue(item, depth + 1);
+        if (normalized !== undefined) {
+          output[safeKey] = normalized;
+        }
+      }
+
+      return output;
+    }
+
+    return undefined;
   }
 
   private resolveSessionId(request: Request): string {

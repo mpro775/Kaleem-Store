@@ -127,6 +127,13 @@ interface FunnelCountRecord {
   sessions_count: number;
 }
 
+export interface EventTaxonomyRecord {
+  event_name: string;
+  event_type: string;
+  total_events: number;
+  unique_sessions: number;
+}
+
 interface AttributionRecord {
   source: string;
   medium: string;
@@ -853,6 +860,33 @@ export class AnalyticsRepository {
         GROUP BY event_type
       `,
       [input.storeId, input.startAt, input.endAt],
+    );
+
+    return result.rows;
+  }
+
+  async getEventTaxonomy(input: {
+    storeId: string;
+    startAt: Date;
+    endAt: Date;
+    limit: number;
+  }): Promise<EventTaxonomyRecord[]> {
+    const result = await this.databaseService.db.query<EventTaxonomyRecord>(
+      `
+        SELECT
+          COALESCE(NULLIF(BTRIM(se.metadata->>'eventName'), ''), se.event_type) AS event_name,
+          se.event_type,
+          COUNT(*)::int AS total_events,
+          COUNT(DISTINCT se.session_id)::int AS unique_sessions
+        FROM storefront_events se
+        WHERE se.store_id = $1
+          AND se.occurred_at >= $2
+          AND se.occurred_at < $3
+        GROUP BY event_name, se.event_type
+        ORDER BY total_events DESC, unique_sessions DESC, event_name ASC
+        LIMIT $4
+      `,
+      [input.storeId, input.startAt, input.endAt, input.limit],
     );
 
     return result.rows;

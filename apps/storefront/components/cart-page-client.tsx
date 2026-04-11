@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { clearCartIdFromStorage, getCartIdFromStorage } from '../lib/cart-storage';
+import { trackStorefrontEvent } from '../lib/storefront-analytics';
 import { getCart, removeCartItem, updateCartItem } from '../lib/storefront-client';
 import type { StorefrontCart } from '../lib/types';
 
@@ -15,9 +16,31 @@ export function CartPageClient() {
     loadCart().catch(() => {
       return;
     });
+
+    trackStorefrontEvent('sf_cart_viewed', {
+      metadata: {
+        page: 'cart',
+      },
+    }).catch(() => undefined);
   }, []);
 
   const hasItems = useMemo(() => (cart?.items.length ?? 0) > 0, [cart]);
+  const shippingEstimate = useMemo(() => {
+    if (!cart || cart.subtotal <= 0) {
+      return 0;
+    }
+
+    if (cart.subtotal >= 300) {
+      return 0;
+    }
+
+    return 25;
+  }, [cart]);
+
+  const estimatedGrandTotal = useMemo(
+    () => (cart ? cart.subtotal + shippingEstimate : 0),
+    [cart, shippingEstimate],
+  );
 
   async function loadCart() {
     const cartId = getCartIdFromStorage();
@@ -49,6 +72,14 @@ export function CartPageClient() {
     try {
       const nextCart = await updateCartItem(cart.cartId, variantId, quantity);
       setCart(nextCart);
+      await trackStorefrontEvent('sf_cart_item_updated', {
+        cartId: cart.cartId,
+        variantId,
+        metadata: {
+          quantity,
+          action: quantity <= 0 ? 'remove' : 'update',
+        },
+      });
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to update cart item');
     }
@@ -62,6 +93,13 @@ export function CartPageClient() {
     try {
       const nextCart = await removeCartItem(cart.cartId, variantId);
       setCart(nextCart);
+      await trackStorefrontEvent('sf_cart_item_updated', {
+        cartId: cart.cartId,
+        variantId,
+        metadata: {
+          action: 'remove',
+        },
+      });
       if (nextCart.items.length === 0) {
         clearCartIdFromStorage();
       }
@@ -97,12 +135,14 @@ export function CartPageClient() {
                 <div>
                   <strong>{item.title}</strong>
                   <p className="muted">SKU: {item.sku}</p>
+                  <p className="muted">Unit: {item.unitPrice.toFixed(2)} {cart.currencyCode}</p>
                   <p>{item.lineTotal.toFixed(2)}</p>
                 </div>
 
                 <div className="cart-actions">
                   <input
                     className="input small-input"
+                    aria-label={`Quantity for ${item.title}`}
                     type="number"
                     min={0}
                     max={50}
@@ -123,12 +163,23 @@ export function CartPageClient() {
             ))}
           </div>
 
-          <div className="panel">
+          <div className="panel cart-summary-panel">
             <h2>Summary</h2>
             <p>Total items: {cart.totalItems}</p>
             <p>
               Subtotal: {cart.subtotal.toFixed(2)} {cart.currencyCode}
             </p>
+            <p>
+              Shipping estimate: {shippingEstimate.toFixed(2)} {cart.currencyCode}
+            </p>
+            <p className="summary-total-strong">
+              Estimated total: {estimatedGrandTotal.toFixed(2)} {cart.currencyCode}
+            </p>
+            <div className="cart-trust-notes">
+              <span>Secure checkout</span>
+              <span>Fast support</span>
+              <span>Easy order tracking</span>
+            </div>
             <Link href="/checkout" className="button-primary">
               Proceed to checkout
             </Link>

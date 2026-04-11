@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { addCartItem } from '../lib/storefront-client';
 import { getCartIdFromStorage, saveCartIdToStorage } from '../lib/cart-storage';
+import { trackStorefrontEvent } from '../lib/storefront-analytics';
 import type { ProductVariant } from '../lib/types';
 
 function bilingual(ar: string | null | undefined, en: string | null | undefined, fallback: string): string {
@@ -45,6 +46,14 @@ function ProductPurchaseForm({ variants }: ProductPurchaseCardProps) {
     setBusy(true);
     setError(null);
     try {
+      await trackStorefrontEvent('sf_add_to_cart_clicked', {
+        variantId: selectedVariant.id,
+        metadata: {
+          quantity,
+          price: selectedVariant.price,
+        },
+      });
+
       const cart = await addCartItem(buildAddToCartPayload(selectedVariant.id, quantity));
       saveCartIdToStorage(cart.cartId);
       router.push('/cart');
@@ -79,18 +88,42 @@ function ProductPurchaseForm({ variants }: ProductPurchaseCardProps) {
       <label className="field-label" htmlFor="qty-input">
         Quantity
       </label>
-      <input
-        id="qty-input"
-        className="input"
-        type="number"
-        min={1}
-        max={maxStock || 1}
-        value={quantity}
-        onChange={(event) => setQuantity(Number(event.target.value))}
-      />
+      <div className="qty-control">
+        <button
+          type="button"
+          className="button-secondary qty-btn"
+          onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+          disabled={busy || quantity <= 1}
+        >
+          -
+        </button>
+        <input
+          id="qty-input"
+          className="input qty-input"
+          type="number"
+          min={1}
+          max={maxStock || 1}
+          value={quantity}
+          onChange={(event) => setQuantity(Number(event.target.value))}
+        />
+        <button
+          type="button"
+          className="button-secondary qty-btn"
+          onClick={() => setQuantity((prev) => Math.min(maxStock || 1, prev + 1))}
+          disabled={busy || quantity >= (maxStock || 1)}
+        >
+          +
+        </button>
+      </div>
 
       {selectedVariant ? (
-        <p className="muted">Stock available: {selectedVariant.stockQuantity}</p>
+        <div className="stack-md">
+          <p className="muted">Stock available: {selectedVariant.stockQuantity}</p>
+          {selectedVariant.stockQuantity <= 5 ? (
+            <p className="purchase-urgency">Hurry, only a few units left.</p>
+          ) : null}
+          <p className="muted">Secure checkout and fast order confirmation.</p>
+        </div>
       ) : null}
       {error ? <p className="error-message">{error}</p> : null}
 

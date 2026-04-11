@@ -57,6 +57,7 @@ export interface ProductImageRecord {
   public_url: string;
   alt_text: string | null;
   sort_order: number;
+  is_primary: boolean;
 }
 
 export interface MediaAssetRecord {
@@ -459,7 +460,12 @@ export class ProductsRepository {
     mediaAssetId: string;
     altText: string | null;
     sortOrder: number;
+    isPrimary: boolean;
   }): Promise<ProductImageRecord> {
+    if (input.isPrimary) {
+      await this.clearPrimaryImage(input.storeId, input.productId);
+    }
+
     const result = await this.databaseService.db.query<ProductImageRecord>(
       `
         INSERT INTO product_images (
@@ -469,10 +475,11 @@ export class ProductsRepository {
           variant_id,
           media_asset_id,
           alt_text,
-          sort_order
+          sort_order,
+          is_primary
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING id, product_id, variant_id, media_asset_id, alt_text, sort_order,
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING id, product_id, variant_id, media_asset_id, alt_text, sort_order, is_primary,
           (SELECT public_url FROM media_assets WHERE id = $5) AS public_url
       `,
       [
@@ -483,6 +490,7 @@ export class ProductsRepository {
         input.mediaAssetId,
         input.altText,
         input.sortOrder,
+        input.isPrimary,
       ],
     );
     return result.rows[0] as ProductImageRecord;
@@ -498,12 +506,13 @@ export class ProductsRepository {
           pi.media_asset_id,
           ma.public_url,
           pi.alt_text,
-          pi.sort_order
+          pi.sort_order,
+          pi.is_primary
         FROM product_images pi
         INNER JOIN media_assets ma ON ma.id = pi.media_asset_id
         WHERE pi.store_id = $1
           AND pi.product_id = $2
-        ORDER BY pi.sort_order ASC, pi.created_at ASC
+        ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.created_at ASC
       `,
       [storeId, productId],
     );
@@ -525,6 +534,33 @@ export class ProductsRepository {
       [storeId, mediaAssetId],
     );
     return result.rows[0] ?? null;
+  }
+
+  async countProductImages(storeId: string, productId: string): Promise<number> {
+    const result = await this.databaseService.db.query<{ total: string }>(
+      `
+        SELECT COUNT(*)::text AS total
+        FROM product_images
+        WHERE store_id = $1
+          AND product_id = $2
+      `,
+      [storeId, productId],
+    );
+    return Number(result.rows[0]?.total ?? '0');
+  }
+
+  async clearPrimaryImage(storeId: string, productId: string): Promise<void> {
+    await this.databaseService.db.query(
+      `
+        UPDATE product_images
+        SET is_primary = FALSE,
+            updated_at = NOW()
+        WHERE store_id = $1
+          AND product_id = $2
+          AND is_primary = TRUE
+      `,
+      [storeId, productId],
+    );
   }
 
   private buildListQuery(input: {

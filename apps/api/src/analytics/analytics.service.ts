@@ -218,6 +218,19 @@ export interface SourceAttributionResponse {
   }>;
 }
 
+export interface EventTaxonomyResponse {
+  windowDays: number;
+  timezone: string;
+  startAt: Date;
+  endAt: Date;
+  items: Array<{
+    eventName: string;
+    baseEventType: string;
+    totalEvents: number;
+    uniqueSessions: number;
+  }>;
+}
+
 export interface AnalyticsDataQualityResponse {
   windowDays: number;
   timezone: string;
@@ -791,6 +804,37 @@ export class AnalyticsService {
         checkoutStarts: row.checkout_starts,
         checkouts: row.checkouts,
         visitToCheckoutRate: row.visits > 0 ? round2((row.checkouts / row.visits) * 100) : 0,
+      })),
+    };
+  }
+
+  async getEventTaxonomy(
+    currentUser: AuthUser,
+    input: { windowDays: number; limit: number },
+  ): Promise<EventTaxonomyResponse> {
+    const store = await this.storesRepository.findById(currentUser.storeId);
+    if (!store) {
+      throw new NotFoundException('Store not found');
+    }
+    const timezone = this.resolveStoreTimezone(store.timezone);
+    const bounds = await this.analyticsRepository.resolveWindowBounds(timezone, input.windowDays);
+    const rows = await this.analyticsRepository.getEventTaxonomy({
+      storeId: currentUser.storeId,
+      startAt: bounds.start_at,
+      endAt: bounds.end_at,
+      limit: input.limit,
+    });
+
+    return {
+      windowDays: input.windowDays,
+      timezone,
+      startAt: bounds.start_at,
+      endAt: bounds.end_at,
+      items: rows.map((row) => ({
+        eventName: row.event_name,
+        baseEventType: row.event_type,
+        totalEvents: row.total_events,
+        uniqueSessions: row.unique_sessions,
       })),
     };
   }

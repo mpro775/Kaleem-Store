@@ -146,6 +146,7 @@ export interface ProductImage {
   url: string;
   altText: string | null;
   sortOrder: number;
+  isPrimary: boolean;
 }
 
 export interface Product {
@@ -467,6 +468,19 @@ export interface AnalyticsSourceAttribution {
     checkoutStarts: number;
     checkouts: number;
     visitToCheckoutRate: number;
+  }>;
+}
+
+export interface AnalyticsEventTaxonomy {
+  windowDays: number;
+  timezone: string;
+  startAt: string;
+  endAt: string;
+  items: Array<{
+    eventName: string;
+    baseEventType: string;
+    totalEvents: number;
+    uniqueSessions: number;
   }>;
 }
 
