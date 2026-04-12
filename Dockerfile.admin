@@ -1,0 +1,30 @@
+FROM node:20-alpine AS build
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY apps/admin/package.json ./apps/admin/package.json
+
+RUN npm ci
+
+COPY tsconfig.base.json ./
+COPY apps ./apps
+COPY packages ./packages
+
+ARG VITE_API_BASE_URL
+ARG VITE_SF_VISUAL_BUILDER_ENABLED
+ARG VITE_SF_ROLLOUT_STAGE
+
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+ENV VITE_SF_VISUAL_BUILDER_ENABLED=${VITE_SF_VISUAL_BUILDER_ENABLED}
+ENV VITE_SF_ROLLOUT_STAGE=${VITE_SF_ROLLOUT_STAGE}
+
+RUN npm run build --workspace @kaleem/admin
+
+FROM nginx:1.27-alpine AS runner
+
+COPY --from=build /app/apps/admin/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
