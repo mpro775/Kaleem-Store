@@ -1,4 +1,5 @@
 import type { AuthResult, MerchantSession } from './types';
+import { attachCsrfHeader } from '../../lib/csrf';
 
 export interface MerchantRequestOptions {
   requiresAuth?: boolean;
@@ -66,9 +67,14 @@ async function executeRequest<T>(
   init: RequestInit,
   options: MerchantRequestOptions,
 ): Promise<ExecuteResult<T>> {
+  const method = (init.method ?? 'GET').toUpperCase();
+  const headers = mergeHeaders(init.headers, session, options, init.body !== undefined);
+  await attachCsrfHeader(session.apiBaseUrl, method, headers);
+
   const response = await fetch(`${session.apiBaseUrl}${path}`, {
     ...init,
-    headers: mergeHeaders(init.headers, session, options, init.body !== undefined),
+    headers,
+    credentials: 'include',
   });
 
   if (!response.ok) {
@@ -146,6 +152,7 @@ async function refreshSession(session: MerchantSession): Promise<MerchantSession
           'content-type': 'application/json',
         },
         body: JSON.stringify({ refreshToken: session.refreshToken }),
+        credentials: 'include',
       });
 
       if (!response.ok) {

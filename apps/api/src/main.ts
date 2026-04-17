@@ -24,6 +24,7 @@ function configureSecurity(
   app.enableCors({
     origin: allowedOrigins.length > 0 ? allowedOrigins.split(',') : true,
     credentials: true,
+    exposedHeaders: ['x-csrf-token'],
   });
 
   const csrfEnabled = configService.get<boolean>('CSRF_ENABLED', false);

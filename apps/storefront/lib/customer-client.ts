@@ -1,6 +1,7 @@
 'use client';
 
 import { getAccessToken, getRefreshToken, saveAuthSession, clearAuthStorage, type CustomerData } from './customer-auth-storage';
+import { attachCsrfHeader } from './csrf-client';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
 const STOREFRONT_STORE_SLUG = process.env.NEXT_PUBLIC_STOREFRONT_STORE_SLUG?.trim();
@@ -261,26 +262,19 @@ export async function listCustomerOrders(
 // ==================== HELPERS ====================
 
 async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const host = typeof window !== 'undefined' ? window.location.host : '';
-  const headers = new Headers(init.headers ?? undefined);
-  headers.set('x-forwarded-host', host);
-  if (!headers.has('content-type')) {
-    headers.set('content-type', 'application/json');
-  }
+  const method = (init.method ?? 'GET').toUpperCase();
+  const headers = createRequestHeaders(init.headers);
 
-  const accessToken = getAccessToken();
-  if (accessToken) {
-    headers.set('authorization', `Bearer ${accessToken}`);
-  }
+  await attachCsrfHeader(API_BASE_URL, method, headers);
 
   const response = await fetch(`${API_BASE_URL}${appendStoreSlugQuery(path)}`, {
     ...init,
     headers,
+    credentials: 'include',
   });
 
   if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(body?.message ?? `Request failed: ${response.status}`);
+    throw new Error(await resolveErrorMessage(response));
   }
 
   if (response.status === 204) {
@@ -288,6 +282,27 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+function createRequestHeaders(headers: HeadersInit | undefined): Headers {
+  const host = typeof window !== 'undefined' ? window.location.host : '';
+  const result = new Headers(headers ?? undefined);
+  result.set('x-forwarded-host', host);
+  if (!result.has('content-type')) {
+    result.set('content-type', 'application/json');
+  }
+
+  const accessToken = getAccessToken();
+  if (accessToken) {
+    result.set('authorization', `Bearer ${accessToken}`);
+  }
+
+  return result;
+}
+
+async function resolveErrorMessage(response: Response): Promise<string> {
+  const body = (await response.json().catch(() => null)) as { message?: string } | null;
+  return body?.message ?? `Request failed: ${response.status}`;
 }
 
 function appendStoreSlugQuery(path: string): string {

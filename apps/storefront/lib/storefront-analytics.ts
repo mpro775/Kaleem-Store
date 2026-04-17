@@ -1,5 +1,7 @@
 'use client';
 
+import { attachCsrfHeader } from './csrf-client';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
 const STOREFRONT_STORE_SLUG = process.env.NEXT_PUBLIC_STOREFRONT_STORE_SLUG?.trim();
 
@@ -47,27 +49,19 @@ export async function trackStorefrontEvent(
   const host = window.location.host;
   const body = JSON.stringify(payload);
 
-  if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
-    try {
-      const blob = new Blob([body], { type: 'application/json' });
-      const sent = navigator.sendBeacon(url, blob);
-      if (sent) {
-        return;
-      }
-    } catch {
-      // Fallback to fetch below.
-    }
-  }
+  const headers = new Headers({
+    'content-type': 'application/json',
+    'x-forwarded-host': host,
+    'x-storefront-session-id': sessionId,
+  });
+  await attachCsrfHeader(API_BASE_URL, 'POST', headers);
 
   await fetch(url, {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-forwarded-host': host,
-      'x-storefront-session-id': sessionId,
-    },
+    headers,
     body,
     keepalive: true,
+    credentials: 'include',
   }).catch(() => undefined);
 }
 

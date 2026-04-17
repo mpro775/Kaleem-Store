@@ -1,8 +1,24 @@
+import { attachCsrfHeader } from './csrf';
+
 export async function requestJson<T>(
   url: string,
   init: RequestInit,
 ): Promise<T | null> {
-  const response = await fetch(url, init);
+  const method = (init.method ?? 'GET').toUpperCase();
+  const headers = new Headers(init.headers ?? undefined);
+
+  try {
+    const parsedUrl = new URL(url, window.location.origin);
+    await attachCsrfHeader(parsedUrl.origin, method, headers);
+  } catch {
+    // Ignore URL parsing errors and continue request without CSRF header.
+  }
+
+  const response = await fetch(url, {
+    ...init,
+    headers,
+    credentials: 'include',
+  });
   if (!response.ok) {
     const message = await resolveErrorMessage(response);
     throw new Error(message);

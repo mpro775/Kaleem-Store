@@ -1,6 +1,7 @@
 'use client';
 
 import type { CheckoutResponse, ShippingZone, StorefrontCart, TrackOrderResponse } from './types';
+import { attachCsrfHeader } from './csrf-client';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
 const STOREFRONT_STORE_SLUG = process.env.NEXT_PUBLIC_STOREFRONT_STORE_SLUG?.trim();
@@ -87,15 +88,19 @@ export async function trackOrder(orderCode: string, phone?: string): Promise<Tra
 
 async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const host = window.location.host;
+  const method = (init.method ?? 'GET').toUpperCase();
   const headers = new Headers(init.headers ?? undefined);
   headers.set('x-forwarded-host', host);
   if (!headers.has('content-type')) {
     headers.set('content-type', 'application/json');
   }
 
+  await attachCsrfHeader(API_BASE_URL, method, headers);
+
   const response = await fetch(`${API_BASE_URL}${appendStoreSlugQuery(path)}`, {
     ...init,
     headers,
+    credentials: 'include',
   });
 
   if (!response.ok) {
