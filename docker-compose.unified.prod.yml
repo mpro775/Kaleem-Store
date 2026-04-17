@@ -126,7 +126,7 @@ services:
       - app-network
       - platform-network
     labels:
-      - traefik.docker.network=qxaas8snd3mked3qol4ze7g1
+      - traefik.docker.network=p3wxn5ll1ulb3vmqrjhf75xm
       - traefik.http.services.kaleem-api.loadbalancer.server.port=3000
 
   admin:
@@ -153,7 +153,7 @@ services:
       - app-network
       - platform-network
     labels:
-      - traefik.docker.network=qxaas8snd3mked3qol4ze7g1
+      - traefik.docker.network=p3wxn5ll1ulb3vmqrjhf75xm
       - traefik.http.services.kaleem-admin.loadbalancer.server.port=80
 
   storefront:
@@ -183,7 +183,7 @@ services:
       - app-network
       - platform-network
     labels:
-      - traefik.docker.network=qxaas8snd3mked3qol4ze7g1
+      - traefik.docker.network=p3wxn5ll1ulb3vmqrjhf75xm
       - traefik.http.services.kaleem-storefront.loadbalancer.server.port=3001
 
   worker:
