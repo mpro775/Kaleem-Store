@@ -372,3 +372,6 @@ networks:
   app-network:
     name: ${PROJECT_SLUG}-network
     driver: bridge
+  platform-network:
+    external: true
+    name: platform-network
