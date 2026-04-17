@@ -2,6 +2,11 @@ import { IsOptional, IsString, IsUUID, Matches, MaxLength } from 'class-validato
 
 export class ListStorefrontFiltersQueryDto {
   @IsOptional()
+  @IsString()
+  @MaxLength(180)
+  store?: string;
+
+  @IsOptional()
   @IsUUID('4')
   categoryId?: string;
 
