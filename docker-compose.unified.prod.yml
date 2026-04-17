@@ -20,8 +20,6 @@ services:
     container_name: ${PROJECT_SLUG}-rabbitmq
     image: rabbitmq:3.13-management-alpine
     restart: unless-stopped
-    env_file:
-      - .env.unified
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
@@ -126,6 +124,10 @@ services:
       retries: 10
     networks:
       - app-network
+      - platform-network
+    labels:
+      - traefik.docker.network=qxaas8snd3mked3qol4ze7g1
+      - traefik.http.services.kaleem-api.loadbalancer.server.port=3000
 
   admin:
     container_name: ${PROJECT_SLUG}-admin
@@ -149,6 +151,10 @@ services:
       retries: 10
     networks:
       - app-network
+      - platform-network
+    labels:
+      - traefik.docker.network=qxaas8snd3mked3qol4ze7g1
+      - traefik.http.services.kaleem-admin.loadbalancer.server.port=80
 
   storefront:
     container_name: ${PROJECT_SLUG}-storefront
@@ -175,6 +181,10 @@ services:
       retries: 10
     networks:
       - app-network
+      - platform-network
+    labels:
+      - traefik.docker.network=qxaas8snd3mked3qol4ze7g1
+      - traefik.http.services.kaleem-storefront.loadbalancer.server.port=3001
 
   worker:
     container_name: ${PROJECT_SLUG}-worker
