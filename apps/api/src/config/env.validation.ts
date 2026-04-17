@@ -20,6 +20,12 @@ export const envValidationSchema = Joi.object({
   NOTIFICATIONS_RETRY_INVENTORY_QUEUE: Joi.string().default('notifications.inventory.retry'),
   NOTIFICATIONS_MAX_RETRIES: Joi.number().integer().min(0).max(20).default(3),
   NOTIFICATIONS_RETRY_DELAY_MS: Joi.number().integer().min(100).max(300_000).default(10_000),
+  NOTIFICATIONS_RABBITMQ_CONNECT_MAX_ATTEMPTS: Joi.number().integer().min(1).max(120).default(20),
+  NOTIFICATIONS_RABBITMQ_CONNECT_RETRY_DELAY_MS: Joi.number()
+    .integer()
+    .min(250)
+    .max(60_000)
+    .default(3_000),
   INVENTORY_RESERVATION_TTL_MINUTES: Joi.number().integer().min(1).max(120).default(15),
   THEME_PREVIEW_TOKEN_TTL_MINUTES: Joi.number().integer().min(1).max(240).default(30),
   DOMAIN_VERIFY_TXT_PREFIX: Joi.string().default('_kaleem-verify'),
@@ -59,13 +65,17 @@ export const envValidationSchema = Joi.object({
   AUTH_MAX_ATTEMPTS: Joi.number().integer().min(3).max(20).default(5),
   AUTH_LOCKOUT_DURATION_MS: Joi.number().integer().min(60_000).max(3600_000).default(900_000),
   AUTH_WINDOW_MS: Joi.number().integer().min(60_000).max(3600_000).default(900_000),
-  AUTH_OTP_SECRET: Joi.string().min(24).default('kaleem-local-owner-registration-otp-secret-change-me'),
+  AUTH_OTP_SECRET: Joi.string()
+    .min(24)
+    .default('kaleem-local-owner-registration-otp-secret-change-me'),
   AUTH_OTP_TTL_MINUTES: Joi.number().integer().min(3).max(30).default(10),
   AUTH_OTP_MAX_VERIFY_ATTEMPTS: Joi.number().integer().min(3).max(10).default(5),
   AUTH_OTP_RESEND_COOLDOWN_SECONDS: Joi.number().integer().min(30).max(600).default(60),
   AUTH_OTP_MAX_RESEND_COUNT: Joi.number().integer().min(1).max(20).default(5),
   EMAIL_DELIVERY_MODE: Joi.string().valid('log', 'resend', 'smtp').default('log'),
-  EMAIL_FROM: Joi.string().email({ tlds: { allow: false } }).default('no-reply@kaleem.store'),
+  EMAIL_FROM: Joi.string()
+    .email({ tlds: { allow: false } })
+    .default('no-reply@kaleem.store'),
   SMTP_HOST: Joi.when('EMAIL_DELIVERY_MODE', {
     is: 'smtp',
     then: Joi.string().trim().required(),
@@ -92,7 +102,9 @@ export const envValidationSchema = Joi.object({
     .default('https://api.resend.com'),
   RESEND_API_KEY: Joi.string().allow('').default(''),
   WEBHOOK_SECRET: Joi.string().min(16).default('kaleem-local-webhook-secret'),
-  JWT_CUSTOMER_ACCESS_SECRET: Joi.string().min(24).default('kaleem-local-customer-access-secret-change-me'),
+  JWT_CUSTOMER_ACCESS_SECRET: Joi.string()
+    .min(24)
+    .default('kaleem-local-customer-access-secret-change-me'),
   JWT_CUSTOMER_ACCESS_EXPIRES_IN: Joi.string().default('15m'),
   CUSTOMER_REFRESH_TOKEN_TTL_DAYS: Joi.number().integer().min(1).max(90).default(30),
   CUSTOMER_PASSWORD_RESET_TTL_MINUTES: Joi.number().integer().min(1).max(1440).default(60),

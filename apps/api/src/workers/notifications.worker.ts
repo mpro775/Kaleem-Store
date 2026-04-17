@@ -28,10 +28,22 @@ export async function bootstrap(): Promise<void> {
   const exchange = configService.get<string>('RABBITMQ_EXCHANGE', 'kaleem.events');
   const maxRetries = configService.get<number>('NOTIFICATIONS_MAX_RETRIES', 3);
   const retryDelayMs = configService.get<number>('NOTIFICATIONS_RETRY_DELAY_MS', 10_000);
+  const connectMaxAttempts = Math.max(
+    1,
+    configService.get<number>('NOTIFICATIONS_RABBITMQ_CONNECT_MAX_ATTEMPTS', 20),
+  );
+  const connectRetryDelayMs = Math.max(
+    250,
+    configService.get<number>('NOTIFICATIONS_RABBITMQ_CONNECT_RETRY_DELAY_MS', 3_000),
+  );
 
   const queues = resolveQueueNames(configService);
 
-  const connection = await amqp.connect(rabbitUrl);
+  const connection = await connectWithRetry({
+    rabbitUrl,
+    maxAttempts: connectMaxAttempts,
+    delayMs: connectRetryDelayMs,
+  });
   const channel = await connection.createChannel();
 
   await setupTopology(channel, exchange, queues);
@@ -68,6 +80,50 @@ export async function bootstrap(): Promise<void> {
   });
 
   logger.log('Notifications worker is running');
+}
+
+async function connectWithRetry(input: {
+  rabbitUrl: string;
+  maxAttempts: number;
+  delayMs: number;
+}): Promise<ChannelModel> {
+  const { rabbitUrl, maxAttempts, delayMs } = input;
+
+  let attempt = 0;
+  let lastError: unknown;
+
+  while (attempt < maxAttempts) {
+    attempt += 1;
+
+    try {
+      const connection = await amqp.connect(rabbitUrl);
+      if (attempt > 1) {
+        logger.log(`Connected to RabbitMQ on attempt ${attempt}`);
+      }
+      return connection;
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : 'Unknown RabbitMQ connection error';
+
+      if (attempt >= maxAttempts) {
+        logger.error(`Failed to connect to RabbitMQ after ${attempt} attempts: ${message}`);
+        break;
+      }
+
+      logger.warn(
+        `RabbitMQ connection attempt ${attempt}/${maxAttempts} failed: ${message}. Retrying in ${delayMs}ms`,
+      );
+      await sleep(delayMs);
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Failed to connect to RabbitMQ');
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 export async function setupTopology(
