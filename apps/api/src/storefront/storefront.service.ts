@@ -87,6 +87,13 @@ export interface StorefrontCategoryResponse {
   descriptionAr: string | null;
   descriptionEn: string | null;
   imageUrl: string | null;
+  imageAltAr: string | null;
+  imageAltEn: string | null;
+  backgroundImageUrl: string | null;
+  seoTitleAr: string | null;
+  seoTitleEn: string | null;
+  seoDescriptionAr: string | null;
+  seoDescriptionEn: string | null;
   parentId: string | null;
 }
 
@@ -244,6 +251,13 @@ export class StorefrontService {
       descriptionAr: category.description_ar,
       descriptionEn: category.description_en,
       imageUrl: category.image_url,
+      imageAltAr: category.image_alt_ar,
+      imageAltEn: category.image_alt_en,
+      backgroundImageUrl: category.background_image_url,
+      seoTitleAr: category.seo_title_ar,
+      seoTitleEn: category.seo_title_en,
+      seoDescriptionAr: category.seo_description_ar,
+      seoDescriptionEn: category.seo_description_en,
       parentId: category.parent_id,
     }));
   }

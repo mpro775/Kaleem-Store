@@ -331,7 +331,7 @@ function CategoriesSection({ categories, variant }: { categories: StorefrontCate
               <div className="category-image-shell">
                 <Image
                   src={category.imageUrl}
-                  alt={bilingual(category.nameAr, category.nameEn, category.name)}
+                  alt={category.imageAltAr ?? category.imageAltEn ?? bilingual(category.nameAr, category.nameEn, category.name)}
                   fill
                   sizes="(max-width: 768px) 100vw, 320px"
                 />

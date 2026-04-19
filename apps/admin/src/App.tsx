@@ -39,6 +39,12 @@ import type { MerchantSession } from './features/merchant/types';
 const ONBOARDING_STORAGE_KEY = 'merchant.onboarding.pending.v1';
 
 type AppRoute = 'marketing' | 'register' | 'login' | 'merchant' | 'platform';
+type ThemeMode = 'light' | 'dark';
+
+interface AppProps {
+  themeMode: ThemeMode;
+  onThemeModeChange: (mode: ThemeMode) => void;
+}
 
 function resolveRoute(pathname: string): AppRoute {
   if (pathname === '/platform') {
@@ -76,13 +82,17 @@ function resolvePath(route: AppRoute): string {
   }
 }
 
-export function App() {
+export function App({ themeMode, onThemeModeChange }: AppProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [session, setSession] = useMerchantSession();
   const [route, setRoute] = useState<AppRoute>(() => resolveRoute(window.location.pathname));
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+
+  function toggleThemeMode(): void {
+    onThemeModeChange(themeMode === 'dark' ? 'light' : 'dark');
+  }
 
   useEffect(() => {
     if (!session) {
@@ -204,6 +214,8 @@ export function App() {
         <MerchantDashboard
           session={currentSession}
           onSessionUpdate={setSession}
+          themeMode={themeMode}
+          onToggleThemeMode={toggleThemeMode}
           onSignedOut={() => {
             writeOnboardingState(currentSession.user.id, false);
             setSession(null);

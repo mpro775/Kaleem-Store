@@ -175,7 +175,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
           description: data.description ?? '',
           categoryId: data.categoryId ?? '',
           status: data.status,
-          titleAr: (data as any).titleAr ?? '',
+          titleAr: (data as any).titleAr ?? data.title,
           titleEn: (data as any).titleEn ?? '',
           descriptionAr: (data as any).descriptionAr ?? '',
           descriptionEn: (data as any).descriptionEn ?? '',
@@ -354,7 +354,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
       lowStockThreshold: String(variant.lowStockThreshold),
       selectedValueByAttributeId: buildVariantValueSelection(attributes, variant.attributeValueIds),
       isDefault: variant.isDefault,
-      titleAr: (variant as any).titleAr ?? '',
+      titleAr: (variant as any).titleAr ?? variant.title,
       titleEn: (variant as any).titleEn ?? '',
     });
     setMessage({ text: 'تم تحميل بيانات المتغير للتعديل', type: 'info' });
@@ -439,28 +439,20 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                   <Box>
                     <Stack spacing={2}>
                       <TextField 
-                        label="اسم المنتج" 
+                        label="الاسم (عربي)" 
                         fullWidth 
-                        value={productForm.title} 
-                        onChange={(event) => setProductForm((prev) => ({ ...prev, title: event.target.value }))} 
+                        value={productForm.titleAr} 
+                        onChange={(event) => setProductForm((prev) => ({ ...prev, titleAr: event.target.value, title: event.target.value }))} 
                         required
+                        dir="rtl"
                       />
-                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-                        <TextField 
-                          label="الاسم (عربي)" 
-                          fullWidth 
-                          value={productForm.titleAr} 
-                          onChange={(event) => setProductForm((prev) => ({ ...prev, titleAr: event.target.value }))} 
-                          dir="rtl"
-                        />
-                        <TextField 
-                          label="Title (English)" 
-                          fullWidth 
-                          value={productForm.titleEn} 
-                          onChange={(event) => setProductForm((prev) => ({ ...prev, titleEn: event.target.value }))} 
-                          dir="ltr"
-                        />
-                      </Box>
+                      <TextField 
+                        label="Title (English)" 
+                        fullWidth 
+                        value={productForm.titleEn} 
+                        onChange={(event) => setProductForm((prev) => ({ ...prev, titleEn: event.target.value }))} 
+                        dir="ltr"
+                      />
                     </Stack>
                   </Box>
                   <Box>
@@ -674,7 +666,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                   <Stack spacing={3}>
                     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2 }}>
                       <Box>
-                        <TextField size="small" label="عنوان المتغير" fullWidth value={variantForm.title} onChange={(e) => setVariantForm({ ...variantForm, title: e.target.value })} placeholder="مثال: أحمر / كبير" />
+                        <TextField size="small" label="عنوان المتغير (عربي)" fullWidth value={variantForm.titleAr} onChange={(e) => setVariantForm({ ...variantForm, titleAr: e.target.value, title: e.target.value })} placeholder="مثال: أحمر / كبير" dir="rtl" />
                       </Box>
                       <Box>
                         <TextField size="small" label="SKU (رمز التخزين)" fullWidth value={variantForm.sku} onChange={(e) => setVariantForm({ ...variantForm, sku: e.target.value })} />
@@ -683,13 +675,8 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                         <TextField size="small" label="الباركود (اختياري)" fullWidth value={variantForm.barcode} onChange={(e) => setVariantForm({ ...variantForm, barcode: e.target.value })} />
                       </Box>
                     </Box>
-                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-                      <Box>
-                        <TextField size="small" label="عنوان الموديل (عربي)" fullWidth value={variantForm.titleAr} onChange={(e) => setVariantForm({ ...variantForm, titleAr: e.target.value })} dir="rtl" />
-                      </Box>
-                      <Box>
-                        <TextField size="small" label="Variant Title (English)" fullWidth value={variantForm.titleEn} onChange={(e) => setVariantForm({ ...variantForm, titleEn: e.target.value })} dir="ltr" />
-                      </Box>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr' }, gap: 2 }}>
+                      <TextField size="small" label="Variant Title (English)" fullWidth value={variantForm.titleEn} onChange={(e) => setVariantForm({ ...variantForm, titleEn: e.target.value })} dir="ltr" />
                     </Box>
                     
                     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(4, 1fr)' }, gap: 2 }}>
@@ -975,6 +962,11 @@ function buildProductPayload(
     minOrderQuantity: string; maxOrderQuantity: string;
   },
 ) {
+  const primaryArabicTitle = form.titleAr.trim() || form.title.trim();
+  if (!primaryArabicTitle) {
+    throw new Error('الاسم العربي للمنتج مطلوب');
+  }
+
   const payload: {
     title: string;
     slug?: string;
@@ -998,7 +990,8 @@ function buildProductPayload(
     seoTitle?: string;
     seoDescription?: string;
   } = {
-    title: form.title.trim(),
+    title: primaryArabicTitle,
+    titleAr: primaryArabicTitle,
     status: form.status,
   };
 
@@ -1010,7 +1003,6 @@ function buildProductPayload(
   const slug = form.slug.trim();
   const description = form.description.trim();
   const categoryId = form.categoryId.trim();
-  const titleAr = form.titleAr.trim();
   const titleEn = form.titleEn.trim();
   const descriptionAr = form.descriptionAr.trim();
   const descriptionEn = form.descriptionEn.trim();
@@ -1023,9 +1015,6 @@ function buildProductPayload(
   }
   if (categoryId) {
     payload.categoryId = categoryId;
-  }
-  if (titleAr) {
-    payload.titleAr = titleAr;
   }
   if (titleEn) {
     payload.titleEn = titleEn;
@@ -1077,6 +1066,11 @@ function buildProductPayload(
 }
 
 function buildVariantPayload(form: ReturnType<typeof createVariantFormDefault>) {
+  const primaryArabicTitle = form.titleAr.trim() || form.title.trim();
+  if (!primaryArabicTitle) {
+    throw new Error('عنوان المتغير بالعربية مطلوب');
+  }
+
   const payload: {
     title: string;
     sku: string;
@@ -1090,7 +1084,8 @@ function buildVariantPayload(form: ReturnType<typeof createVariantFormDefault>) 
     titleAr?: string;
     titleEn?: string;
   } = {
-    title: form.title.trim(),
+    title: primaryArabicTitle,
+    titleAr: primaryArabicTitle,
     sku: form.sku.trim(),
     price: Number(form.price || '0'),
     stockQuantity: Number(form.stockQuantity || '0'),
@@ -1101,7 +1096,6 @@ function buildVariantPayload(form: ReturnType<typeof createVariantFormDefault>) 
 
   const barcode = form.barcode.trim();
   const compareAtPrice = form.compareAtPrice.trim();
-  const titleAr = form.titleAr.trim();
   const titleEn = form.titleEn.trim();
 
   if (barcode) {
@@ -1109,9 +1103,6 @@ function buildVariantPayload(form: ReturnType<typeof createVariantFormDefault>) 
   }
   if (compareAtPrice) {
     payload.compareAtPrice = Number(compareAtPrice);
-  }
-  if (titleAr) {
-    payload.titleAr = titleAr;
   }
   if (titleEn) {
     payload.titleEn = titleEn;

@@ -113,7 +113,8 @@ export class ProductsService {
   ): Promise<ProductResponse> {
     await this.saasService.assertMetricCanGrow(currentUser.storeId, 'products.total', 1);
 
-    const slug = this.resolveSlug(input.title, input.slug);
+    const primaryArabicTitle = this.resolvePrimaryArabicTitle(input.title, input.titleAr);
+    const slug = this.resolveSlug(primaryArabicTitle, input.slug);
     await this.ensureProductSlugAvailable(currentUser.storeId, slug);
     await this.validateCategory(currentUser.storeId, input.categoryId ?? null);
 
@@ -121,8 +122,8 @@ export class ProductsService {
       id: uuidv4(),
       storeId: currentUser.storeId,
       categoryId: input.categoryId ?? null,
-      title: input.title.trim(),
-      titleAr: input.titleAr ?? null,
+      title: primaryArabicTitle,
+      titleAr: primaryArabicTitle,
       titleEn: input.titleEn ?? null,
       slug,
       description: input.description?.trim() ?? null,
@@ -203,6 +204,10 @@ export class ProductsService {
   ): Promise<ProductResponse> {
     const existing = await this.requireProduct(currentUser.storeId, productId);
     const slug = this.getNextSlug(existing, input);
+    const primaryArabicTitle = this.resolvePrimaryArabicTitle(
+      input.title ?? existing.title,
+      input.titleAr ?? existing.title_ar,
+    );
     if (slug !== existing.slug) {
       await this.ensureProductSlugAvailable(currentUser.storeId, slug, productId);
     }
@@ -214,8 +219,8 @@ export class ProductsService {
       storeId: currentUser.storeId,
       productId,
       categoryId,
-      title: input.title?.trim() ?? existing.title,
-      titleAr: input.titleAr ?? existing.title_ar,
+      title: primaryArabicTitle,
+      titleAr: primaryArabicTitle,
       titleEn: input.titleEn ?? existing.title_en,
       slug,
       description: input.description?.trim() ?? existing.description,
@@ -325,11 +330,16 @@ export class ProductsService {
     isDefault: boolean;
     selectedAttributes: ResolvedVariantAttributes;
   }): Promise<ProductVariantRecord> {
+    const primaryArabicTitle = this.resolvePrimaryArabicTitle(
+      input.payload.title,
+      input.payload.titleAr,
+    );
+
     const variant = await this.productsRepository.createVariant({
       productId: input.productId,
       storeId: input.storeId,
-      title: input.payload.title.trim(),
-      titleAr: input.payload.titleAr ?? null,
+      title: primaryArabicTitle,
+      titleAr: primaryArabicTitle,
       titleEn: input.payload.titleEn ?? null,
       sku: input.payload.sku.trim(),
       barcode: input.payload.barcode?.trim() ?? null,
@@ -448,10 +458,15 @@ export class ProductsService {
   }
 
   private getNextSlug(existing: ProductRecord, input: UpdateProductDto): string {
-    if (!input.slug && !input.title) {
+    if (!input.slug && !input.title && !input.titleAr) {
       return existing.slug;
     }
-    return this.resolveSlug(input.title ?? existing.title, input.slug);
+
+    const nextTitleForSlug = this.resolvePrimaryArabicTitle(
+      input.title ?? existing.title,
+      input.titleAr ?? existing.title_ar,
+    );
+    return this.resolveSlug(nextTitleForSlug, input.slug);
   }
 
   private resolveSlug(title: string, slug?: string): string {
@@ -460,6 +475,20 @@ export class ProductsService {
       throw new BadRequestException('Product slug is invalid');
     }
     return value;
+  }
+
+  private resolvePrimaryArabicTitle(baseTitle: string, arabicTitle?: string | null): string {
+    const normalizedArabicTitle = arabicTitle?.trim();
+    if (normalizedArabicTitle) {
+      return normalizedArabicTitle;
+    }
+
+    const normalizedBaseTitle = baseTitle.trim();
+    if (!normalizedBaseTitle) {
+      throw new BadRequestException('Product title is invalid');
+    }
+
+    return normalizedBaseTitle;
   }
 
   private async ensureProductSlugAvailable(

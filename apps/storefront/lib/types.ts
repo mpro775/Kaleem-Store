@@ -30,6 +30,13 @@ export interface StorefrontCategory {
   descriptionAr: string | null;
   descriptionEn: string | null;
   imageUrl: string | null;
+  imageAltAr: string | null;
+  imageAltEn: string | null;
+  backgroundImageUrl: string | null;
+  seoTitleAr: string | null;
+  seoTitleEn: string | null;
+  seoDescriptionAr: string | null;
+  seoDescriptionEn: string | null;
 }
 
 export interface StorefrontFilterAttribute {

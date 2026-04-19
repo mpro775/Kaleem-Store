@@ -54,6 +54,40 @@ export class CreateCategoryDto {
   mediaAssetId?: string;
 
   @IsOptional()
+  @IsUUID('4')
+  backgroundMediaAssetId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(180)
+  imageAltAr?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(180)
+  imageAltEn?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(180)
+  seoTitleAr?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(180)
+  seoTitleEn?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  seoDescriptionAr?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  seoDescriptionEn?: string;
+
+  @IsOptional()
   @IsInt()
   @Min(0)
   sortOrder?: number;

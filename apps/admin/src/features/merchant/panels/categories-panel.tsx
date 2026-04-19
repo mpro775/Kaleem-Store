@@ -1,25 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Alert,
   Box,
   Button,
   Checkbox,
   FormControlLabel,
+  MenuItem,
   Paper,
   Stack,
   TextField,
   Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Chip,
   Divider,
-  IconButton,
   CircularProgress,
-  Grid,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditNoteIcon from '@mui/icons-material/EditNote';
@@ -28,6 +21,7 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import ImageIcon from '@mui/icons-material/Image';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 
 import type { MerchantRequester } from '../merchant-dashboard.types';
 import type { Category, MediaAsset, PresignedMediaUpload } from '../types';
@@ -47,6 +41,12 @@ const emptyForm = {
   nameEn: '',
   descriptionAr: '',
   descriptionEn: '',
+  imageAltAr: '',
+  imageAltEn: '',
+  seoTitleAr: '',
+  seoTitleEn: '',
+  seoDescriptionAr: '',
+  seoDescriptionEn: '',
 };
 
 export function CategoriesPanel({ request }: CategoriesPanelProps) {
@@ -60,6 +60,12 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
   const [message, setMessage] = useState({ text: '', type: 'info' as 'info' | 'success' | 'error' });
   const [formMediaAssetId, setFormMediaAssetId] = useState<string | null>(null);
   const [formImageUrl, setFormImageUrl] = useState<string | null>(null);
+  const [formBackgroundMediaAssetId, setFormBackgroundMediaAssetId] = useState<string | null>(null);
+  const [formBackgroundImageUrl, setFormBackgroundImageUrl] = useState<string | null>(null);
+  const [draggedCategoryId, setDraggedCategoryId] = useState<string | null>(null);
+  const [reorderLoading, setReorderLoading] = useState(false);
+
+  const treeRows = useMemo(() => buildCategoryTreeRows(categories), [categories]);
 
   useEffect(() => {
     loadCategories().catch(() => undefined);
@@ -84,6 +90,8 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
     setForm(emptyForm);
     setFormMediaAssetId(null);
     setFormImageUrl(null);
+    setFormBackgroundMediaAssetId(null);
+    setFormBackgroundImageUrl(null);
     setMessage({ text: '', type: 'info' });
     setViewMode('detail');
   }
@@ -99,7 +107,7 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
     try {
       await request('/categories', {
         method: 'POST',
-        body: JSON.stringify(buildCategoryPayload(form, formMediaAssetId, false)),
+        body: JSON.stringify(buildCategoryPayload(form, formMediaAssetId, formBackgroundMediaAssetId, false)),
       });
       setForm(emptyForm);
       await loadCategories();
@@ -119,7 +127,7 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
     try {
       await request(`/categories/${selectedId}`, {
         method: 'PUT',
-        body: JSON.stringify(buildCategoryPayload(form, formMediaAssetId, true)),
+        body: JSON.stringify(buildCategoryPayload(form, formMediaAssetId, formBackgroundMediaAssetId, true)),
       });
       await loadCategories();
       setMessage({ text: 'تم تحديث التصنيف بنجاح', type: 'success' });
@@ -143,6 +151,8 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
       setForm(emptyForm);
       setFormMediaAssetId(null);
       setFormImageUrl(null);
+      setFormBackgroundMediaAssetId(null);
+      setFormBackgroundImageUrl(null);
       await loadCategories();
       setMessage({ text: 'تم حذف التصنيف بنجاح', type: 'success' });
       setViewMode('list');
@@ -162,13 +172,21 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
       parentId: category.parentId ?? '',
       sortOrder: String(category.sortOrder),
       isActive: category.isActive,
-      nameAr: category.nameAr ?? '',
+      nameAr: category.nameAr ?? category.name,
       nameEn: category.nameEn ?? '',
       descriptionAr: category.descriptionAr ?? '',
       descriptionEn: category.descriptionEn ?? '',
+      imageAltAr: category.imageAltAr ?? '',
+      imageAltEn: category.imageAltEn ?? '',
+      seoTitleAr: category.seoTitleAr ?? '',
+      seoTitleEn: category.seoTitleEn ?? '',
+      seoDescriptionAr: category.seoDescriptionAr ?? '',
+      seoDescriptionEn: category.seoDescriptionEn ?? '',
     });
     setFormMediaAssetId(category.mediaAssetId);
     setFormImageUrl(category.imageUrl);
+    setFormBackgroundMediaAssetId(category.backgroundMediaAssetId);
+    setFormBackgroundImageUrl(category.backgroundImageUrl);
     setViewMode('detail');
   }
 
@@ -189,9 +207,92 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
     }
   }
 
+  async function handleBackgroundImageUpload(event: React.ChangeEvent<HTMLInputElement>): Promise<void> {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    setMessage({ text: '', type: 'info' });
+    try {
+      const asset = await uploadMediaAsset(request, file);
+      setFormBackgroundMediaAssetId(asset.id);
+      setFormBackgroundImageUrl(asset.url);
+    } catch (error) {
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر رفع صورة الخلفية', type: 'error' });
+    } finally {
+      setUploadingImage(false);
+      event.target.value = '';
+    }
+  }
+
   function handleRemoveImage() {
     setFormMediaAssetId(null);
     setFormImageUrl(null);
+  }
+
+  function handleRemoveBackgroundImage() {
+    setFormBackgroundMediaAssetId(null);
+    setFormBackgroundImageUrl(null);
+  }
+
+  async function applyReorder(nextCategories: Category[]): Promise<void> {
+    const changedCategories = nextCategories.filter((nextCategory) => {
+      const current = categories.find((item) => item.id === nextCategory.id);
+      return (
+        current &&
+        (current.parentId !== nextCategory.parentId || current.sortOrder !== nextCategory.sortOrder)
+      );
+    });
+
+    if (changedCategories.length === 0) {
+      return;
+    }
+
+    setReorderLoading(true);
+    setMessage({ text: '', type: 'info' });
+
+    try {
+      await Promise.all(
+        changedCategories.map((category) =>
+          request(`/categories/${category.id}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+              parentId: category.parentId,
+              sortOrder: category.sortOrder,
+            }),
+          }),
+        ),
+      );
+      setCategories(nextCategories);
+      setMessage({ text: 'تم تحديث ترتيب شجرة التصنيفات', type: 'success' });
+    } catch (error) {
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر حفظ ترتيب التصنيفات', type: 'error' });
+      await loadCategories();
+    } finally {
+      setReorderLoading(false);
+    }
+  }
+
+  async function handleDropOnCategory(targetCategoryId: string): Promise<void> {
+    if (!draggedCategoryId || draggedCategoryId === targetCategoryId) {
+      setDraggedCategoryId(null);
+      return;
+    }
+
+    const nextCategories = reorderCategories(categories, draggedCategoryId, {
+      type: 'after',
+      targetCategoryId,
+    });
+    setDraggedCategoryId(null);
+    await applyReorder(nextCategories);
+  }
+
+  async function handleDropOnRoot(): Promise<void> {
+    if (!draggedCategoryId) {
+      return;
+    }
+    const nextCategories = reorderCategories(categories, draggedCategoryId, { type: 'root' });
+    setDraggedCategoryId(null);
+    await applyReorder(nextCategories);
   }
 
   const getParentName = (parentId: string | null) => {
@@ -199,6 +300,8 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
     const parent = categories.find(c => c.id === parentId);
     return parent ? parent.name : parentId;
   };
+
+  const parentCategoryOptions = categories.filter((category) => category.id !== selectedId);
 
   if (viewMode === 'detail') {
     return (
@@ -241,11 +344,12 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 3 }}>
               <Box>
                 <TextField 
-                  label="اسم التصنيف" 
+                  label="الاسم (عربي)" 
                   fullWidth 
-                  value={form.name} 
-                  onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} 
+                  value={form.nameAr} 
+                  onChange={(event) => setForm((prev) => ({ ...prev, nameAr: event.target.value, name: event.target.value }))} 
                   required
+                  dir="rtl"
                 />
               </Box>
               <Box>
@@ -260,16 +364,7 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
               </Box>
             </Box>
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-              <Box>
-                <TextField 
-                  label="الاسم (عربي)" 
-                  fullWidth 
-                  value={form.nameAr} 
-                  onChange={(event) => setForm((prev) => ({ ...prev, nameAr: event.target.value }))} 
-                  dir="rtl"
-                />
-              </Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr' }, gap: 3 }}>
               <Box>
                 <TextField 
                   label="Name (English)" 
@@ -294,12 +389,20 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
               </Box>
               <Box>
                 <TextField 
-                  label="معرّف التصنيف الأب (اختياري)" 
+                  select
+                  label="التصنيف الأب (اختياري)" 
                   fullWidth 
                   value={form.parentId} 
                   onChange={(event) => setForm((prev) => ({ ...prev, parentId: event.target.value }))} 
-                  helperText="لجعل هذا التصنيف فرعياً من تصنيف آخر"
-                />
+                  helperText="اختر تصنيفاً سابقاً لجعل هذا التصنيف فرعياً"
+                >
+                  <MenuItem value="">بدون تصنيف أب</MenuItem>
+                  {parentCategoryOptions.map((category) => (
+                    <MenuItem key={category.id} value={category.id}>
+                      {category.nameAr ?? category.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
               </Box>
             </Box>
 
@@ -337,6 +440,27 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
               </Box>
             </Box>
 
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+              <Box>
+                <TextField
+                  label="وصف صورة التصنيف (عربي)"
+                  fullWidth
+                  value={form.imageAltAr}
+                  onChange={(event) => setForm((prev) => ({ ...prev, imageAltAr: event.target.value }))}
+                  dir="rtl"
+                />
+              </Box>
+              <Box>
+                <TextField
+                  label="Category Image Alt (English)"
+                  fullWidth
+                  value={form.imageAltEn}
+                  onChange={(event) => setForm((prev) => ({ ...prev, imageAltEn: event.target.value }))}
+                  dir="ltr"
+                />
+              </Box>
+            </Box>
+
             <FormControlLabel 
               control={<Checkbox checked={form.isActive} onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))} />} 
               label={<Typography fontWeight={600}>تفعيل التصنيف وظهوره في المتجر</Typography>} 
@@ -346,7 +470,7 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
               <Typography variant="subtitle2" fontWeight={700} mb={2}>صورة التصنيف</Typography>
               {formImageUrl && (
                 <Box sx={{ mb: 2, position: 'relative', display: 'inline-block' }}>
-                  <Box component="img" src={formImageUrl} alt="صورة التصنيف" sx={{ width: 160, height: 160, objectFit: 'cover', borderRadius: 2, border: '1px solid', borderColor: 'divider' }} />
+                  <Box component="img" src={formImageUrl} alt={form.imageAltAr || form.imageAltEn || 'صورة التصنيف'} sx={{ width: 160, height: 160, objectFit: 'cover', borderRadius: 2, border: '1px solid', borderColor: 'divider' }} />
                   <Button size="small" color="error" onClick={handleRemoveImage} sx={{ mt: 1 }}>إزالة الصورة</Button>
                 </Box>
               )}
@@ -355,6 +479,64 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
                   {uploadingImage ? 'جارِ الرفع...' : formImageUrl ? 'تغيير الصورة' : 'رفع صورة'}
                   <input type="file" accept="image/*" hidden onChange={(e) => handleImageUpload(e).catch(() => undefined)} />
                 </Button>
+              </Stack>
+            </Box>
+
+            <Box sx={{ bgcolor: 'background.default', p: 3, borderRadius: 3, border: '1px dashed', borderColor: 'divider' }}>
+              <Typography variant="subtitle2" fontWeight={700} mb={2}>الصورة الخلفية للتصنيف</Typography>
+              {formBackgroundImageUrl && (
+                <Box sx={{ mb: 2, position: 'relative', display: 'inline-block' }}>
+                  <Box component="img" src={formBackgroundImageUrl} alt="الصورة الخلفية للتصنيف" sx={{ width: 240, height: 120, objectFit: 'cover', borderRadius: 2, border: '1px solid', borderColor: 'divider' }} />
+                  <Button size="small" color="error" onClick={handleRemoveBackgroundImage} sx={{ mt: 1 }}>إزالة الصورة</Button>
+                </Box>
+              )}
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Button variant="outlined" component="label" startIcon={<CloudUploadIcon />} disabled={uploadingImage}>
+                  {uploadingImage ? 'جارِ الرفع...' : formBackgroundImageUrl ? 'تغيير صورة الخلفية' : 'رفع صورة خلفية'}
+                  <input type="file" accept="image/*" hidden onChange={(e) => handleBackgroundImageUpload(e).catch(() => undefined)} />
+                </Button>
+              </Stack>
+            </Box>
+
+            <Box sx={{ bgcolor: 'background.default', p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="subtitle1" fontWeight={800} mb={2}>تحسين الظهور ونتائج البحث (SEO)</Typography>
+              <Stack spacing={3}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+                  <TextField
+                    label="عنوان صفحة التصنيف (عربي)"
+                    fullWidth
+                    value={form.seoTitleAr}
+                    onChange={(event) => setForm((prev) => ({ ...prev, seoTitleAr: event.target.value }))}
+                    dir="rtl"
+                  />
+                  <TextField
+                    label="Category Page Title (English)"
+                    fullWidth
+                    value={form.seoTitleEn}
+                    onChange={(event) => setForm((prev) => ({ ...prev, seoTitleEn: event.target.value }))}
+                    dir="ltr"
+                  />
+                </Box>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+                  <TextField
+                    label="وصف صفحة التصنيف (عربي)"
+                    fullWidth
+                    multiline
+                    minRows={3}
+                    value={form.seoDescriptionAr}
+                    onChange={(event) => setForm((prev) => ({ ...prev, seoDescriptionAr: event.target.value }))}
+                    dir="rtl"
+                  />
+                  <TextField
+                    label="Category Page Description (English)"
+                    fullWidth
+                    multiline
+                    minRows={3}
+                    value={form.seoDescriptionEn}
+                    onChange={(event) => setForm((prev) => ({ ...prev, seoDescriptionEn: event.target.value }))}
+                    dir="ltr"
+                  />
+                </Box>
               </Stack>
             </Box>
 
@@ -411,85 +593,278 @@ export function CategoriesPanel({ request }: CategoriesPanelProps) {
         <Alert severity={message.type} sx={{ borderRadius: 2 }}>{message.text}</Alert>
       )}
 
-      <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
-        <TableContainer>
-          <Table>
-            <TableHead sx={{ bgcolor: 'background.default' }}>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>الصورة</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>اسم التصنيف</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>المسار المختصر</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>التصنيف الأب</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>الترتيب</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>الحالة</TableCell>
-                <TableCell align="left" sx={{ fontWeight: 700 }}>الإجراءات</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
-                    <CircularProgress />
-                  </TableCell>
-                </TableRow>
-              ) : categories.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
-                    <Typography color="text.secondary">لا توجد تصنيفات مضافة.</Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                categories.map((category) => (
-                  <TableRow key={category.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                    <TableCell>
-                      {category.imageUrl ? (
-                        <Box component="img" src={category.imageUrl} alt={category.name} sx={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 1 }} />
-                      ) : (
-                        <Box sx={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default', borderRadius: 1 }}>
-                          <ImageIcon fontSize="small" color="disabled" />
-                        </Box>
-                      )}
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>{category.name}</TableCell>
-                    <TableCell dir="ltr" align="right">
-                      <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                        /{category.slug}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" color="text.secondary">
-                        {getParentName(category.parentId)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>{category.sortOrder}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        size="small" 
-                        label={category.isActive ? 'نشط' : 'غير نشط'} 
-                        color={category.isActive ? 'success' : 'default'} 
-                        sx={{ fontWeight: 700, borderRadius: 1.5 }}
-                      />
-                    </TableCell>
-                    <TableCell align="left">
-                      <Button 
-                        size="small" 
-                        variant="outlined" 
-                        startIcon={<EditNoteIcon />}
-                        onClick={() => selectCategory(category)}
-                        sx={{ borderRadius: 1.5 }}
-                      >
-                        تعديل
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+      <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden', p: 2 }}>
+        {loading ? (
+          <Box sx={{ py: 6, textAlign: 'center' }}>
+            <CircularProgress />
+          </Box>
+        ) : categories.length === 0 ? (
+          <Box sx={{ py: 6, textAlign: 'center' }}>
+            <Typography color="text.secondary">لا توجد تصنيفات مضافة.</Typography>
+          </Box>
+        ) : (
+          <Stack spacing={1.2}>
+            <Typography variant="body2" color="text.secondary">
+              اسحب التصنيف ثم أفلته فوق تصنيف آخر لإعادة الترتيب داخل نفس المستوى. ويمكنك إفلاته في منطقة الجذر لنقله كتصنيف رئيسي.
+            </Typography>
+            <Box
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={() => {
+                handleDropOnRoot().catch(() => undefined);
+              }}
+              sx={{
+                border: '1px dashed',
+                borderColor: draggedCategoryId ? 'primary.main' : 'divider',
+                borderRadius: 2,
+                p: 1.5,
+                textAlign: 'center',
+                bgcolor: draggedCategoryId ? 'action.hover' : 'background.default',
+              }}
+            >
+              <Typography variant="body2" color="text.secondary">إفلات هنا للنقل إلى الجذر (بدون تصنيف أب)</Typography>
+            </Box>
+            {treeRows.map(({ category, depth }) => (
+              <Box
+                key={category.id}
+                draggable={!reorderLoading}
+                onDragStart={() => setDraggedCategoryId(category.id)}
+                onDragEnd={() => setDraggedCategoryId(null)}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={() => {
+                  handleDropOnCategory(category.id).catch(() => undefined);
+                }}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  p: 1.2,
+                  pl: `${1.2 + depth * 2.4}rem`,
+                  borderRadius: 2,
+                  border: '1px solid',
+                  borderColor: draggedCategoryId === category.id ? 'primary.main' : 'divider',
+                  bgcolor: draggedCategoryId === category.id ? 'action.selected' : 'background.paper',
+                  opacity: reorderLoading && draggedCategoryId === category.id ? 0.5 : 1,
+                  cursor: reorderLoading ? 'not-allowed' : 'grab',
+                }}
+              >
+                <DragIndicatorIcon fontSize="small" color="disabled" />
+                {category.imageUrl ? (
+                  <Box
+                    component="img"
+                    src={category.imageUrl}
+                    alt={category.imageAltAr ?? category.imageAltEn ?? category.name}
+                    sx={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 1 }}
+                  />
+                ) : (
+                  <Box sx={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default', borderRadius: 1 }}>
+                    <ImageIcon fontSize="small" color="disabled" />
+                  </Box>
+                )}
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography fontWeight={700} noWrap>
+                    {category.nameAr ?? category.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" dir="ltr" sx={{ fontFamily: 'monospace' }} noWrap>
+                    /{category.slug}
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  {getParentName(category.parentId)}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">#{category.sortOrder}</Typography>
+                <Chip
+                  size="small"
+                  label={category.isActive ? 'نشط' : 'غير نشط'}
+                  color={category.isActive ? 'success' : 'default'}
+                  sx={{ fontWeight: 700, borderRadius: 1.5 }}
+                />
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<EditNoteIcon />}
+                  onClick={() => selectCategory(category)}
+                  sx={{ borderRadius: 1.5, whiteSpace: 'nowrap' }}
+                >
+                  تعديل
+                </Button>
+              </Box>
+            ))}
+            {reorderLoading ? (
+              <Typography variant="body2" color="text.secondary">
+                جاري حفظ ترتيب التصنيفات...
+              </Typography>
+            ) : null}
+          </Stack>
+        )}
       </Paper>
     </Box>
   );
+}
+
+interface TreeRow {
+  category: Category;
+  depth: number;
+}
+
+function buildCategoryTreeRows(categories: Category[]): TreeRow[] {
+  const byId = new Map(categories.map((category) => [category.id, category]));
+  const childrenByParent = new Map<string, Category[]>();
+
+  for (const category of categories) {
+    const parentKey = category.parentId && byId.has(category.parentId) ? category.parentId : 'root';
+    const siblings = childrenByParent.get(parentKey) ?? [];
+    siblings.push(category);
+    childrenByParent.set(parentKey, siblings);
+  }
+
+  for (const siblings of childrenByParent.values()) {
+    siblings.sort((a, b) => {
+      if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+      return (a.nameAr ?? a.name).localeCompare(b.nameAr ?? b.name, 'ar');
+    });
+  }
+
+  const rows: TreeRow[] = [];
+  const visited = new Set<string>();
+
+  const walk = (parentKey: string, depth: number) => {
+    const siblings = childrenByParent.get(parentKey) ?? [];
+    for (const category of siblings) {
+      if (visited.has(category.id)) continue;
+      visited.add(category.id);
+      rows.push({ category, depth });
+      walk(category.id, depth + 1);
+    }
+  };
+
+  walk('root', 0);
+
+  for (const category of categories) {
+    if (!visited.has(category.id)) {
+      rows.push({ category, depth: 0 });
+    }
+  }
+
+  return rows;
+}
+
+function reorderCategories(
+  categories: Category[],
+  draggedCategoryId: string,
+  destination: { type: 'after'; targetCategoryId: string } | { type: 'root' },
+): Category[] {
+  const byId = new Map(categories.map((category) => [category.id, category]));
+  const dragged = byId.get(draggedCategoryId);
+  if (!dragged) {
+    return categories;
+  }
+
+  const childrenByParent = buildChildrenIndex(categories, byId);
+  const oldParentKey = dragged.parentId && byId.has(dragged.parentId) ? dragged.parentId : 'root';
+  const sourceSiblings = [...(childrenByParent.get(oldParentKey) ?? [])].filter((id) => id !== draggedCategoryId);
+  childrenByParent.set(oldParentKey, sourceSiblings);
+
+  if (destination.type === 'root') {
+    const rootSiblings = [...(childrenByParent.get('root') ?? []), draggedCategoryId];
+    childrenByParent.set('root', uniqueIds(rootSiblings));
+    return materializeReorderedCategories(categories, byId, childrenByParent);
+  }
+
+  const target = byId.get(destination.targetCategoryId);
+  if (!target) {
+    return categories;
+  }
+
+  const descendantIds = collectDescendantIds(draggedCategoryId, childrenByParent);
+  if (descendantIds.has(target.id)) {
+    return categories;
+  }
+
+  const targetParentKey = target.parentId && byId.has(target.parentId) ? target.parentId : 'root';
+  const destinationSiblings = [...(childrenByParent.get(targetParentKey) ?? [])].filter((id) => id !== draggedCategoryId);
+  const targetIndex = destinationSiblings.findIndex((id) => id === target.id);
+  const insertIndex = targetIndex === -1 ? destinationSiblings.length : targetIndex + 1;
+  destinationSiblings.splice(insertIndex, 0, draggedCategoryId);
+  childrenByParent.set(targetParentKey, destinationSiblings);
+
+  return materializeReorderedCategories(categories, byId, childrenByParent);
+}
+
+function buildChildrenIndex(
+  categories: Category[],
+  byId: Map<string, Category>,
+): Map<string, string[]> {
+  const index = new Map<string, string[]>();
+
+  const sortedCategories = [...categories].sort((a, b) => {
+    if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+    return (a.nameAr ?? a.name).localeCompare(b.nameAr ?? b.name, 'ar');
+  });
+
+  for (const category of sortedCategories) {
+    const parentKey = category.parentId && byId.has(category.parentId) ? category.parentId : 'root';
+    const siblings = index.get(parentKey) ?? [];
+    siblings.push(category.id);
+    index.set(parentKey, siblings);
+  }
+
+  return index;
+}
+
+function collectDescendantIds(categoryId: string, childrenByParent: Map<string, string[]>): Set<string> {
+  const descendants = new Set<string>();
+  const stack = [...(childrenByParent.get(categoryId) ?? [])];
+
+  while (stack.length > 0) {
+    const nextId = stack.pop();
+    if (!nextId || descendants.has(nextId)) {
+      continue;
+    }
+    descendants.add(nextId);
+    const nested = childrenByParent.get(nextId) ?? [];
+    for (const childId of nested) {
+      stack.push(childId);
+    }
+  }
+
+  return descendants;
+}
+
+function uniqueIds(values: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    if (seen.has(value)) continue;
+    seen.add(value);
+    result.push(value);
+  }
+  return result;
+}
+
+function materializeReorderedCategories(
+  categories: Category[],
+  byId: Map<string, Category>,
+  childrenByParent: Map<string, string[]>,
+): Category[] {
+  const updates = new Map<string, { parentId: string | null; sortOrder: number }>();
+
+  for (const [parentKey, siblingIds] of childrenByParent.entries()) {
+    const parentId = parentKey === 'root' ? null : parentKey;
+    siblingIds.forEach((categoryId, index) => {
+      if (!byId.has(categoryId)) return;
+      updates.set(categoryId, { parentId, sortOrder: index });
+    });
+  }
+
+  return categories.map((category) => {
+    const next = updates.get(category.id);
+    if (!next) return category;
+    return {
+      ...category,
+      parentId: next.parentId,
+      sortOrder: next.sortOrder,
+    };
+  });
 }
 
 function buildCategoryPayload(form: {
@@ -503,7 +878,18 @@ function buildCategoryPayload(form: {
   nameEn: string;
   descriptionAr: string;
   descriptionEn: string;
-}, mediaAssetId: string | null, isUpdate: boolean) {
+  imageAltAr: string;
+  imageAltEn: string;
+  seoTitleAr: string;
+  seoTitleEn: string;
+  seoDescriptionAr: string;
+  seoDescriptionEn: string;
+}, mediaAssetId: string | null, backgroundMediaAssetId: string | null, isUpdate: boolean) {
+  const primaryArabicName = form.nameAr.trim() || form.name.trim();
+  if (!primaryArabicName) {
+    throw new Error('الاسم العربي للتصنيف مطلوب');
+  }
+
   const payload: {
     name: string;
     slug?: string;
@@ -515,26 +901,45 @@ function buildCategoryPayload(form: {
     nameEn?: string;
     descriptionAr?: string;
     descriptionEn?: string;
+    imageAltAr?: string;
+    imageAltEn?: string;
+    seoTitleAr?: string;
+    seoTitleEn?: string;
+    seoDescriptionAr?: string;
+    seoDescriptionEn?: string;
     mediaAssetId?: string | null;
+    backgroundMediaAssetId?: string | null;
   } = {
-    name: form.name.trim(),
+    name: primaryArabicName,
+    nameAr: primaryArabicName,
     sortOrder: Number(form.sortOrder || '0'),
     isActive: form.isActive,
   };
 
   if (isUpdate) {
     payload.mediaAssetId = mediaAssetId;
-  } else if (mediaAssetId) {
-    payload.mediaAssetId = mediaAssetId;
+    payload.backgroundMediaAssetId = backgroundMediaAssetId;
+  } else {
+    if (mediaAssetId) {
+      payload.mediaAssetId = mediaAssetId;
+    }
+    if (backgroundMediaAssetId) {
+      payload.backgroundMediaAssetId = backgroundMediaAssetId;
+    }
   }
 
   const slug = form.slug.trim();
   const description = form.description.trim();
   const parentId = form.parentId.trim();
-  const nameAr = form.nameAr.trim();
   const nameEn = form.nameEn.trim();
   const descriptionAr = form.descriptionAr.trim();
   const descriptionEn = form.descriptionEn.trim();
+  const imageAltAr = form.imageAltAr.trim();
+  const imageAltEn = form.imageAltEn.trim();
+  const seoTitleAr = form.seoTitleAr.trim();
+  const seoTitleEn = form.seoTitleEn.trim();
+  const seoDescriptionAr = form.seoDescriptionAr.trim();
+  const seoDescriptionEn = form.seoDescriptionEn.trim();
 
   if (slug) {
     payload.slug = slug;
@@ -545,9 +950,6 @@ function buildCategoryPayload(form: {
   if (parentId) {
     payload.parentId = parentId;
   }
-  if (nameAr) {
-    payload.nameAr = nameAr;
-  }
   if (nameEn) {
     payload.nameEn = nameEn;
   }
@@ -556,6 +958,24 @@ function buildCategoryPayload(form: {
   }
   if (descriptionEn) {
     payload.descriptionEn = descriptionEn;
+  }
+  if (imageAltAr) {
+    payload.imageAltAr = imageAltAr;
+  }
+  if (imageAltEn) {
+    payload.imageAltEn = imageAltEn;
+  }
+  if (seoTitleAr) {
+    payload.seoTitleAr = seoTitleAr;
+  }
+  if (seoTitleEn) {
+    payload.seoTitleEn = seoTitleEn;
+  }
+  if (seoDescriptionAr) {
+    payload.seoDescriptionAr = seoDescriptionAr;
+  }
+  if (seoDescriptionEn) {
+    payload.seoDescriptionEn = seoDescriptionEn;
   }
 
   return payload;

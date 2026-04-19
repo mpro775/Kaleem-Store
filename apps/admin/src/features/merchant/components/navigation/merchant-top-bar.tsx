@@ -7,6 +7,7 @@ import {
   ListItemIcon,
   Menu,
   MenuItem,
+  Switch,
   Toolbar,
   Typography,
 } from '@mui/material';
@@ -18,13 +19,17 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import PeopleIcon from '@mui/icons-material/People';
 import LogoutIcon from '@mui/icons-material/Logout';
+import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
+import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
 import type { MerchantSession } from '../../types';
 
 interface MerchantTopBarProps {
   activeLabel: string;
   session: MerchantSession;
+  themeMode: 'light' | 'dark';
   showNavigationToggle: boolean;
   userMenuAnchorEl: HTMLElement | null;
+  onToggleThemeMode: () => void;
   onOpenNavigation: () => void;
   onOpenUserMenu: (event: MouseEvent<HTMLElement>) => void;
   onCloseUserMenu: () => void;
@@ -36,8 +41,10 @@ interface MerchantTopBarProps {
 export function MerchantTopBar({
   activeLabel,
   session,
+  themeMode,
   showNavigationToggle,
   userMenuAnchorEl,
+  onToggleThemeMode,
   onOpenNavigation,
   onOpenUserMenu,
   onCloseUserMenu,
@@ -78,6 +85,38 @@ export function MerchantTopBar({
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.3,
+              px: 0.7,
+              borderRadius: 999,
+              border: '1px solid',
+              borderColor: 'divider',
+              bgcolor: alpha(theme.palette.background.default, theme.palette.mode === 'dark' ? 0.5 : 0.9),
+            }}
+          >
+            <LightModeOutlinedIcon
+              sx={{
+                fontSize: 18,
+                color: themeMode === 'light' ? 'warning.main' : 'text.disabled',
+              }}
+            />
+            <Switch
+              size="small"
+              checked={themeMode === 'dark'}
+              onChange={() => onToggleThemeMode()}
+              inputProps={{ 'aria-label': 'تبديل الوضع الليلي' }}
+            />
+            <DarkModeOutlinedIcon
+              sx={{
+                fontSize: 18,
+                color: themeMode === 'dark' ? 'primary.light' : 'text.disabled',
+              }}
+            />
+          </Box>
+
           <IconButton size="large" aria-label="show notifications" color="inherit">
             <NotificationsIcon />
           </IconButton>

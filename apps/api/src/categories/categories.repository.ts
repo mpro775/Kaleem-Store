@@ -14,6 +14,14 @@ export interface CategoryRecord {
   description_en: string | null;
   media_asset_id: string | null;
   image_url: string | null;
+  image_alt_ar: string | null;
+  image_alt_en: string | null;
+  background_media_asset_id: string | null;
+  background_image_url: string | null;
+  seo_title_ar: string | null;
+  seo_title_en: string | null;
+  seo_description_ar: string | null;
+  seo_description_en: string | null;
   sort_order: number;
   is_active: boolean;
 }
@@ -26,7 +34,7 @@ export interface MediaAssetRecord {
   file_size_bytes: number;
 }
 
-const CATEGORY_COLUMNS = `c.id, c.store_id, c.parent_id, c.name, c.name_ar, c.name_en, c.slug, c.description, c.description_ar, c.description_en, c.media_asset_id, ma.public_url AS image_url, c.sort_order, c.is_active`;
+const CATEGORY_COLUMNS = `c.id, c.store_id, c.parent_id, c.name, c.name_ar, c.name_en, c.slug, c.description, c.description_ar, c.description_en, c.media_asset_id, ma.public_url AS image_url, c.image_alt_ar, c.image_alt_en, c.background_media_asset_id, bma.public_url AS background_image_url, c.seo_title_ar, c.seo_title_en, c.seo_description_ar, c.seo_description_en, c.sort_order, c.is_active`;
 
 @Injectable()
 export class CategoriesRepository {
@@ -38,6 +46,7 @@ export class CategoriesRepository {
         SELECT ${CATEGORY_COLUMNS}
         FROM categories c
         LEFT JOIN media_assets ma ON ma.id = c.media_asset_id
+        LEFT JOIN media_assets bma ON bma.id = c.background_media_asset_id
         WHERE c.store_id = $1
           AND c.id = $2
         LIMIT 1
@@ -53,6 +62,7 @@ export class CategoriesRepository {
         SELECT ${CATEGORY_COLUMNS}
         FROM categories c
         LEFT JOIN media_assets ma ON ma.id = c.media_asset_id
+        LEFT JOIN media_assets bma ON bma.id = c.background_media_asset_id
         WHERE c.store_id = $1
           AND c.slug = $2
         LIMIT 1
@@ -74,14 +84,21 @@ export class CategoriesRepository {
     descriptionAr: string | null;
     descriptionEn: string | null;
     mediaAssetId: string | null;
+    imageAltAr: string | null;
+    imageAltEn: string | null;
+    backgroundMediaAssetId: string | null;
+    seoTitleAr: string | null;
+    seoTitleEn: string | null;
+    seoDescriptionAr: string | null;
+    seoDescriptionEn: string | null;
     sortOrder: number;
     isActive: boolean;
   }): Promise<CategoryRecord> {
     const result = await this.databaseService.db.query<CategoryRecord>(
       `
         INSERT INTO categories (
-          id, store_id, parent_id, name, name_ar, name_en, slug, description, description_ar, description_en, media_asset_id, sort_order, is_active
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+          id, store_id, parent_id, name, name_ar, name_en, slug, description, description_ar, description_en, media_asset_id, image_alt_ar, image_alt_en, background_media_asset_id, seo_title_ar, seo_title_en, seo_description_ar, seo_description_en, sort_order, is_active
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
         RETURNING id
       `,
       [
@@ -96,6 +113,13 @@ export class CategoriesRepository {
         input.descriptionAr,
         input.descriptionEn,
         input.mediaAssetId,
+        input.imageAltAr,
+        input.imageAltEn,
+        input.backgroundMediaAssetId,
+        input.seoTitleAr,
+        input.seoTitleEn,
+        input.seoDescriptionAr,
+        input.seoDescriptionEn,
         input.sortOrder,
         input.isActive,
       ],
@@ -117,6 +141,7 @@ export class CategoriesRepository {
         SELECT ${CATEGORY_COLUMNS}
         FROM categories c
         LEFT JOIN media_assets ma ON ma.id = c.media_asset_id
+        LEFT JOIN media_assets bma ON bma.id = c.background_media_asset_id
         WHERE c.store_id = $1
           AND ($2::text IS NULL OR c.parent_id = $2::uuid)
           AND ($3::text IS NULL OR c.name ILIKE '%' || $3 || '%' OR c.name_ar ILIKE '%' || $3 || '%' OR c.name_en ILIKE '%' || $3 || '%' OR c.slug ILIKE '%' || $3 || '%')
@@ -134,6 +159,7 @@ export class CategoriesRepository {
         SELECT ${CATEGORY_COLUMNS}
         FROM categories c
         LEFT JOIN media_assets ma ON ma.id = c.media_asset_id
+        LEFT JOIN media_assets bma ON bma.id = c.background_media_asset_id
         WHERE c.store_id = $1
           AND c.is_active = TRUE
         ORDER BY c.sort_order ASC, c.created_at DESC
@@ -156,6 +182,13 @@ export class CategoriesRepository {
     descriptionAr: string | null;
     descriptionEn: string | null;
     mediaAssetId: string | null;
+    imageAltAr: string | null;
+    imageAltEn: string | null;
+    backgroundMediaAssetId: string | null;
+    seoTitleAr: string | null;
+    seoTitleEn: string | null;
+    seoDescriptionAr: string | null;
+    seoDescriptionEn: string | null;
     sortOrder: number;
     isActive: boolean;
   }): Promise<CategoryRecord | null> {
@@ -171,8 +204,15 @@ export class CategoriesRepository {
             description_ar = $9,
             description_en = $10,
             media_asset_id = $11,
-            sort_order = $12,
-            is_active = $13,
+            image_alt_ar = $12,
+            image_alt_en = $13,
+            background_media_asset_id = $14,
+            seo_title_ar = $15,
+            seo_title_en = $16,
+            seo_description_ar = $17,
+            seo_description_en = $18,
+            sort_order = $19,
+            is_active = $20,
             updated_at = NOW()
         WHERE store_id = $1
           AND id = $2
@@ -189,6 +229,13 @@ export class CategoriesRepository {
         input.descriptionAr,
         input.descriptionEn,
         input.mediaAssetId,
+        input.imageAltAr,
+        input.imageAltEn,
+        input.backgroundMediaAssetId,
+        input.seoTitleAr,
+        input.seoTitleEn,
+        input.seoDescriptionAr,
+        input.seoDescriptionEn,
         input.sortOrder,
         input.isActive,
       ],

@@ -21,12 +21,16 @@ export type {
 interface MerchantDashboardProps {
   session: MerchantSession;
   onSessionUpdate: (session: MerchantSession) => void;
+  themeMode: 'light' | 'dark';
+  onToggleThemeMode: () => void;
   onSignedOut: () => void;
 }
 
 export function MerchantDashboard({
   session,
   onSessionUpdate,
+  themeMode,
+  onToggleThemeMode,
   onSignedOut,
 }: MerchantDashboardProps) {
   const theme = useTheme();
@@ -124,8 +128,10 @@ export function MerchantDashboard({
         <MerchantTopBar
           activeLabel={activeLabel}
           session={session}
+          themeMode={themeMode}
           showNavigationToggle={!isDesktop}
           userMenuAnchorEl={userMenuAnchorEl}
+          onToggleThemeMode={onToggleThemeMode}
           onOpenNavigation={handleOpenNavigation}
           onOpenUserMenu={handleOpenUserMenu}
           onCloseUserMenu={handleCloseUserMenu}

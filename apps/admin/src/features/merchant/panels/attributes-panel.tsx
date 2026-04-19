@@ -272,7 +272,7 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
     setAttributeForm({
       name: attribute.name,
       slug: attribute.slug,
-      nameAr: (attribute as any).nameAr ?? '',
+      nameAr: (attribute as any).nameAr ?? attribute.name,
       nameEn: (attribute as any).nameEn ?? '',
     });
     setViewMode('detail');
@@ -343,18 +343,12 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
               
               <Stack spacing={3}>
                 <TextField 
-                  label="اسم الخاصية" 
-                  fullWidth 
-                  value={attributeForm.name} 
-                  onChange={(event) => setAttributeForm((prev) => ({ ...prev, name: event.target.value }))} 
-                  placeholder="مثال: اللون، المقاس"
-                  required
-                />
-                <TextField 
                   label="الاسم (عربي)" 
                   fullWidth 
                   value={attributeForm.nameAr} 
-                  onChange={(event) => setAttributeForm((prev) => ({ ...prev, nameAr: event.target.value }))} 
+                  onChange={(event) => setAttributeForm((prev) => ({ ...prev, nameAr: event.target.value, name: event.target.value }))} 
+                  placeholder="مثال: اللون، المقاس"
+                  required
                   dir="rtl"
                 />
                 <TextField 
@@ -590,18 +584,19 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
 }
 
 function buildAttributePayload(form: typeof attributeFormDefault) {
+  const primaryArabicName = form.nameAr.trim() || form.name.trim();
+  if (!primaryArabicName) {
+    throw new Error('الاسم العربي للخاصية مطلوب');
+  }
+
   const payload: { name: string; slug?: string; nameAr?: string; nameEn?: string } = {
-    name: form.name.trim(),
+    name: primaryArabicName,
+    nameAr: primaryArabicName,
   };
 
   const slug = form.slug.trim();
   if (slug) {
     payload.slug = slug;
-  }
-
-  const nameAr = form.nameAr.trim();
-  if (nameAr) {
-    payload.nameAr = nameAr;
   }
 
   const nameEn = form.nameEn.trim();

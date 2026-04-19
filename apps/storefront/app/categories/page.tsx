@@ -21,12 +21,29 @@ export async function generateMetadata({ searchParams }: CategoriesPageProps): P
   const resolvedParams = searchParams ? await searchParams : {};
   const selectedCategory = readSingleSearchParam(resolvedParams, 'category');
   const query = readSingleSearchParam(resolvedParams, 'q');
+  const categories = await listCategories();
+  const selectedCategoryData = selectedCategory
+    ? categories.find((category) => category.slug === selectedCategory)
+    : null;
 
-  const titleBase = selectedCategory ? `Categories - ${selectedCategory}` : 'Categories';
+  const selectedCategoryName = selectedCategoryData
+    ? bilingual(selectedCategoryData.nameAr, selectedCategoryData.nameEn, selectedCategoryData.name)
+    : selectedCategory;
+
+  const seoTitle = selectedCategoryData
+    ? selectedCategoryData.seoTitleAr ?? selectedCategoryData.seoTitleEn
+    : null;
+  const seoDescription = selectedCategoryData
+    ? selectedCategoryData.seoDescriptionAr ?? selectedCategoryData.seoDescriptionEn
+    : null;
+
+  const titleBase = seoTitle ?? (selectedCategoryName ? `Categories - ${selectedCategoryName}` : 'Categories');
   const title = query ? `${titleBase} | Search: ${query}` : titleBase;
-  const description = selectedCategory
-    ? `Browse products in ${selectedCategory} and discover top picks with filters.`
-    : 'Browse categories with advanced filters and fast product discovery.';
+  const description =
+    seoDescription ??
+    (selectedCategoryName
+      ? `Browse products in ${selectedCategoryName} and discover top picks with filters.`
+      : 'Browse categories with advanced filters and fast product discovery.');
 
   const params = new URLSearchParams();
   if (selectedCategory) {
@@ -80,6 +97,19 @@ export default async function CategoriesPage({ searchParams }: CategoriesPagePro
   ]);
 
   const totalPages = Math.max(1, Math.ceil(products.total / limit));
+  const selectedCategoryData = selectedCategory
+    ? categories.find((category) => category.slug === selectedCategory)
+    : null;
+  const pageTitle = selectedCategoryData
+    ? bilingual(selectedCategoryData.nameAr, selectedCategoryData.nameEn, selectedCategoryData.name)
+    : 'Categories';
+  const pageDescription = selectedCategoryData
+    ? bilingual(
+        selectedCategoryData.descriptionAr,
+        selectedCategoryData.descriptionEn,
+        selectedCategoryData.description ?? 'Browse products with quick filters and pagination.',
+      )
+    : 'Browse products with quick filters and pagination.';
   const pageUrl = buildPageHref(page, selectedCategory, query, attributeFilters);
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -125,8 +155,18 @@ export default async function CategoriesPage({ searchParams }: CategoriesPagePro
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <header className="page-header">
-        <h1>Categories</h1>
-        <p>Browse products with quick filters and pagination.</p>
+        {selectedCategoryData?.backgroundImageUrl ? (
+          <Image
+            src={selectedCategoryData.backgroundImageUrl}
+            alt={selectedCategoryData.imageAltAr ?? selectedCategoryData.imageAltEn ?? pageTitle}
+            width={1400}
+            height={360}
+            style={{ width: '100%', height: 'auto', borderRadius: '16px', marginBottom: '0.8rem' }}
+            priority
+          />
+        ) : null}
+        <h1>{pageTitle}</h1>
+        <p>{pageDescription}</p>
       </header>
 
       <CategoryTabs categories={categories} selectedCategory={selectedCategory} />
@@ -157,7 +197,16 @@ function CategoryTabs({
   categories,
   selectedCategory,
 }: {
-  categories: Array<{ id: string; slug: string; name: string; nameAr: string | null; nameEn: string | null; imageUrl: string | null }>;
+  categories: Array<{
+    id: string;
+    slug: string;
+    name: string;
+    nameAr: string | null;
+    nameEn: string | null;
+    imageUrl: string | null;
+    imageAltAr: string | null;
+    imageAltEn: string | null;
+  }>;
   selectedCategory: string | undefined;
 }) {
   return (
@@ -174,7 +223,7 @@ function CategoryTabs({
           {category.imageUrl ? (
             <Image
               src={category.imageUrl}
-              alt={bilingual(category.nameAr, category.nameEn, category.name)}
+              alt={category.imageAltAr ?? category.imageAltEn ?? bilingual(category.nameAr, category.nameEn, category.name)}
               width={20}
               height={20}
               className="category-tab-icon"

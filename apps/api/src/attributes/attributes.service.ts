@@ -91,14 +91,15 @@ export class AttributesService {
     input: CreateAttributeDto,
     context: RequestContextData,
   ): Promise<AttributeResponse> {
-    const slug = this.resolveSlug(input.name, input.slug, 'Attribute slug is invalid');
+    const primaryArabicName = this.resolvePrimaryArabicName(input.name, input.nameAr);
+    const slug = this.resolveSlug(primaryArabicName, input.slug, 'Attribute slug is invalid');
     await this.ensureAttributeSlugAvailable(currentUser.storeId, slug);
 
     try {
       const created = await this.attributesRepository.createAttribute({
         storeId: currentUser.storeId,
-        name: input.name.trim(),
-        nameAr: input.nameAr ?? null,
+        name: primaryArabicName,
+        nameAr: primaryArabicName,
         nameEn: input.nameEn ?? null,
         slug,
       });
@@ -143,7 +144,10 @@ export class AttributesService {
     context: RequestContextData,
   ): Promise<AttributeResponse> {
     const existing = await this.requireAttribute(currentUser.storeId, attributeId);
-    const name = input.name?.trim() ?? existing.name;
+    const name = this.resolvePrimaryArabicName(
+      input.name ?? existing.name,
+      input.nameAr ?? existing.name_ar,
+    );
     const slug = this.resolveSlug(name, input.slug ?? existing.slug, 'Attribute slug is invalid');
 
     if (slug !== existing.slug) {
@@ -155,7 +159,7 @@ export class AttributesService {
         storeId: currentUser.storeId,
         attributeId,
         name,
-        nameAr: input.nameAr ?? existing.name_ar ?? null,
+        nameAr: name,
         nameEn: input.nameEn ?? existing.name_en ?? null,
         slug,
       });
@@ -573,6 +577,20 @@ export class AttributesService {
     }
 
     return value;
+  }
+
+  private resolvePrimaryArabicName(baseName: string, arabicName?: string | null): string {
+    const normalizedArabicName = arabicName?.trim();
+    if (normalizedArabicName) {
+      return normalizedArabicName;
+    }
+
+    const normalizedBaseName = baseName.trim();
+    if (!normalizedBaseName) {
+      throw new BadRequestException('Attribute name is invalid');
+    }
+
+    return normalizedBaseName;
   }
 
   private assertAttributeOwnership(expectedAttributeId: string, actualAttributeId: string): void {

@@ -27,6 +27,14 @@ export interface CategoryResponse {
   descriptionEn: string | null;
   mediaAssetId: string | null;
   imageUrl: string | null;
+  imageAltAr: string | null;
+  imageAltEn: string | null;
+  backgroundMediaAssetId: string | null;
+  backgroundImageUrl: string | null;
+  seoTitleAr: string | null;
+  seoTitleEn: string | null;
+  seoDescriptionAr: string | null;
+  seoDescriptionEn: string | null;
   sortOrder: number;
   isActive: boolean;
 }
@@ -43,23 +51,32 @@ export class CategoriesService {
     input: CreateCategoryDto,
     context: RequestContextData,
   ): Promise<CategoryResponse> {
-    const slug = this.resolveSlug(input.name, input.slug);
+    const primaryArabicName = this.resolvePrimaryArabicName(input.name, input.nameAr);
+    const slug = this.resolveSlug(primaryArabicName, input.slug);
     await this.ensureSlugAvailable(currentUser.storeId, slug);
     await this.validateParentCategory(currentUser.storeId, input.parentId ?? null);
     await this.validateMediaAsset(currentUser.storeId, input.mediaAssetId ?? null);
+    await this.validateMediaAsset(currentUser.storeId, input.backgroundMediaAssetId ?? null);
 
     const category = await this.categoriesRepository.create({
       id: uuidv4(),
       storeId: currentUser.storeId,
       parentId: input.parentId ?? null,
-      name: input.name.trim(),
-      nameAr: input.nameAr?.trim() ?? null,
+      name: primaryArabicName,
+      nameAr: primaryArabicName,
       nameEn: input.nameEn?.trim() ?? null,
       slug,
       description: input.description?.trim() ?? null,
       descriptionAr: input.descriptionAr?.trim() ?? null,
       descriptionEn: input.descriptionEn?.trim() ?? null,
       mediaAssetId: input.mediaAssetId ?? null,
+      imageAltAr: input.imageAltAr?.trim() ?? null,
+      imageAltEn: input.imageAltEn?.trim() ?? null,
+      backgroundMediaAssetId: input.backgroundMediaAssetId ?? null,
+      seoTitleAr: input.seoTitleAr?.trim() ?? null,
+      seoTitleEn: input.seoTitleEn?.trim() ?? null,
+      seoDescriptionAr: input.seoDescriptionAr?.trim() ?? null,
+      seoDescriptionEn: input.seoDescriptionEn?.trim() ?? null,
       sortOrder: input.sortOrder ?? 0,
       isActive: input.isActive ?? true,
     });
@@ -98,10 +115,24 @@ export class CategoriesService {
     const nextSlug = await this.resolveUpdatedSlug(currentUser.storeId, categoryId, existing, input);
     const parentId = await this.resolveUpdatedParentId(currentUser.storeId, categoryId, existing, input);
     const mediaAssetId = input.mediaAssetId !== undefined ? (input.mediaAssetId ?? null) : existing.media_asset_id;
+    const backgroundMediaAssetId =
+      input.backgroundMediaAssetId !== undefined
+        ? (input.backgroundMediaAssetId ?? null)
+        : existing.background_media_asset_id;
     await this.validateMediaAsset(currentUser.storeId, mediaAssetId);
+    await this.validateMediaAsset(currentUser.storeId, backgroundMediaAssetId);
 
     const updated = await this.categoriesRepository.update(
-      this.buildUpdatePayload(currentUser.storeId, categoryId, existing, input, nextSlug, parentId, mediaAssetId),
+      this.buildUpdatePayload(
+        currentUser.storeId,
+        categoryId,
+        existing,
+        input,
+        nextSlug,
+        parentId,
+        mediaAssetId,
+        backgroundMediaAssetId,
+      ),
     );
 
     if (!updated) {
@@ -118,11 +149,15 @@ export class CategoriesService {
     existing: CategoryRecord,
     input: UpdateCategoryDto,
   ): Promise<string> {
-    if (!input.slug && !input.name) {
+    if (!input.slug && !input.name && !input.nameAr) {
       return existing.slug;
     }
 
-    const nextSlug = this.resolveSlug(input.name ?? existing.name, input.slug);
+    const nextNameForSlug = this.resolvePrimaryArabicName(
+      input.name ?? existing.name,
+      input.nameAr ?? existing.name_ar,
+    );
+    const nextSlug = this.resolveSlug(nextNameForSlug, input.slug);
     if (nextSlug !== existing.slug) {
       await this.ensureSlugAvailable(storeId, nextSlug, categoryId);
     }
@@ -150,19 +185,32 @@ export class CategoriesService {
     nextSlug: string,
     parentId: string | null,
     mediaAssetId: string | null,
+    backgroundMediaAssetId: string | null,
   ) {
+    const primaryArabicName = this.resolvePrimaryArabicName(
+      input.name ?? existing.name,
+      input.nameAr ?? existing.name_ar,
+    );
+
     return {
       storeId,
       categoryId,
       parentId,
-      name: input.name?.trim() ?? existing.name,
-      nameAr: input.nameAr?.trim() ?? existing.name_ar,
+      name: primaryArabicName,
+      nameAr: primaryArabicName,
       nameEn: input.nameEn?.trim() ?? existing.name_en,
       slug: nextSlug,
       description: input.description?.trim() ?? existing.description,
       descriptionAr: input.descriptionAr?.trim() ?? existing.description_ar,
       descriptionEn: input.descriptionEn?.trim() ?? existing.description_en,
       mediaAssetId,
+      imageAltAr: input.imageAltAr?.trim() ?? existing.image_alt_ar,
+      imageAltEn: input.imageAltEn?.trim() ?? existing.image_alt_en,
+      backgroundMediaAssetId,
+      seoTitleAr: input.seoTitleAr?.trim() ?? existing.seo_title_ar,
+      seoTitleEn: input.seoTitleEn?.trim() ?? existing.seo_title_en,
+      seoDescriptionAr: input.seoDescriptionAr?.trim() ?? existing.seo_description_ar,
+      seoDescriptionEn: input.seoDescriptionEn?.trim() ?? existing.seo_description_en,
       sortOrder: input.sortOrder ?? existing.sort_order,
       isActive: input.isActive ?? existing.is_active,
     };
@@ -205,6 +253,20 @@ export class CategoriesService {
       throw new BadRequestException('Category slug is invalid');
     }
     return value;
+  }
+
+  private resolvePrimaryArabicName(baseName: string, arabicName?: string | null): string {
+    const normalizedArabicName = arabicName?.trim();
+    if (normalizedArabicName) {
+      return normalizedArabicName;
+    }
+
+    const normalizedBaseName = baseName.trim();
+    if (!normalizedBaseName) {
+      throw new BadRequestException('Category name is invalid');
+    }
+
+    return normalizedBaseName;
   }
 
   private assertNoSelfParent(categoryId: string, parentId: string | null): void {
@@ -267,6 +329,14 @@ export class CategoriesService {
       descriptionEn: record.description_en,
       mediaAssetId: record.media_asset_id,
       imageUrl: record.image_url,
+      imageAltAr: record.image_alt_ar,
+      imageAltEn: record.image_alt_en,
+      backgroundMediaAssetId: record.background_media_asset_id,
+      backgroundImageUrl: record.background_image_url,
+      seoTitleAr: record.seo_title_ar,
+      seoTitleEn: record.seo_title_en,
+      seoDescriptionAr: record.seo_description_ar,
+      seoDescriptionEn: record.seo_description_en,
       sortOrder: record.sort_order,
       isActive: record.is_active,
     };
