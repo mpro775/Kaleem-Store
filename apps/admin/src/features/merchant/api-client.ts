@@ -19,14 +19,31 @@ interface MerchantRequestInput {
 let activeSession: MerchantSession | null = null;
 let refreshPromise: Promise<MerchantSession | null> | null = null;
 
+export function clearMerchantSessionCache(): void {
+  activeSession = null;
+  refreshPromise = null;
+}
+
+function isSameSessionScope(a: MerchantSession, b: MerchantSession): boolean {
+  const aSessionId = a.user?.sessionId;
+  const bSessionId = b.user?.sessionId;
+
+  if (aSessionId && bSessionId) {
+    return aSessionId === bSessionId;
+  }
+
+  return a.user.id === b.user.id && a.user.storeId === b.user.storeId;
+}
+
 export async function merchantRequestJson<T>(input: MerchantRequestInput): Promise<T | null> {
   const init = input.init ?? {};
   const options = input.options ?? {};
 
   // Use the most up-to-date session to prevent race conditions during React state updates
-  const currentSession = activeSession && activeSession.refreshToken !== input.session.refreshToken 
-    ? activeSession 
-    : input.session;
+  const currentSession =
+    activeSession && isSameSessionScope(activeSession, input.session)
+      ? activeSession
+      : input.session;
 
   const initial = await executeRequest<T>(currentSession, input.path, init, options);
   if (initial.ok) {
@@ -154,7 +171,7 @@ function shouldRefresh(status: number, options: MerchantRequestOptions): boolean
 async function refreshSession(session: MerchantSession): Promise<MerchantSession | null> {
   // If the session we are trying to refresh is older than the active one we already refreshed,
   // we just return the active one instead of refreshing again.
-  if (activeSession && activeSession.refreshToken !== session.refreshToken) {
+  if (activeSession && isSameSessionScope(activeSession, session) && activeSession.refreshToken !== session.refreshToken) {
     return activeSession;
   }
 

@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react';
 import { useMediaQuery, useTheme } from '@mui/material';
-import { merchantRequestJson, type MerchantRequestOptions } from './api-client';
+import {
+  clearMerchantSessionCache,
+  merchantRequestJson,
+  type MerchantRequestOptions,
+} from './api-client';
 import { MERCHANT_DRAWER_WIDTH, MERCHANT_NAV_ITEMS, MERCHANT_PRIMARY_MOBILE_TABS } from './constants/merchant-navigation';
 import { MerchantDashboardLayout } from './components/layout/merchant-dashboard-layout';
 import { MerchantMobileNav } from './components/navigation/merchant-mobile-nav';
@@ -102,6 +106,7 @@ export function MerchantDashboard({
     } catch {
       // Ignore sign-out network failures and clear session locally.
     }
+    clearMerchantSessionCache();
     onSignedOut();
   }, [onSignedOut, request]);
 
