@@ -64,6 +64,33 @@ export interface Category {
 }
 
 export type ProductStatus = 'draft' | 'active' | 'archived';
+export type ProductType = 'single' | 'bundled' | 'digital';
+
+export interface ProductBundleItem {
+  id: string;
+  bundledProductId: string;
+  bundledVariantId: string | null;
+  quantity: number;
+  sortOrder: number;
+  bundledProductTitle: string;
+  bundledVariantTitle: string | null;
+}
+
+export interface ProductDigitalFile {
+  id: string;
+  mediaAssetId: string;
+  fileName: string | null;
+  sortOrder: number;
+  url: string;
+  fileSizeBytes: number;
+}
+
+export interface ProductInlineDiscount {
+  type: 'percent' | 'fixed';
+  value: number;
+  startsAt: string | null;
+  endsAt: string | null;
+}
 
 export interface ProductVariant {
   id: string;
@@ -146,6 +173,56 @@ export interface PaginatedInventoryReservations {
   limit: number;
 }
 
+export interface Warehouse {
+  id: string;
+  storeId: string;
+  name: string;
+  nameAr: string;
+  nameEn: string;
+  code: string;
+  isDefault: boolean;
+  isActive: boolean;
+  country: string;
+  city: string;
+  branch: string;
+  district: string;
+  street: string;
+  shortAddress: string;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  geolocation: Record<string, unknown> | null;
+  priority: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProductWarehouseLink {
+  warehouseId: string;
+  warehouseCode: string;
+  warehouseName: string;
+  warehouseNameAr: string | null;
+  warehouseNameEn: string | null;
+  isDefault: boolean;
+  isActive: boolean;
+}
+
+export interface VariantWarehouseAllocation {
+  warehouseId: string;
+  warehouseCode: string;
+  warehouseName: string;
+  warehouseNameAr: string | null;
+  warehouseNameEn: string | null;
+  isDefault: boolean;
+  isActive: boolean;
+  quantity: number;
+  reservedQuantity: number;
+  lowStockThreshold: number | null;
+  reorderPoint: number | null;
+}
+
 export interface ProductImage {
   id: string;
   productId: string;
@@ -161,22 +238,44 @@ export interface Product {
   id: string;
   storeId: string;
   categoryId: string | null;
+  categoryIds: string[];
+  productType: ProductType;
+  isVisible: boolean;
+  stockUnlimited: boolean;
   title: string;
   slug: string;
   description: string | null;
   status: ProductStatus;
   variants?: ProductVariant[];
   images?: ProductImage[];
+  bundleItems?: ProductBundleItem[];
+  digitalFiles?: ProductDigitalFile[];
+  relatedProductIds?: string[];
   titleAr: string | null;
   titleEn: string | null;
   descriptionAr: string | null;
   descriptionEn: string | null;
+  shortDescriptionAr: string | null;
+  shortDescriptionEn: string | null;
+  detailedDescriptionAr: string | null;
+  detailedDescriptionEn: string | null;
   brand: string | null;
   weight: number | null;
+  weightUnit: string | null;
   dimensions: { length?: number; width?: number; height?: number } | null;
   costPrice: number | null;
+  productLabel: string | null;
+  youtubeUrl: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
+  seoTitleAr: string | null;
+  seoTitleEn: string | null;
+  seoDescriptionAr: string | null;
+  seoDescriptionEn: string | null;
+  customFields: Array<Record<string, unknown>>;
+  inlineDiscount: ProductInlineDiscount | null;
+  digitalDownloadAttemptsLimit: number | null;
+  digitalDownloadExpiresAt: string | null;
   tags: string[];
   isFeatured: boolean;
   isTaxable: boolean;

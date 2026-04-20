@@ -15,6 +15,9 @@ export interface StoreVariantSnapshot {
   variant_id: string;
   product_id: string;
   product_status: string;
+  product_is_visible: boolean;
+  product_type: 'single' | 'bundled' | 'digital';
+  stock_unlimited: boolean;
   product_title: string;
   sku: string;
   variant_title: string;
@@ -34,6 +37,8 @@ export interface CartItemSnapshot {
   cart_item_id: string;
   product_id: string;
   category_id: string | null;
+  product_type: 'single' | 'bundled' | 'digital';
+  stock_unlimited: boolean;
   variant_id: string;
   quantity: number;
   unit_price: string;
@@ -152,6 +157,9 @@ export class OrdersRepository {
           pv.id AS variant_id,
           pv.product_id,
           p.status AS product_status,
+          p.is_visible AS product_is_visible,
+          p.product_type,
+          p.stock_unlimited,
           p.title AS product_title,
           pv.sku,
           pv.title AS variant_title,
@@ -243,6 +251,8 @@ export class OrdersRepository {
           ci.id AS cart_item_id,
           ci.product_id,
           p.category_id,
+          p.product_type,
+          p.stock_unlimited,
           ci.variant_id,
           ci.quantity,
           ci.unit_price,

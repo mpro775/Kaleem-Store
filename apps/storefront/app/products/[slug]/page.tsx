@@ -183,7 +183,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 <p><strong>Brand:</strong> {product.brand}</p>
               ) : null}
               {product.weight != null ? (
-                <p><strong>Weight:</strong> {product.weight}g</p>
+                <p><strong>Weight:</strong> {product.weight}{product.weightUnit ? ` ${product.weightUnit}` : ''}</p>
               ) : null}
               {product.dimensions ? (
                 <p>
@@ -202,7 +202,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
             ) : null}
           </article>
 
-          <ProductPurchaseCard variants={product.variants} />
+          <ProductPurchaseCard
+            variants={product.variants}
+            productType={product.productType}
+            stockUnlimited={product.stockUnlimited}
+            minOrderQuantity={product.minOrderQuantity}
+            maxOrderQuantity={product.maxOrderQuantity}
+          />
         </section>
       </div>
 

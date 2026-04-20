@@ -22,6 +22,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
 import type { MerchantSession } from '../../types';
+import { ADMIN_TOKENS } from '../../../../theme/tokens';
 
 interface MerchantTopBarProps {
   activeLabel: string;
@@ -66,7 +67,7 @@ export function MerchantTopBar({
         zIndex: (currentTheme) => currentTheme.zIndex.drawer - 1,
       }}
     >
-      <Toolbar sx={{ justifyContent: 'space-between', minHeight: { xs: 64, md: 72 } }}>
+      <Toolbar sx={{ justifyContent: 'space-between', minHeight: { xs: 64, md: ADMIN_TOKENS.heights.toolbar }, px: { xs: 2, md: 3 } }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
           {showNavigationToggle ? (
             <IconButton
@@ -79,9 +80,9 @@ export function MerchantTopBar({
               <MenuIcon />
             </IconButton>
           ) : null}
-          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 800 }}>
-            {activeLabel}
-          </Typography>
+           <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700 }}>
+             {activeLabel}
+           </Typography>
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
@@ -90,11 +91,11 @@ export function MerchantTopBar({
               display: 'flex',
               alignItems: 'center',
               gap: 0.3,
-              px: 0.7,
-              borderRadius: 999,
-              border: '1px solid',
-              borderColor: 'divider',
-              bgcolor: alpha(theme.palette.background.default, theme.palette.mode === 'dark' ? 0.5 : 0.9),
+               px: 1,
+               borderRadius: 999,
+               border: '1px solid',
+               borderColor: 'divider',
+               bgcolor: alpha(theme.palette.background.default, theme.palette.mode === 'dark' ? 0.5 : 0.9),
             }}
           >
             <LightModeOutlinedIcon
@@ -117,37 +118,37 @@ export function MerchantTopBar({
             />
           </Box>
 
-          <IconButton size="large" aria-label="show notifications" color="inherit">
-            <NotificationsIcon />
-          </IconButton>
+           <IconButton size="medium" aria-label="show notifications" color="inherit">
+             <NotificationsIcon />
+           </IconButton>
 
           <Box
             onClick={onOpenUserMenu}
             sx={{
               display: 'flex',
               alignItems: 'center',
-              gap: 1.25,
-              marginInlineStart: 0.5,
-              paddingBlock: 0.5,
-              paddingInlineStart: 0.5,
-              paddingInlineEnd: 1.25,
-              borderRadius: 999,
-              cursor: 'pointer',
-              border: '1px solid',
-              borderColor: 'divider',
+               gap: 1,
+               marginInlineStart: 0.5,
+               paddingBlock: 0.5,
+               paddingInlineStart: 0.5,
+               paddingInlineEnd: 1,
+               borderRadius: 999,
+               cursor: 'pointer',
+               border: '1px solid',
+               borderColor: 'divider',
               '&:hover': { bgcolor: alpha(theme.palette.text.primary, 0.02) },
             }}
           >
             <Avatar
               sx={{
-                width: 32,
-                height: 32,
-                bgcolor: 'primary.light',
-                color: 'primary.dark',
-                fontWeight: 700,
-                fontSize: '0.9rem',
-              }}
-            >
+                 width: 32,
+                 height: 32,
+                 bgcolor: 'primary.light',
+                 color: 'primary.dark',
+                 fontWeight: 700,
+                 fontSize: '0.9rem',
+               }}
+             >
               {session.user.fullName.charAt(0).toUpperCase()}
             </Avatar>
 
@@ -176,7 +177,7 @@ export function MerchantTopBar({
                 filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.1))',
                 mt: 1,
                 minWidth: 220,
-                borderRadius: 3,
+                borderRadius: 2,
                 border: '1px solid',
                 borderColor: 'divider',
               },

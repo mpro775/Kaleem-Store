@@ -23,7 +23,6 @@ import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import PaymentsIcon from '@mui/icons-material/Payments';
 import StorefrontIcon from '@mui/icons-material/Storefront';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import type { MerchantSession } from '../types';
 import type { MerchantRequester } from '../merchant-dashboard.types';
@@ -37,6 +36,7 @@ import {
   qualityCheckLabel,
   transitionLabel,
 } from './overview-formatters';
+import { AppPage, PageHeader, StatCard } from '../components/ui';
 
 export function OverviewPanel({ session, request }: { session: MerchantSession; request: MerchantRequester }) {
   const theme = useTheme();
@@ -99,34 +99,26 @@ export function OverviewPanel({ session, request }: { session: MerchantSession; 
   ];
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      {error ? <Alert severity="error" sx={{ borderRadius: 2 }}>{error}</Alert> : null}
+    <AppPage>
+      <PageHeader
+        title="لوحة المؤشرات"
+        description="متابعة الأداء التجاري والتشغيلي للمتجر خلال آخر 30 يوم مع مؤشرات جودة البيانات."
+      />
+
+      {error ? <Alert severity="error">{error}</Alert> : null}
 
       {/* Stat Cards Row */}
       <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' } }}>
-        {stats.map((stat, i) => (
-          <Box key={i}>
-            <Paper elevation={0} sx={{ p: 3, borderRadius: 4, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', transition: 'box-shadow 0.3s', '&:hover': { boxShadow: '0 8px 24px rgba(0,0,0,0.04)' } }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <Box>
-                  <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>
-                    {stat.title}
-                  </Typography>
-                  <Typography variant="h4" fontWeight={800} sx={{ mb: 0.5 }}>
-                    {loading ? '-' : stat.value}
-                  </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <TrendingUpIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
-                    <Typography variant="caption" color="text.disabled">
-                      {stat.subtitle}
-                    </Typography>
-                  </Box>
-                </Box>
-                <Box sx={{ width: 44, height: 44, borderRadius: 2.5, bgcolor: stat.bg, color: stat.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {stat.icon}
-                </Box>
-              </Box>
-            </Paper>
+        {stats.map((stat) => (
+          <Box key={stat.title}>
+            <StatCard
+              title={stat.title}
+              value={loading ? '-' : stat.value}
+              subtitle={stat.subtitle}
+              icon={stat.icon}
+              toneColor={stat.color}
+              toneBackground={stat.bg}
+            />
           </Box>
         ))}
       </Box>
@@ -620,6 +612,6 @@ export function OverviewPanel({ session, request }: { session: MerchantSession; 
           </Box>
         </Paper>
       </Box>
-    </Box>
+    </AppPage>
   );
 }

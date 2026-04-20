@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -11,10 +12,15 @@ import {
   Put,
   Query,
   Req,
+  Res,
+  UploadedFile,
+  UseInterceptors,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
+import type { Response } from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { PERMISSIONS } from '../auth/constants/permission.constants';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AccessTokenGuard } from '../auth/guards/access-token.guard';
@@ -31,6 +37,7 @@ import { UpdateVariantAttributesDto } from './dto/update-variant-attributes.dto'
 import { UpdateProductDto } from './dto/update-product.dto';
 import {
   ProductsService,
+  type ProductExcelImportResultResponse,
   type ProductImageResponse,
   type ProductListResponse,
   type ProductResponse,
@@ -63,6 +70,47 @@ export class ProductsController {
     @Query() query: ListProductsQueryDto,
   ): Promise<ProductListResponse> {
     return this.productsService.list(currentUser, query);
+  }
+
+  @Get('export/excel')
+  @RequirePermissions(PERMISSIONS.productsRead)
+  @ApiOkResponse({ description: 'Export products as Excel file' })
+  async exportExcel(
+    @CurrentUser() currentUser: AuthUser,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<Buffer> {
+    const fileName = `products-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    response.setHeader(
+      'content-type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    response.setHeader('content-disposition', `attachment; filename="${fileName}"`);
+    return this.productsService.exportToExcel(currentUser);
+  }
+
+  @Post('import/excel')
+  @RequirePermissions(PERMISSIONS.productsWrite)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: 5 * 1024 * 1024,
+      },
+    }),
+  )
+  @ApiOkResponse({ description: 'Import products from Excel file' })
+  async importExcel(
+    @CurrentUser() currentUser: AuthUser,
+    @UploadedFile() file: { buffer: Buffer } | undefined,
+    @Req() request: Request,
+  ): Promise<ProductExcelImportResultResponse> {
+    if (!file?.buffer) {
+      throw new BadRequestException('Import file is required');
+    }
+    return this.productsService.importFromExcel(
+      currentUser,
+      file.buffer,
+      getRequestContext(request),
+    );
   }
 
   @Get(':productId')

@@ -116,7 +116,6 @@ export class OrdersService {
     const order = await this.requireOrder(currentUser.storeId, orderId);
     this.ensureTransitionAllowed(order.status, input.status);
 
-    const items = await this.ordersRepository.listOrderItems(orderId);
     const lowStockSignals: LowStockSignal[] = [];
 
     await this.ordersRepository.withTransaction(async (db) => {
@@ -126,7 +125,6 @@ export class OrdersService {
         currentStatus: order.status,
         nextStatus: input.status,
         storeId: currentUser.storeId,
-        items,
         actorId: currentUser.id,
       });
       lowStockSignals.push(...transitionSignals);
@@ -184,15 +182,13 @@ export class OrdersService {
       currentStatus: OrderStatus;
       nextStatus: OrderStatus;
       storeId: string;
-      items: OrderItemRecord[];
       actorId: string | null;
     },
   ): Promise<LowStockSignal[]> {
     if (input.currentStatus === 'new' && input.nextStatus === 'confirmed') {
-      return this.inventoryService.confirmReservedOrderItems(db, {
+      return this.inventoryService.confirmOrderReservations(db, {
         storeId: input.storeId,
         orderId: input.orderId,
-        items: this.mapInventoryItems(input.items),
         actorId: input.actorId,
       });
     }
@@ -213,18 +209,6 @@ export class OrdersService {
     }
 
     return [];
-  }
-
-  private mapInventoryItems(items: OrderItemRecord[]): Array<{
-    variantId: string;
-    quantity: number;
-    sku: string;
-  }> {
-    return items.map((item) => ({
-      variantId: item.variant_id,
-      quantity: item.quantity,
-      sku: item.sku,
-    }));
   }
 
   private isCancellationAfterStockDeduction(
@@ -253,14 +237,12 @@ export class OrdersService {
     input: {
       orderId: string;
       storeId: string;
-      items: OrderItemRecord[];
       actorId: string | null;
     },
   ): Promise<void> {
-    await this.inventoryService.restockOrderItems(db, {
+    await this.inventoryService.restockOrderSales(db, {
       storeId: input.storeId,
       orderId: input.orderId,
-      items: this.mapInventoryItems(input.items),
       actorId: input.actorId,
       note: 'Stock returned after order cancellation',
       movementType: 'return',
@@ -272,14 +254,12 @@ export class OrdersService {
     input: {
       orderId: string;
       storeId: string;
-      items: OrderItemRecord[];
       actorId: string | null;
     },
   ): Promise<void> {
-    await this.inventoryService.restockOrderItems(db, {
+    await this.inventoryService.restockOrderSales(db, {
       storeId: input.storeId,
       orderId: input.orderId,
-      items: this.mapInventoryItems(input.items),
       actorId: input.actorId,
       note: 'Stock returned from delivered order',
       movementType: 'return',

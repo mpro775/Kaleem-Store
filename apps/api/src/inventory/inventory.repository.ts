@@ -71,6 +71,32 @@ export interface VariantStockChangeRecord {
   current_stock_quantity: number;
 }
 
+export interface ReservedOrderVariantRecord {
+  variant_id: string;
+  quantity: number;
+  sku: string;
+  low_stock_threshold: number;
+  product_id: string;
+}
+
+export interface SoldOrderVariantRecord {
+  variant_id: string;
+  quantity: number;
+  sku: string;
+  low_stock_threshold: number;
+  product_id: string;
+}
+
+export interface VariantWarehouseStockRecord {
+  warehouse_id: string;
+  warehouse_name: string;
+  warehouse_code: string;
+  is_default: boolean;
+  priority: number;
+  quantity: number;
+  reserved_quantity: number;
+}
+
 const LIST_MOVEMENTS_ROWS_QUERY = `
   SELECT
     im.id,
@@ -267,6 +293,77 @@ export class InventoryRepository {
     return result.rowCount ?? 0;
   }
 
+  async listReservedVariantsForOrder(
+    db: Queryable,
+    storeId: string,
+    orderId: string,
+  ): Promise<ReservedOrderVariantRecord[]> {
+    const result = await db.query<ReservedOrderVariantRecord>(
+      `
+        SELECT
+          ir.variant_id,
+          ir.quantity,
+          pv.sku,
+          pv.low_stock_threshold,
+          pv.product_id
+        FROM inventory_reservations ir
+        INNER JOIN product_variants pv ON pv.id = ir.variant_id
+        WHERE ir.store_id = $1
+          AND ir.order_id = $2
+          AND ir.status = 'reserved'
+          AND ir.expires_at > NOW()
+      `,
+      [storeId, orderId],
+    );
+
+    return result.rows;
+  }
+
+  async countOrderReservations(
+    db: Queryable,
+    storeId: string,
+    orderId: string,
+  ): Promise<number> {
+    const result = await db.query<{ total: string }>(
+      `
+        SELECT COUNT(*)::text AS total
+        FROM inventory_reservations
+        WHERE store_id = $1
+          AND order_id = $2
+      `,
+      [storeId, orderId],
+    );
+
+    return Number(result.rows[0]?.total ?? '0');
+  }
+
+  async listSoldVariantsForOrder(
+    db: Queryable,
+    storeId: string,
+    orderId: string,
+  ): Promise<SoldOrderVariantRecord[]> {
+    const result = await db.query<SoldOrderVariantRecord>(
+      `
+        SELECT
+          im.variant_id,
+          SUM(ABS(im.qty_delta))::int AS quantity,
+          pv.sku,
+          pv.low_stock_threshold,
+          pv.product_id
+        FROM inventory_movements im
+        INNER JOIN product_variants pv ON pv.id = im.variant_id
+        WHERE im.store_id = $1
+          AND im.order_id = $2
+          AND im.movement_type = 'sale'
+        GROUP BY im.variant_id, pv.sku, pv.low_stock_threshold, pv.product_id
+        HAVING SUM(ABS(im.qty_delta)) > 0
+      `,
+      [storeId, orderId],
+    );
+
+    return result.rows;
+  }
+
   async decreaseVariantStock(
     db: Queryable,
     input: {
@@ -344,6 +441,132 @@ export class InventoryRepository {
     );
 
     return this.findVariantInventorySnapshot(db, input.storeId, input.variantId);
+  }
+
+  async listVariantWarehouseStocksForUpdate(
+    db: Queryable,
+    storeId: string,
+    variantId: string,
+  ): Promise<VariantWarehouseStockRecord[]> {
+    const result = await db.query<VariantWarehouseStockRecord>(
+      `
+        SELECT
+          wi.warehouse_id,
+          w.name AS warehouse_name,
+          w.code AS warehouse_code,
+          w.is_default,
+          w.priority,
+          wi.quantity,
+          wi.reserved_quantity
+        FROM warehouse_inventory wi
+        INNER JOIN warehouses w ON w.id = wi.warehouse_id
+        WHERE wi.store_id = $1
+          AND wi.variant_id = $2
+          AND w.is_active = TRUE
+        ORDER BY w.is_default DESC, w.priority DESC, w.created_at ASC
+        FOR UPDATE OF wi
+      `,
+      [storeId, variantId],
+    );
+    return result.rows;
+  }
+
+  async listVariantWarehouseStocks(
+    storeId: string,
+    variantId: string,
+  ): Promise<VariantWarehouseStockRecord[]> {
+    const result = await this.databaseService.db.query<VariantWarehouseStockRecord>(
+      `
+        SELECT
+          wi.warehouse_id,
+          w.name AS warehouse_name,
+          w.code AS warehouse_code,
+          w.is_default,
+          w.priority,
+          wi.quantity,
+          wi.reserved_quantity
+        FROM warehouse_inventory wi
+        INNER JOIN warehouses w ON w.id = wi.warehouse_id
+        WHERE wi.store_id = $1
+          AND wi.variant_id = $2
+          AND w.is_active = TRUE
+        ORDER BY w.is_default DESC, w.priority DESC, w.created_at ASC
+      `,
+      [storeId, variantId],
+    );
+    return result.rows;
+  }
+
+  async updateWarehouseInventoryQuantity(
+    db: Queryable,
+    input: {
+      storeId: string;
+      variantId: string;
+      warehouseId: string;
+      quantity: number;
+    },
+  ): Promise<void> {
+    await db.query(
+      `
+        UPDATE warehouse_inventory
+        SET quantity = $4,
+            updated_at = NOW()
+        WHERE store_id = $1
+          AND variant_id = $2
+          AND warehouse_id = $3
+      `,
+      [input.storeId, input.variantId, input.warehouseId, input.quantity],
+    );
+  }
+
+  async findPreferredWarehouse(
+    db: Queryable,
+    storeId: string,
+  ): Promise<{ id: string; code: string; name: string } | null> {
+    const result = await db.query<{ id: string; code: string; name: string }>(
+      `
+        SELECT id, code, name
+        FROM warehouses
+        WHERE store_id = $1
+          AND is_active = TRUE
+        ORDER BY is_default DESC, priority DESC, created_at ASC
+        LIMIT 1
+      `,
+      [storeId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async upsertVariantWarehouseStock(
+    db: Queryable,
+    input: {
+      storeId: string;
+      variantId: string;
+      warehouseId: string;
+      quantity: number;
+      lowStockThreshold: number;
+    },
+  ): Promise<void> {
+    await db.query(
+      `
+        INSERT INTO warehouse_inventory (
+          id,
+          warehouse_id,
+          variant_id,
+          store_id,
+          quantity,
+          reserved_quantity,
+          low_stock_threshold
+        )
+        VALUES ($1, $2, $3, $4, $5, 0, $6)
+        ON CONFLICT (warehouse_id, variant_id)
+        DO UPDATE SET
+          quantity = EXCLUDED.quantity,
+          low_stock_threshold = EXCLUDED.low_stock_threshold,
+          updated_at = NOW()
+      `,
+      [uuidv4(), input.warehouseId, input.variantId, input.storeId, input.quantity, input.lowStockThreshold],
+    );
   }
 
   async createMovement(

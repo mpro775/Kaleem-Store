@@ -2,6 +2,7 @@ import { arSD } from '@mui/material/locale';
 import { alpha, createTheme, type PaletteMode } from '@mui/material/styles';
 import '@fontsource/cairo';
 import '@fontsource/tajawal';
+import { ADMIN_TOKENS } from './tokens';
 
 const lightPrimaryMain = '#502E91';
 const lightPrimaryDark = '#4B247A';
@@ -15,6 +16,8 @@ export function createAdminTheme(mode: PaletteMode) {
   const primaryMain = isDark ? darkPrimaryMain : lightPrimaryMain;
   const primaryDark = isDark ? darkPrimaryDark : lightPrimaryDark;
   const surfaceTint = isDark ? 'rgba(255, 255, 255, 0.04)' : '#F4F2FA';
+  const radius = ADMIN_TOKENS.radius;
+  const heights = ADMIN_TOKENS.heights;
 
   return createTheme(
     {
@@ -52,30 +55,36 @@ export function createAdminTheme(mode: PaletteMode) {
         },
         h4: {
           fontWeight: 800,
+          fontSize: '1.62rem',
         },
         h5: {
-          fontWeight: 800,
+          fontWeight: 700,
           color: primaryDark,
         },
         h6: {
-          fontWeight: 800,
+          fontWeight: 700,
         },
         button: {
+          fontWeight: 700,
+          fontSize: '0.92rem',
+          lineHeight: 1.2,
+          fontFamily: 'Tajawal, Cairo, sans-serif',
+        },
+        subtitle1: {
           fontWeight: 700,
           fontFamily: 'Tajawal, Cairo, sans-serif',
         },
         body2: {
           color: isDark ? '#A5ADBF' : '#8589A0',
-        },
-        subtitle1: {
-          fontFamily: 'Tajawal, Cairo, sans-serif',
+          lineHeight: 1.6,
         },
         subtitle2: {
+          fontWeight: 700,
           fontFamily: 'Tajawal, Cairo, sans-serif',
         },
       },
       shape: {
-        borderRadius: 10,
+        borderRadius: radius.md,
       },
       components: {
         MuiCssBaseline: {
@@ -86,6 +95,9 @@ export function createAdminTheme(mode: PaletteMode) {
             body: {
               margin: 0,
               backgroundColor: isDark ? '#0E1118' : '#FAFAFF',
+              backgroundImage: isDark
+                ? 'radial-gradient(circle at 15% 10%, rgba(110, 83, 184, 0.13), transparent 45%)'
+                : 'radial-gradient(circle at 12% 8%, rgba(94, 65, 163, 0.06), transparent 40%)',
               color: isDark ? '#E6EAF2' : '#333333',
               transition: 'background-color 180ms ease, color 180ms ease',
             },
@@ -100,12 +112,16 @@ export function createAdminTheme(mode: PaletteMode) {
         MuiButton: {
           defaultProps: {
             disableElevation: true,
+            size: 'medium',
           },
           styleOverrides: {
             root: {
-              borderRadius: 14,
+              minHeight: heights.buttonMd,
+              borderRadius: radius.md,
               textTransform: 'none',
               fontWeight: 700,
+              paddingInline: 16,
+              whiteSpace: 'nowrap',
             },
             containedPrimary: {
               background: isDark
@@ -113,8 +129,8 @@ export function createAdminTheme(mode: PaletteMode) {
                 : 'linear-gradient(90deg, #6A3F9C 0%, #4B247A 100%)',
               color: '#ffffff',
               boxShadow: isDark
-                ? '0 6px 18px 0 rgba(112, 84, 189, 0.4)'
-                : '0 4px 14px 0 rgba(80, 46, 145, 0.28)',
+                ? '0 6px 16px 0 rgba(112, 84, 189, 0.36)'
+                : '0 5px 14px 0 rgba(80, 46, 145, 0.24)',
               '&:hover': {
                 background: isDark
                   ? 'linear-gradient(90deg, #8F74D3 0%, #7459C0 100%)'
@@ -124,15 +140,26 @@ export function createAdminTheme(mode: PaletteMode) {
             outlined: {
               borderColor: alpha(primaryDark, isDark ? 0.55 : 0.18),
             },
+            sizeSmall: {
+              minHeight: heights.buttonSm,
+              borderRadius: radius.sm,
+              paddingInline: 12,
+            },
+            sizeLarge: {
+              minHeight: heights.buttonLg,
+              borderRadius: radius.md,
+              paddingInline: 20,
+            },
           },
         },
         MuiPaper: {
           styleOverrides: {
             root: {
-              borderRadius: 24,
+              borderRadius: radius.lg,
+              border: `1px solid ${isDark ? '#232C3F' : '#ECE9F5'}`,
               boxShadow: isDark
-                ? '0 18px 34px rgba(5, 8, 20, 0.45), 0 8px 18px rgba(0,0,0,0.32)'
-                : '0 15px 35px rgba(50, 50, 93, 0.13), 0 5px 15px rgba(0,0,0,0.09)',
+                ? '0 12px 24px rgba(4, 10, 20, 0.35), 0 4px 12px rgba(0,0,0,0.2)'
+                : '0 10px 24px rgba(47, 51, 84, 0.08), 0 2px 10px rgba(0,0,0,0.04)',
               backgroundImage: 'none',
             },
           },
@@ -140,17 +167,22 @@ export function createAdminTheme(mode: PaletteMode) {
         MuiCard: {
           styleOverrides: {
             root: {
-              borderRadius: 24,
+              borderRadius: radius.lg,
+              border: `1px solid ${isDark ? '#232C3F' : '#ECE9F5'}`,
               boxShadow: isDark
-                ? '0 16px 30px rgba(5, 8, 20, 0.4), 0 6px 14px rgba(0,0,0,0.28)'
-                : '0 15px 35px rgba(50, 50, 93, 0.13), 0 5px 15px rgba(0,0,0,0.09)',
+                ? '0 12px 24px rgba(4, 10, 20, 0.34), 0 4px 12px rgba(0,0,0,0.2)'
+                : '0 10px 24px rgba(47, 51, 84, 0.08), 0 2px 10px rgba(0,0,0,0.04)',
             },
           },
         },
         MuiOutlinedInput: {
+          defaultProps: {
+            size: 'small',
+          },
           styleOverrides: {
             root: {
-              borderRadius: 12,
+              minHeight: heights.input,
+              borderRadius: radius.md,
               backgroundColor: surfaceTint,
               '& fieldset': {
                 borderColor: isDark ? '#303A50' : '#e0e0e0',
@@ -164,8 +196,8 @@ export function createAdminTheme(mode: PaletteMode) {
               },
             },
             input: {
-              paddingTop: 14,
-              paddingBottom: 14,
+              paddingTop: 10,
+              paddingBottom: 10,
             },
           },
         },
@@ -173,6 +205,7 @@ export function createAdminTheme(mode: PaletteMode) {
           defaultProps: {
             variant: 'outlined',
             fullWidth: true,
+            size: 'small',
           },
         },
         MuiAppBar: {
@@ -182,8 +215,8 @@ export function createAdminTheme(mode: PaletteMode) {
               color: isDark ? '#E6EAF2' : '#1c2f34',
               backdropFilter: 'blur(12px)',
               boxShadow: isDark
-                ? '0 8px 24px rgba(3, 7, 17, 0.5)'
-                : '0 4px 16px rgba(80, 46, 145, 0.16)',
+                ? '0 6px 18px rgba(3, 7, 17, 0.45)'
+                : '0 4px 12px rgba(80, 46, 145, 0.1)',
             },
           },
         },
@@ -191,12 +224,16 @@ export function createAdminTheme(mode: PaletteMode) {
           styleOverrides: {
             paper: {
               border: 0,
+              borderInlineStart: `1px solid ${isDark ? '#232C3F' : '#ECE9F5'}`,
               backgroundColor: isDark ? '#121825' : '#ffffff',
             },
           },
         },
         MuiTabs: {
           styleOverrides: {
+            root: {
+              minHeight: heights.buttonLg,
+            },
             indicator: {
               height: 3,
               borderRadius: 999,
@@ -207,8 +244,11 @@ export function createAdminTheme(mode: PaletteMode) {
         MuiTab: {
           styleOverrides: {
             root: {
+              minHeight: heights.buttonLg,
+              paddingInline: 16,
+              borderRadius: radius.md,
               textTransform: 'none',
-              fontWeight: 700,
+              fontWeight: 600,
               '&.Mui-selected': {
                 color: primaryDark,
               },
@@ -218,8 +258,67 @@ export function createAdminTheme(mode: PaletteMode) {
         MuiChip: {
           styleOverrides: {
             root: {
+              height: 28,
               fontWeight: 700,
               borderRadius: 999,
+            },
+          },
+        },
+        MuiTableContainer: {
+          styleOverrides: {
+            root: {
+              borderRadius: radius.md,
+            },
+          },
+        },
+        MuiTableHead: {
+          styleOverrides: {
+            root: {
+              '& .MuiTableRow-root': {
+                backgroundColor: isDark ? '#1A2235' : '#F8F6FC',
+              },
+            },
+          },
+        },
+        MuiTableCell: {
+          styleOverrides: {
+            root: {
+              padding: '12px 16px',
+              verticalAlign: 'middle',
+              borderBottomColor: isDark ? '#283248' : '#ECE9F5',
+            },
+            head: {
+              height: heights.tableHeadRow,
+              fontWeight: 700,
+              color: isDark ? '#D7DEEC' : '#4B4F63',
+              fontSize: '0.83rem',
+            },
+            body: {
+              minHeight: heights.tableRow,
+            },
+          },
+        },
+        MuiToolbar: {
+          styleOverrides: {
+            root: {
+              minHeight: heights.toolbar,
+              paddingInline: 24,
+            },
+          },
+        },
+        MuiMenuItem: {
+          styleOverrides: {
+            root: {
+              minHeight: 40,
+              borderRadius: radius.sm,
+              margin: 4,
+            },
+          },
+        },
+        MuiAlert: {
+          styleOverrides: {
+            root: {
+              borderRadius: radius.md,
             },
           },
         },

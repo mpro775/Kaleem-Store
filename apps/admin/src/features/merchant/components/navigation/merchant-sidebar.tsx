@@ -28,7 +28,8 @@ export function MerchantSidebar({
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Box
         sx={{
-          p: 2,
+          px: 2,
+          py: 2.5,
           display: 'flex',
           alignItems: 'center',
           gap: 1.5,
@@ -38,9 +39,9 @@ export function MerchantSidebar({
       >
         <Box
           sx={{
-            width: 36,
-            height: 36,
-            borderRadius: 1.5,
+            width: 38,
+            height: 38,
+            borderRadius: 2,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -66,7 +67,8 @@ export function MerchantSidebar({
                 onClick={() => onSelectTab(item.key)}
                 sx={{
                   borderRadius: 2,
-                  py: 1,
+                  minHeight: 44,
+                  py: 0.75,
                   bgcolor: isActive ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
                   color: isActive ? 'primary.main' : 'text.secondary',
                   '&:hover': {
@@ -102,7 +104,7 @@ export function MerchantSidebar({
       <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
         <Paper
           elevation={0}
-          sx={{ p: 1.5, bgcolor: 'background.default', border: '1px solid', borderColor: 'divider', borderRadius: 2 }}
+          sx={{ p: 1.5, bgcolor: 'background.default', border: '1px solid', borderColor: 'divider', borderRadius: 2.5 }}
         >
           <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 0.5 }}>
             حالة متجرك الآن

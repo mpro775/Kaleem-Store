@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Alert, Box, Button, Paper, Stack, TextField, Typography, Divider, CircularProgress } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Stack, TextField } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
-import StoreIcon from '@mui/icons-material/Store';
-import PhoneIcon from '@mui/icons-material/Phone';
-import PolicyIcon from '@mui/icons-material/Policy';
 import SettingsBackupRestoreIcon from '@mui/icons-material/SettingsBackupRestore';
 import type { MerchantRequester } from '../merchant-dashboard.types';
 import type { StoreSettings } from '../types';
+import { AppPage, FormSection, PageHeader } from '../components/ui';
 
 interface StoreSettingsPanelProps {
   request: MerchantRequester;
@@ -81,199 +79,147 @@ export function StoreSettingsPanel({ request }: StoreSettingsPanelProps) {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-        <CircularProgress />
-      </Box>
+      <AppPage maxWidth={900}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 320 }}>
+          <CircularProgress />
+        </Box>
+      </AppPage>
     );
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, maxWidth: 900, mx: 'auto', width: '100%' }}>
-      
-      {/* Header Area */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1 }}>
-        <Box>
-          <Typography variant="h4" fontWeight={800} gutterBottom>
-            إعدادات المتجر
-          </Typography>
-          <Typography color="text.secondary">
-            قم بضبط البيانات الأساسية والسياسات الخاصة بمتجرك لتظهر للعملاء بشكل صحيح.
-          </Typography>
-        </Box>
-        <Stack direction="row" spacing={1.5}>
-          <Button 
-            variant="outlined" 
-            color="inherit" 
-            startIcon={<SettingsBackupRestoreIcon />}
-            onClick={() => loadSettings().catch(() => undefined)} 
-            disabled={saveLoading}
-          >
-            إلغاء التعديلات
-          </Button>
-          <Button 
-            variant="contained" 
-            color="primary" 
-            startIcon={<SaveIcon />}
-            onClick={() => saveSettings().catch(() => undefined)} 
-            disabled={saveLoading}
-          >
-            {saveLoading ? 'جارِ الحفظ...' : 'حفظ التغييرات'}
-          </Button>
-        </Stack>
-      </Box>
+    <AppPage maxWidth={900}>
+      <PageHeader
+        title="إعدادات المتجر"
+        description="قم بضبط البيانات الأساسية والسياسات الخاصة بمتجرك لتظهر للعملاء بشكل واضح ومتسق."
+        actions={(
+          <>
+            <Button
+              variant="outlined"
+              color="inherit"
+              startIcon={<SettingsBackupRestoreIcon />}
+              onClick={() => loadSettings().catch(() => undefined)}
+              disabled={saveLoading}
+            >
+              إلغاء التعديلات
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<SaveIcon />}
+              onClick={() => saveSettings().catch(() => undefined)}
+              disabled={saveLoading}
+            >
+              {saveLoading ? 'جارِ الحفظ...' : 'حفظ التغييرات'}
+            </Button>
+          </>
+        )}
+      />
 
-      {message.text && (
-        <Alert severity={message.type} sx={{ borderRadius: 2 }}>
-          {message.text}
-        </Alert>
-      )}
+      {message.text ? <Alert severity={message.type}>{message.text}</Alert> : null}
 
-      {/* Card 1: Basic Information */}
-      <Paper elevation={0} sx={{ p: { xs: 3, md: 4 }, borderRadius: 4, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-          <StoreIcon color="primary" />
-          <Typography variant="h6" fontWeight={800}>المعلومات الأساسية</Typography>
-        </Box>
-        <Divider sx={{ mb: 4 }} />
-        
+      <FormSection title="المعلومات الأساسية" description="بيانات الهوية الرئيسية التي تظهر للعملاء داخل المتجر والفواتير.">
         <Stack spacing={3}>
-          <TextField 
-            label="اسم المتجر" 
-            fullWidth 
-            value={form.name} 
-            onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} 
+          <TextField
+            label="اسم المتجر"
+            value={form.name}
+            onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
             placeholder="مثال: متجر الهدايا الفاخرة"
           />
-          <TextField 
-            label="رابط الشعار (Logo URL)" 
-            fullWidth 
-            value={form.logoUrl} 
-            onChange={(event) => setForm((prev) => ({ ...prev, logoUrl: event.target.value }))} 
+          <TextField
+            label="رابط الشعار (Logo URL)"
+            value={form.logoUrl}
+            onChange={(event) => setForm((prev) => ({ ...prev, logoUrl: event.target.value }))}
             placeholder="https://example.com/logo.png"
-            helperText="أدخل رابط صورة شعار المتجر. سيظهر في الفواتير وواجهة المتجر."
+            helperText="أدخل رابط صورة شعار المتجر."
           />
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
             <TextField
               label="رمز العملة"
-              fullWidth
               value={form.currencyCode}
               inputProps={{ maxLength: 3 }}
               onChange={(event) => setForm((prev) => ({ ...prev, currencyCode: event.target.value.toUpperCase() }))}
               helperText="مثال: SAR, YER, USD"
             />
-            <TextField 
-              label="المنطقة الزمنية" 
-              fullWidth 
-              value={form.timezone} 
-              onChange={(event) => setForm((prev) => ({ ...prev, timezone: event.target.value }))} 
+            <TextField
+              label="المنطقة الزمنية"
+              value={form.timezone}
+              onChange={(event) => setForm((prev) => ({ ...prev, timezone: event.target.value }))}
               helperText="مثال: Asia/Riyadh"
               dir="ltr"
             />
           </Stack>
         </Stack>
-      </Paper>
+      </FormSection>
 
-      {/* Card 2: Contact Information */}
-      <Paper elevation={0} sx={{ p: { xs: 3, md: 4 }, borderRadius: 4, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-          <PhoneIcon color="primary" />
-          <Typography variant="h6" fontWeight={800}>معلومات التواصل</Typography>
-        </Box>
-        <Divider sx={{ mb: 4 }} />
-        
+      <FormSection title="معلومات التواصل" description="وسائل التواصل وموقع المتجر الجغرافي الظاهر للعميل.">
         <Stack spacing={3}>
-          <TextField 
-            label="رقم الهاتف" 
-            fullWidth 
-            value={form.phone} 
-            onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))} 
+          <TextField
+            label="رقم الهاتف"
+            value={form.phone}
+            onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
             placeholder="+966xxxxxxxxx"
             dir="ltr"
           />
-          <TextField 
-            label="العنوان الجغرافي" 
-            fullWidth 
+          <TextField
+            label="العنوان الجغرافي"
             multiline
             rows={2}
-            value={form.address} 
-            onChange={(event) => setForm((prev) => ({ ...prev, address: event.target.value }))} 
+            value={form.address}
+            onChange={(event) => setForm((prev) => ({ ...prev, address: event.target.value }))}
             placeholder="مثال: شارع العليا، الرياض، المملكة العربية السعودية"
           />
         </Stack>
-      </Paper>
+      </FormSection>
 
-      {/* Card 3: Policies */}
-      <Paper elevation={0} sx={{ p: { xs: 3, md: 4 }, borderRadius: 4, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-          <PolicyIcon color="primary" />
-          <Typography variant="h6" fontWeight={800}>السياسات والأحكام</Typography>
-        </Box>
-        <Divider sx={{ mb: 4 }} />
-        
-        <Stack spacing={4}>
-          <Box>
-            <Typography variant="subtitle2" fontWeight={700} gutterBottom>سياسة الشحن والتوصيل</Typography>
-            <TextField 
-              fullWidth 
-              multiline 
-              minRows={3} 
-              value={form.shippingPolicy} 
-              onChange={(event) => setForm((prev) => ({ ...prev, shippingPolicy: event.target.value }))} 
-              placeholder="اكتب هنا تفاصيل الشحن والشركات المعتمدة ومدة التوصيل المتوقعة..."
-            />
-          </Box>
-          <Box>
-            <Typography variant="subtitle2" fontWeight={700} gutterBottom>سياسة الاسترجاع والاستبدال</Typography>
-            <TextField 
-              fullWidth 
-              multiline 
-              minRows={3} 
-              value={form.returnPolicy} 
-              onChange={(event) => setForm((prev) => ({ ...prev, returnPolicy: event.target.value }))} 
-              placeholder="اكتب هنا شروط قبول استرجاع أو استبدال المنتجات..."
-            />
-          </Box>
-          <Box>
-            <Typography variant="subtitle2" fontWeight={700} gutterBottom>سياسة الخصوصية</Typography>
-            <TextField 
-              fullWidth 
-              multiline 
-              minRows={3} 
-              value={form.privacyPolicy} 
-              onChange={(event) => setForm((prev) => ({ ...prev, privacyPolicy: event.target.value }))} 
-              placeholder="اكتب هنا كيفية جمع واستخدام بيانات العملاء..."
-            />
-          </Box>
-          <Box>
-            <Typography variant="subtitle2" fontWeight={700} gutterBottom>الشروط والأحكام</Typography>
-            <TextField 
-              fullWidth 
-              multiline 
-              minRows={3} 
-              value={form.termsAndConditions} 
-              onChange={(event) => setForm((prev) => ({ ...prev, termsAndConditions: event.target.value }))} 
-              placeholder="اكتب هنا الشروط العامة لاستخدام الموقع وإتمام الطلبات..."
-            />
-          </Box>
+      <FormSection title="السياسات والأحكام" description="سياسات الشحن والاسترجاع والخصوصية والشروط العامة للمتجر.">
+        <Stack spacing={3}>
+          <TextField
+            label="سياسة الشحن والتوصيل"
+            multiline
+            minRows={3}
+            value={form.shippingPolicy}
+            onChange={(event) => setForm((prev) => ({ ...prev, shippingPolicy: event.target.value }))}
+            placeholder="اكتب هنا تفاصيل الشحن والشركات المعتمدة ومدة التوصيل المتوقعة..."
+          />
+          <TextField
+            label="سياسة الاسترجاع والاستبدال"
+            multiline
+            minRows={3}
+            value={form.returnPolicy}
+            onChange={(event) => setForm((prev) => ({ ...prev, returnPolicy: event.target.value }))}
+            placeholder="اكتب هنا شروط قبول استرجاع أو استبدال المنتجات..."
+          />
+          <TextField
+            label="سياسة الخصوصية"
+            multiline
+            minRows={3}
+            value={form.privacyPolicy}
+            onChange={(event) => setForm((prev) => ({ ...prev, privacyPolicy: event.target.value }))}
+            placeholder="اكتب هنا كيفية جمع واستخدام بيانات العملاء..."
+          />
+          <TextField
+            label="الشروط والأحكام"
+            multiline
+            minRows={3}
+            value={form.termsAndConditions}
+            onChange={(event) => setForm((prev) => ({ ...prev, termsAndConditions: event.target.value }))}
+            placeholder="اكتب هنا الشروط العامة لاستخدام الموقع وإتمام الطلبات..."
+          />
         </Stack>
-      </Paper>
+      </FormSection>
 
-      {/* Bottom Floating Save Button for convenience */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1, mb: 4 }}>
-        <Button 
-          variant="contained" 
-          color="primary" 
-          size="large"
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', pb: 2 }}>
+        <Button
+          variant="contained"
           startIcon={<SaveIcon />}
-          onClick={() => saveSettings().catch(() => undefined)} 
+          onClick={() => saveSettings().catch(() => undefined)}
           disabled={saveLoading}
-          sx={{ px: 4, py: 1.5, borderRadius: 2 }}
         >
           {saveLoading ? 'جارِ الحفظ...' : 'حفظ التغييرات'}
         </Button>
       </Box>
-
-    </Box>
+    </AppPage>
   );
 }
 

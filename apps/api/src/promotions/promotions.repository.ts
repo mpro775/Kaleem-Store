@@ -40,6 +40,12 @@ export interface OfferRecord {
   is_active: boolean;
 }
 
+export interface InlineProductOfferRecord {
+  product_id: string;
+  discount_type: DiscountType;
+  discount_value: string;
+}
+
 @Injectable()
 export class PromotionsRepository {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -318,6 +324,36 @@ export class PromotionsRepository {
       `,
       [storeId, now],
     );
+    return result.rows;
+  }
+
+  async listActiveInlineProductOffers(
+    storeId: string,
+    productIds: string[],
+    now: Date,
+  ): Promise<InlineProductOfferRecord[]> {
+    if (productIds.length === 0) {
+      return [];
+    }
+
+    const result = await this.databaseService.db.query<InlineProductOfferRecord>(
+      `
+        SELECT
+          id AS product_id,
+          inline_discount_type AS discount_type,
+          inline_discount_value AS discount_value
+        FROM products
+        WHERE store_id = $1
+          AND id = ANY($2::uuid[])
+          AND inline_discount_active = TRUE
+          AND inline_discount_type IS NOT NULL
+          AND inline_discount_value IS NOT NULL
+          AND (inline_discount_starts_at IS NULL OR inline_discount_starts_at <= $3)
+          AND (inline_discount_ends_at IS NULL OR inline_discount_ends_at >= $3)
+      `,
+      [storeId, productIds, now],
+    );
+
     return result.rows;
   }
 

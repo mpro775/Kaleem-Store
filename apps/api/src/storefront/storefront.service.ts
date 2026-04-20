@@ -52,6 +52,9 @@ import type { ThemeQueryDto } from './dto/theme-query.dto';
 
 export interface StorefrontProductResponse {
   id: string;
+  productType: 'single' | 'bundled' | 'digital';
+  isVisible: boolean;
+  stockUnlimited: boolean;
   title: string;
   titleAr: string | null;
   titleEn: string | null;
@@ -59,14 +62,25 @@ export interface StorefrontProductResponse {
   description: string | null;
   descriptionAr: string | null;
   descriptionEn: string | null;
+  shortDescriptionAr: string | null;
+  shortDescriptionEn: string | null;
+  detailedDescriptionAr: string | null;
+  detailedDescriptionEn: string | null;
   categoryId: string | null;
   primaryImageUrl: string | null;
   priceFrom: number | null;
   brand: string | null;
   weight: number | null;
+  weightUnit: string | null;
   dimensions: { length?: number; width?: number; height?: number } | null;
+  productLabel: string | null;
+  youtubeUrl: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
+  seoTitleAr: string | null;
+  seoTitleEn: string | null;
+  seoDescriptionAr: string | null;
+  seoDescriptionEn: string | null;
   tags: string[];
   isFeatured: boolean;
   isTaxable: boolean;
@@ -162,6 +176,7 @@ type QueryRunner = {
 interface CheckoutData {
   cart: { id: string; currency_code: string };
   items: CartItemSnapshot[];
+  inventoryReservationItems: Array<{ variantId: string; quantity: number; sku: string }>;
   subtotal: number;
   shippingZone: ShippingZoneRecord | null;
   promotion: PromotionComputationResult;
@@ -299,6 +314,7 @@ export class StorefrontService {
       q: query.q?.trim(),
       categoryId,
       status: 'active',
+      isVisible: true,
       isFeatured: query.isFeatured,
       attributeFilters,
       limit,
@@ -323,7 +339,7 @@ export class StorefrontService {
   async getProductDetails(request: Request, slug: string) {
     const store = await this.storeResolverService.resolve(request);
     const product = await this.productsRepository.findBySlug(store.id, slug);
-    if (!product || product.status !== 'active') {
+    if (!product || product.status !== 'active' || !product.is_visible) {
       throw new NotFoundException('Product not found');
     }
 
@@ -406,11 +422,16 @@ export class StorefrontService {
     await this.inventoryService.releaseExpiredReservations(store.id);
     const variant = await this.requireVariant(store.id, input.variantId);
     const cart = await this.resolveCart(store.id, store.currency_code, input.cartId);
-    const availableStock = await this.inventoryService.getAvailableStock(
-      store.id,
-      variant.variant_id,
-    );
-    this.ensureStockAvailable(availableStock ?? 0, input.quantity);
+
+    if (variant.product_type === 'bundled') {
+      await this.ensureBundleComponentsStock(store.id, variant.product_id, input.quantity);
+    } else if (!variant.stock_unlimited) {
+      const availableStock = await this.inventoryService.getAvailableStock(
+        store.id,
+        variant.variant_id,
+      );
+      this.ensureStockAvailable(availableStock ?? 0, input.quantity);
+    }
 
     await this.ordersRepository.addOrIncrementCartItem({
       cartId: cart.id,
@@ -461,11 +482,16 @@ export class StorefrontService {
     await this.inventoryService.releaseExpiredReservations(store.id);
     const cart = await this.requireOpenCart(store.id, cartId);
     const variant = await this.requireVariant(store.id, variantId);
-    const availableStock = await this.inventoryService.getAvailableStock(
-      store.id,
-      variant.variant_id,
-    );
-    this.ensureStockAvailable(availableStock ?? 0, quantity);
+
+    if (variant.product_type === 'bundled') {
+      await this.ensureBundleComponentsStock(store.id, variant.product_id, quantity);
+    } else if (!variant.stock_unlimited) {
+      const availableStock = await this.inventoryService.getAvailableStock(
+        store.id,
+        variant.variant_id,
+      );
+      this.ensureStockAvailable(availableStock ?? 0, quantity);
+    }
 
     const updated = await this.ordersRepository.updateCartItemQuantity({
       storeId: store.id,
@@ -626,6 +652,9 @@ export class StorefrontService {
   ): StorefrontProductResponse {
     return {
       id: row.id,
+      productType: row.product_type,
+      isVisible: row.is_visible,
+      stockUnlimited: row.stock_unlimited,
       title: row.title,
       titleAr: row.title_ar,
       titleEn: row.title_en,
@@ -633,14 +662,25 @@ export class StorefrontService {
       description: row.description,
       descriptionAr: row.description_ar,
       descriptionEn: row.description_en,
+      shortDescriptionAr: row.short_description_ar,
+      shortDescriptionEn: row.short_description_en,
+      detailedDescriptionAr: row.detailed_description_ar,
+      detailedDescriptionEn: row.detailed_description_en,
       categoryId: row.category_id,
       primaryImageUrl: listingMeta.primaryImageUrl,
       priceFrom: listingMeta.priceFrom,
       brand: row.brand,
       weight: row.weight ? Number(row.weight) : null,
+      weightUnit: row.weight_unit,
       dimensions: row.dimensions,
+      productLabel: row.product_label,
+      youtubeUrl: row.youtube_url,
       seoTitle: row.seo_title,
       seoDescription: row.seo_description,
+      seoTitleAr: row.seo_title_ar,
+      seoTitleEn: row.seo_title_en,
+      seoDescriptionAr: row.seo_description_ar,
+      seoDescriptionEn: row.seo_description_en,
       tags: row.tags,
       isFeatured: row.is_featured,
       isTaxable: row.is_taxable,
@@ -974,7 +1014,7 @@ export class StorefrontService {
 
   private async requireVariant(storeId: string, variantId: string) {
     const variant = await this.ordersRepository.findVariantForStore(storeId, variantId);
-    if (!variant || variant.product_status !== 'active') {
+    if (!variant || variant.product_status !== 'active' || !variant.product_is_visible) {
       throw new NotFoundException('Variant not found or inactive');
     }
     return variant;
@@ -1024,14 +1064,79 @@ export class StorefrontService {
 
   private async validateCartStock(storeId: string, items: CartItemSnapshot[]): Promise<void> {
     for (const item of items) {
-      const availableStock = await this.inventoryService.getAvailableStock(
-        storeId,
-        item.variant_id,
-      );
-      if (availableStock === null || item.quantity > availableStock) {
-        throw new UnprocessableEntityException(`Variant ${item.sku} is out of stock`);
+      if (item.product_type === 'bundled') {
+        await this.ensureBundleComponentsStock(storeId, item.product_id, item.quantity);
+        continue;
+      }
+
+      if (!item.stock_unlimited) {
+        const availableStock = await this.inventoryService.getAvailableStock(
+          storeId,
+          item.variant_id,
+        );
+        if (availableStock === null || item.quantity > availableStock) {
+          throw new UnprocessableEntityException(`Variant ${item.sku} is out of stock`);
+        }
       }
     }
+  }
+
+  private async ensureBundleComponentsStock(
+    storeId: string,
+    bundleProductId: string,
+    bundleQuantity: number,
+  ): Promise<void> {
+    const reservationRows = await this.resolveBundleReservationRows(
+      storeId,
+      bundleProductId,
+      bundleQuantity,
+    );
+
+    for (const row of reservationRows) {
+      const availableStock = await this.inventoryService.getAvailableStock(storeId, row.variantId);
+      if (availableStock === null || row.quantity > availableStock) {
+        throw new UnprocessableEntityException(`Bundle component SKU ${row.sku} is out of stock`);
+      }
+    }
+  }
+
+  private async resolveBundleReservationRows(
+    storeId: string,
+    bundleProductId: string,
+    bundleQuantity: number,
+  ): Promise<Array<{ variantId: string; quantity: number; sku: string }>> {
+    const bundleItems = await this.productsRepository.listBundleItems(storeId, bundleProductId);
+    if (bundleItems.length === 0) {
+      throw new UnprocessableEntityException('Bundled product has no configured bundled items');
+    }
+
+    const rows: Array<{ variantId: string; quantity: number; sku: string }> = [];
+    for (const item of bundleItems) {
+      const bundledProduct = await this.productsRepository.findById(storeId, item.bundled_product_id);
+      if (!bundledProduct) {
+        throw new UnprocessableEntityException('One bundled product is unavailable');
+      }
+
+      if (bundledProduct.stock_unlimited) {
+        continue;
+      }
+
+      const variant = item.bundled_variant_id
+        ? await this.productsRepository.findVariantById(storeId, item.bundled_variant_id)
+        : await this.productsRepository.findDefaultVariantByProductId(storeId, item.bundled_product_id);
+
+      if (!variant) {
+        throw new UnprocessableEntityException('One bundle component has no purchasable variant');
+      }
+
+      rows.push({
+        variantId: variant.id,
+        quantity: bundleQuantity * item.quantity,
+        sku: variant.sku,
+      });
+    }
+
+    return rows;
   }
 
   private calculateTotals(items: CartItemSnapshot[]) {
@@ -1052,6 +1157,7 @@ export class StorefrontService {
 
     await this.inventoryService.releaseExpiredReservations(storeId);
     await this.validateCartStock(storeId, items);
+    const inventoryReservationItems = await this.mapCheckoutItemsToInventoryInput(storeId, items);
     const subtotal = this.calculateTotals(items).subtotal;
     const shippingZone = await this.resolveShippingZone(storeId, input.shippingZoneId);
     const promotion = await this.promotionsService.computeCheckoutDiscount(
@@ -1067,6 +1173,7 @@ export class StorefrontService {
     return {
       cart,
       items,
+      inventoryReservationItems,
       subtotal,
       shippingZone,
       promotion,
@@ -1167,15 +1274,17 @@ export class StorefrontService {
     checkoutData: CheckoutData,
   ): Promise<void> {
     await this.persistOrderItems(db, storeId, orderId, checkoutData.items);
-    await this.inventoryService.reserveOrderItems(db, {
-      storeId,
-      orderId,
-      expiresAt: this.buildReservationExpiryDate(),
-      items: this.mapCheckoutItemsToInventoryInput(checkoutData.items),
-      metadata: {
-        source: 'storefront.checkout',
-      },
-    });
+    if (checkoutData.inventoryReservationItems.length > 0) {
+      await this.inventoryService.reserveOrderItems(db, {
+        storeId,
+        orderId,
+        expiresAt: this.buildReservationExpiryDate(),
+        items: checkoutData.inventoryReservationItems,
+        metadata: {
+          source: 'storefront.checkout',
+        },
+      });
+    }
     await this.createPayment(db, storeId, orderId, paymentMethod, checkoutData.total);
     if (checkoutData.promotion.couponId) {
       await this.promotionsService.increaseCouponUsageInTransaction(
@@ -1266,12 +1375,48 @@ export class StorefrontService {
     return `KS-${random}`;
   }
 
-  private mapCheckoutItemsToInventoryInput(items: CartItemSnapshot[]) {
-    return items.map((item) => ({
-      variantId: item.variant_id,
-      quantity: item.quantity,
-      sku: item.sku,
-    }));
+  private async mapCheckoutItemsToInventoryInput(
+    storeId: string,
+    items: CartItemSnapshot[],
+  ): Promise<Array<{ variantId: string; quantity: number; sku: string }>> {
+    const aggregated = new Map<string, { variantId: string; quantity: number; sku: string }>();
+
+    for (const item of items) {
+      if (item.product_type === 'bundled') {
+        const bundleRows = await this.resolveBundleReservationRows(
+          storeId,
+          item.product_id,
+          item.quantity,
+        );
+
+        for (const row of bundleRows) {
+          const current = aggregated.get(row.variantId);
+          if (current) {
+            current.quantity += row.quantity;
+          } else {
+            aggregated.set(row.variantId, { ...row });
+          }
+        }
+        continue;
+      }
+
+      if (item.stock_unlimited) {
+        continue;
+      }
+
+      const current = aggregated.get(item.variant_id);
+      if (current) {
+        current.quantity += item.quantity;
+      } else {
+        aggregated.set(item.variant_id, {
+          variantId: item.variant_id,
+          quantity: item.quantity,
+          sku: item.sku,
+        });
+      }
+    }
+
+    return [...aggregated.values()];
   }
 
   private buildReservationExpiryDate(referenceDate: Date = new Date()): Date {

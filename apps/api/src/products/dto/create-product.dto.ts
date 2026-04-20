@@ -1,4 +1,5 @@
 import {
+  IsDateString,
   IsArray,
   IsBoolean,
   IsIn,
@@ -12,8 +13,17 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { PRODUCT_STATUSES } from '../constants/product-status.constants';
+import { PRODUCT_TYPES } from '../constants/product-type.constants';
+import {
+  ProductBundleItemDto,
+  ProductCustomFieldDto,
+  ProductDigitalFileDto,
+  ProductInlineDiscountDto,
+} from './product-extensions.dto';
+import { Type } from 'class-transformer';
 
 export class CreateProductDto {
   @IsString()
@@ -56,13 +66,35 @@ export class CreateProductDto {
   categoryId?: string;
 
   @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  categoryIds?: string[];
+
+  @IsOptional()
   @IsIn(PRODUCT_STATUSES)
   status?: (typeof PRODUCT_STATUSES)[number];
+
+  @IsOptional()
+  @IsIn(PRODUCT_TYPES)
+  productType?: (typeof PRODUCT_TYPES)[number];
+
+  @IsOptional()
+  @IsBoolean()
+  isVisible?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  stockUnlimited?: boolean;
 
   @IsOptional()
   @IsString()
   @MaxLength(120)
   brand?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  weightUnit?: string;
 
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
@@ -89,9 +121,100 @@ export class CreateProductDto {
   seoDescription?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(180)
+  seoTitleAr?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(180)
+  seoTitleEn?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  seoDescriptionAr?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  seoDescriptionEn?: string;
+
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  relatedProductIds?: string[];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  productLabel?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  youtubeUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  shortDescriptionAr?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  shortDescriptionEn?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(10000)
+  detailedDescriptionAr?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(10000)
+  detailedDescriptionEn?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ProductInlineDiscountDto)
+  inlineDiscount?: ProductInlineDiscountDto;
+
+  @IsOptional()
+  @IsBoolean()
+  inlineDiscountEnabled?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductBundleItemDto)
+  bundleItems?: ProductBundleItemDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductDigitalFileDto)
+  digitalFiles?: ProductDigitalFileDto[];
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  digitalDownloadAttemptsLimit?: number;
+
+  @IsOptional()
+  @IsDateString()
+  digitalDownloadExpiresAt?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductCustomFieldDto)
+  customFields?: ProductCustomFieldDto[];
 
   @IsOptional()
   @IsBoolean()

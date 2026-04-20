@@ -29,6 +29,7 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import type { MerchantRequester } from '../merchant-dashboard.types';
 import type { Order, OrderDetail, OrderStatus } from '../types';
+import { AppPage, DataTableWrapper, FilterBar, PageHeader } from '../components/ui';
 
 interface OrdersPanelProps {
   request: MerchantRequester;
@@ -141,7 +142,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
   // --- DETAIL VIEW ---
   if (orderDetail || detailLoading) {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, maxWidth: 1000, mx: 'auto', width: '100%' }}>
+      <AppPage maxWidth={1000}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
           <Button 
             startIcon={<ArrowForwardIcon />} 
@@ -344,35 +345,25 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
             </Box>
           </Box>
         ) : null}
-      </Box>
+      </AppPage>
     );
   }
 
   // --- LIST VIEW ---
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1 }}>
-        <Box>
-          <Typography variant="h4" fontWeight={800} gutterBottom>
-            الطلبات
-          </Typography>
-          <Typography color="text.secondary">
-            إدارة جميع الطلبات الواردة وتحديث حالات الشحن والتوصيل.
-          </Typography>
-        </Box>
-      </Box>
+    <AppPage>
+      <PageHeader
+        title="الطلبات"
+        description="إدارة الطلبات الواردة ومتابعة حالة التنفيذ والتوصيل بشكل يومي."
+      />
 
-      {message.text && (
-        <Alert severity={message.type} sx={{ borderRadius: 2 }}>{message.text}</Alert>
-      )}
+      {message.text ? <Alert severity={message.type}>{message.text}</Alert> : null}
 
-      {/* Filter and Search Bar */}
-      <Paper elevation={0} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-        <TextField 
-          placeholder="ابحث برمز الطلب..." 
-          value={searchQuery} 
-          onChange={(event) => setSearchQuery(event.target.value)} 
-          size="small"
+      <FilterBar>
+        <TextField
+          placeholder="ابحث برمز الطلب..."
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
           sx={{ minWidth: 240, flex: 1 }}
           InputProps={{
             startAdornment: (
@@ -382,13 +373,12 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
             ),
           }}
         />
-        <TextField 
-          select 
-          label="فلترة بالحالة" 
-          value={statusFilter} 
+        <TextField
+          select
+          label="فلترة بالحالة"
+          value={statusFilter}
           onChange={(event) => setStatusFilter(event.target.value)}
-          size="small"
-          sx={{ minWidth: 200 }}
+          sx={{ minWidth: 220 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -404,27 +394,21 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
             </MenuItem>
           ))}
         </TextField>
-        <Button 
-          variant="contained" 
-          onClick={() => loadOrders().catch(() => undefined)}
-          disableElevation
-          sx={{ height: 40 }}
-        >
+        <Button variant="contained" onClick={() => loadOrders().catch(() => undefined)}>
           بحث وتحديث
         </Button>
-      </Paper>
+      </FilterBar>
 
-      {/* Orders Table */}
-      <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+      <DataTableWrapper>
         <TableContainer>
           <Table>
-            <TableHead sx={{ bgcolor: 'background.default' }}>
+            <TableHead>
               <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>رقم الطلب</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>التاريخ</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>الحالة</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>الإجمالي</TableCell>
-                <TableCell align="left" sx={{ fontWeight: 700 }}>الإجراءات</TableCell>
+                <TableCell>رقم الطلب</TableCell>
+                <TableCell>التاريخ</TableCell>
+                <TableCell>الحالة</TableCell>
+                <TableCell>الإجمالي</TableCell>
+                <TableCell align="left">الإجراءات</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -444,27 +428,20 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
                 orders.map((order) => (
                   <TableRow key={order.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
                     <TableCell sx={{ fontWeight: 700, fontFamily: 'monospace' }}>{order.orderCode}</TableCell>
+                    <TableCell>{new Date(order.createdAt).toLocaleDateString('ar-EG')}</TableCell>
                     <TableCell>
-                      {new Date(order.createdAt).toLocaleDateString('ar-EG')}
-                    </TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={statusLabels[order.status] || order.status} 
-                        color={statusColors[order.status] || 'default'} 
-                        size="small" 
-                        sx={{ fontWeight: 700, borderRadius: 1.5 }} 
+                      <Chip
+                        label={statusLabels[order.status] || order.status}
+                        color={statusColors[order.status] || 'default'}
+                        size="small"
+                        sx={{ fontWeight: 700 }}
                       />
                     </TableCell>
                     <TableCell sx={{ fontWeight: 700 }}>
                       {order.total} {order.currencyCode}
                     </TableCell>
                     <TableCell align="left">
-                      <Button 
-                        size="small" 
-                        variant="outlined" 
-                        onClick={() => loadOrderDetail(order.id).catch(() => undefined)}
-                        sx={{ borderRadius: 1.5 }}
-                      >
+                      <Button size="small" variant="outlined" onClick={() => loadOrderDetail(order.id).catch(() => undefined)}>
                         إدارة
                       </Button>
                     </TableCell>
@@ -474,8 +451,8 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
             </TableBody>
           </Table>
         </TableContainer>
-      </Paper>
-    </Box>
+      </DataTableWrapper>
+    </AppPage>
   );
 }
 

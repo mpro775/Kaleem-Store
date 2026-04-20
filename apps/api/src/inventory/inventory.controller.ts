@@ -24,7 +24,10 @@ import { AdjustInventoryDto } from './dto/adjust-inventory.dto';
 import { ListInventoryMovementsQueryDto } from './dto/list-inventory-movements-query.dto';
 import { ListInventoryReservationsQueryDto } from './dto/list-inventory-reservations-query.dto';
 import { UpdateLowStockThresholdDto } from './dto/update-low-stock-threshold.dto';
-import { InventoryService } from './inventory.service';
+import {
+  InventoryService,
+  type VariantWithdrawalPriorityResponse,
+} from './inventory.service';
 
 @ApiTags('inventory')
 @ApiBearerAuth()
@@ -58,6 +61,16 @@ export class InventoryController {
   @ApiOkResponse({ description: 'List low-stock inventory alerts' })
   async listLowStockAlerts(@CurrentUser() currentUser: AuthUser) {
     return this.inventoryService.listLowStockAlerts(currentUser);
+  }
+
+  @Get('variants/:variantId/withdrawal-priority')
+  @RequirePermissions(PERMISSIONS.inventoryRead)
+  @ApiOkResponse({ description: 'List warehouse withdrawal priority for variant' })
+  async listVariantWithdrawalPriority(
+    @CurrentUser() currentUser: AuthUser,
+    @Param('variantId', ParseUUIDPipe) variantId: string,
+  ): Promise<VariantWithdrawalPriorityResponse[]> {
+    return this.inventoryService.listVariantWithdrawalPriority(currentUser, variantId);
   }
 
   @Post('variants/:variantId/adjustments')

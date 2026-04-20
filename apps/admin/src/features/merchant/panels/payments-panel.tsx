@@ -4,7 +4,6 @@ import {
   Box,
   Button,
   Chip,
-  Paper,
   Stack,
   TextField,
   Typography,
@@ -25,6 +24,7 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import FactCheckIcon from '@mui/icons-material/FactCheck';
 
 import type { MerchantRequester } from '../merchant-dashboard.types';
+import { AppPage, DataTableWrapper, PageHeader, SectionCard } from '../components/ui';
 import type { PaymentWithOrder, PaymentStatus } from '../types';
 
 interface PaymentsPanelProps {
@@ -159,7 +159,7 @@ export function PaymentsPanel({ request }: PaymentsPanelProps) {
 
   if (viewMode === 'detail' && selectedPayment) {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, maxWidth: 900, mx: 'auto', width: '100%' }}>
+      <AppPage maxWidth={900}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
           <Button 
             startIcon={<ArrowForwardIcon />} 
@@ -177,7 +177,7 @@ export function PaymentsPanel({ request }: PaymentsPanelProps) {
 
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.5fr 1fr' }, gap: 3 }}>
           {/* Payment Info */}
-          <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', height: '100%' }}>
+          <SectionCard>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
               <ReceiptIcon color="primary" />
               <Typography variant="h6" fontWeight={800}>معلومات الدفعة</Typography>
@@ -217,10 +217,10 @@ export function PaymentsPanel({ request }: PaymentsPanelProps) {
                 </Box>
               )}
             </Stack>
-          </Paper>
+          </SectionCard>
 
           {/* Action / Review */}
-          <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: '1px solid', borderColor: 'primary.light', bgcolor: 'primary.50', height: '100%' }}>
+          <SectionCard sx={{ borderColor: 'primary.light', bgcolor: 'primary.50' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
               <FactCheckIcon color="primary" />
               <Typography variant="h6" fontWeight={800} color="primary.dark">قرار المراجعة</Typography>
@@ -266,35 +266,29 @@ export function PaymentsPanel({ request }: PaymentsPanelProps) {
                 </Button>
               </Box>
             </Stack>
-          </Paper>
+          </SectionCard>
         </Box>
-      </Box>
+      </AppPage>
     );
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1, flexWrap: 'wrap', gap: 2 }}>
-        <Box>
-          <Typography variant="h4" fontWeight={800} gutterBottom>
-            المدفوعات والحوالات
-          </Typography>
-          <Typography color="text.secondary">
-            راجع إيصالات التحويل البنكي الواردة من العملاء واعتمدها لتأكيد الطلبات.
-          </Typography>
-        </Box>
-        <Button 
-          variant="outlined" 
-          onClick={() => (activeTab === 'pending' ? loadPendingPayments() : loadAllPayments()).catch(() => undefined)}
-          disabled={loading}
-        >
-          تحديث القائمة
-        </Button>
-      </Box>
+    <AppPage>
+      <PageHeader
+        title="المدفوعات والحوالات"
+        description="مراجعة إيصالات التحويل واعتمادها لضمان انسيابية دورة الطلبات."
+        actions={
+          <Button
+            variant="outlined"
+            onClick={() => (activeTab === 'pending' ? loadPendingPayments() : loadAllPayments()).catch(() => undefined)}
+            disabled={loading}
+          >
+            تحديث القائمة
+          </Button>
+        }
+      />
 
-      {message.text && (
-        <Alert severity={message.type} sx={{ borderRadius: 2 }}>{message.text}</Alert>
-      )}
+      {message.text ? <Alert severity={message.type}>{message.text}</Alert> : null}
 
       {/* Tabs */}
       <Stack direction="row" spacing={1} sx={{ borderBottom: '1px solid', borderColor: 'divider', pb: 2 }}>
@@ -320,16 +314,16 @@ export function PaymentsPanel({ request }: PaymentsPanelProps) {
         </Button>
       </Stack>
 
-      <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+      <DataTableWrapper>
         <TableContainer>
           <Table>
-            <TableHead sx={{ bgcolor: 'background.default' }}>
+            <TableHead>
               <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>رقم الطلب</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>تاريخ الرفع</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>المبلغ والطريقة</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>حالة الدفع</TableCell>
-                <TableCell align="left" sx={{ fontWeight: 700 }}>الإجراءات</TableCell>
+                <TableCell>رقم الطلب</TableCell>
+                <TableCell>تاريخ الرفع</TableCell>
+                <TableCell>المبلغ والطريقة</TableCell>
+                <TableCell>حالة الدفع</TableCell>
+                <TableCell align="left">الإجراءات</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -389,7 +383,7 @@ export function PaymentsPanel({ request }: PaymentsPanelProps) {
             </TableBody>
           </Table>
         </TableContainer>
-      </Paper>
-    </Box>
+      </DataTableWrapper>
+    </AppPage>
   );
 }

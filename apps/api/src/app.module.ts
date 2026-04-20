@@ -31,6 +31,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 import { AdvancedOffersModule } from './advanced-offers/advanced-offers.module';
 import { CustomersModule } from './customers/customers.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { WarehousesModule } from './warehouses/warehouses.module';
 
 @Module({
   imports: [
@@ -72,6 +73,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     StorefrontModule,
     CustomersModule,
     AnalyticsModule,
+    WarehousesModule,
   ],
   providers: [
     {

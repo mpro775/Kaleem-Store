@@ -13,14 +13,16 @@ import LanguageIcon from '@mui/icons-material/Language';
 import WebhookIcon from '@mui/icons-material/Webhook';
 import PeopleIcon from '@mui/icons-material/People';
 import type { MerchantNavItem, MerchantTabKey } from '../merchant-dashboard.types';
+import { ADMIN_TOKENS } from '../../../theme/tokens';
 
-export const MERCHANT_DRAWER_WIDTH = 280;
+export const MERCHANT_DRAWER_WIDTH = ADMIN_TOKENS.layout.sidebarWidth;
 
 export const MERCHANT_NAV_ITEMS: MerchantNavItem[] = [
   { key: 'overview', label: 'الرئيسية', icon: <DashboardIcon /> },
   { key: 'orders', label: 'الطلبات', icon: <ShoppingCartIcon /> },
   { key: 'products', label: 'المنتجات', icon: <InventoryIcon /> },
-  { key: 'inventory', label: 'المخزون', icon: <WarehouseIcon /> },
+  { key: 'inventory', label: 'المخزون', icon: <InventoryIcon /> },
+  { key: 'warehouses', label: 'المستودعات', icon: <WarehouseIcon /> },
   { key: 'categories', label: 'التصنيفات', icon: <AccountTreeIcon /> },
   { key: 'attributes', label: 'الخصائص', icon: <StyleIcon /> },
   { key: 'payments', label: 'المدفوعات', icon: <PaymentsIcon /> },

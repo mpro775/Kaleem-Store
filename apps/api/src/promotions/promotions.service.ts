@@ -240,22 +240,62 @@ export class PromotionsService {
     storeId: string,
     input: PromotionComputationInput,
   ): Promise<PromotionComputationResult> {
-    const offers = await this.promotionsRepository.listActiveOffers(storeId, input.at);
+    const productIds = [...new Set(input.items.map((item) => item.product_id))];
+    const [offers, inlineProductOffers] = await Promise.all([
+      this.promotionsRepository.listActiveOffers(storeId, input.at),
+      this.promotionsRepository.listActiveInlineProductOffers(storeId, productIds, input.at),
+    ]);
+
+    const inlineOfferByProductId = new Map(
+      inlineProductOffers.map((row) => [row.product_id, row] as const),
+    );
+
+    let inlineOfferDiscount = 0;
+    const productIdsWithInlineOffer = new Set<string>();
+    for (const item of input.items) {
+      const inline = inlineOfferByProductId.get(item.product_id);
+      if (!inline) {
+        continue;
+      }
+
+      const lineSubtotal = Number(item.unit_price) * item.quantity;
+      inlineOfferDiscount += this.promotionsRepository.calculateDiscount(
+        Number(inline.discount_value),
+        inline.discount_type,
+        lineSubtotal,
+      );
+      productIdsWithInlineOffer.add(item.product_id);
+    }
+    inlineOfferDiscount = Number(inlineOfferDiscount.toFixed(2));
+
+    const remainingItems = input.items.filter(
+      (item) => !productIdsWithInlineOffer.has(item.product_id),
+    );
+    const remainingSubtotal = Number(
+      remainingItems
+        .reduce((sum, item) => sum + Number(item.unit_price) * item.quantity, 0)
+        .toFixed(2),
+    );
+
     const basicOffer = this.promotionsRepository.calculateBestOfferDiscount(
       offers,
-      input.subtotal,
-      input.items,
+      remainingSubtotal,
+      remainingItems,
     );
     const advancedOffer = await this.advancedOffersService.computeBestDiscount(
       storeId,
-      input.items,
-      input.subtotal,
+      remainingItems,
+      remainingSubtotal,
       input.at,
     );
-    const bestOffer =
+    const bestExternalOffer =
       advancedOffer.discount > basicOffer.discount
         ? advancedOffer
         : { offerId: basicOffer.offerId, discount: basicOffer.discount };
+
+    const offerDiscount = Number((inlineOfferDiscount + bestExternalOffer.discount).toFixed(2));
+    const offerId =
+      inlineOfferDiscount > 0 ? 'inline-product-offer' : (bestExternalOffer.offerId ?? null);
 
     const normalizedCouponCode = input.couponCode?.trim();
 
@@ -275,23 +315,23 @@ export class PromotionsService {
     let couponCode: string | null = null;
 
     if (coupon) {
-      this.assertCouponUsable(coupon, input.subtotal - bestOffer.discount, input.at);
+      this.assertCouponUsable(coupon, input.subtotal - offerDiscount, input.at);
       couponDiscount = this.promotionsRepository.calculateDiscount(
         Number(coupon.discount_value),
         coupon.discount_type,
-        input.subtotal - bestOffer.discount,
+        input.subtotal - offerDiscount,
       );
       couponId = coupon.id;
       couponCode = coupon.code;
     }
 
-    const totalDiscount = Number((bestOffer.discount + couponDiscount).toFixed(2));
+    const totalDiscount = Number((offerDiscount + couponDiscount).toFixed(2));
     return {
       couponId,
       couponCode,
       couponDiscount,
-      offerId: bestOffer.offerId,
-      offerDiscount: bestOffer.discount,
+      offerId,
+      offerDiscount,
       totalDiscount,
     };
   }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Alert, Box, Button, Paper, Stack, TextField, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, CircularProgress, Divider } from '@mui/material';
+import { Alert, Box, Button, Stack, TextField, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, CircularProgress, Divider } from '@mui/material';
 import LanguageIcon from '@mui/icons-material/Language';
 import AddIcon from '@mui/icons-material/Add';
 import SyncIcon from '@mui/icons-material/Sync';
@@ -8,6 +8,7 @@ import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import type { MerchantRequester } from '../merchant-dashboard.types';
 import type { Domain } from '../types';
+import { AppPage, DataTableWrapper, PageHeader, SectionCard } from '../components/ui';
 
 interface DomainsPanelProps {
   request: MerchantRequester;
@@ -114,31 +115,21 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1, flexWrap: 'wrap', gap: 2 }}>
-        <Box>
-          <Typography variant="h4" fontWeight={800} gutterBottom>
-            النطاقات (الدومين)
-          </Typography>
-          <Typography color="text.secondary">
-            اربط متجرك بنطاق مخصص واعرض هويتك التجارية باحترافية.
-          </Typography>
-        </Box>
-        <Button 
-          variant="outlined" 
-          onClick={() => loadDomains().catch(() => undefined)}
-          disabled={loading}
-        >
-          تحديث البيانات
-        </Button>
-      </Box>
+    <AppPage>
+      <PageHeader
+        title="النطاقات (الدومين)"
+        description="ربط المتجر بنطاق مخصص وإدارة التحقق وشهادة SSL من مكان واحد."
+        actions={
+          <Button variant="outlined" onClick={() => loadDomains().catch(() => undefined)} disabled={loading}>
+            تحديث البيانات
+          </Button>
+        }
+      />
 
-      {message.text && (
-        <Alert severity={message.type} sx={{ borderRadius: 2 }}>{message.text}</Alert>
-      )}
+      {message.text ? <Alert severity={message.type}>{message.text}</Alert> : null}
 
       {/* Add Domain Section */}
-      <Paper elevation={0} sx={{ p: 3, borderRadius: 4, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
+      <SectionCard>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
           <LanguageIcon color="primary" />
           <Typography variant="h6" fontWeight={800}>ربط نطاق جديد</Typography>
@@ -170,19 +161,19 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
             إضافة النطاق
           </Button>
         </Stack>
-      </Paper>
+      </SectionCard>
 
       {/* Domains Table */}
-      <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+      <DataTableWrapper>
         <TableContainer>
           <Table>
-            <TableHead sx={{ bgcolor: 'background.default' }}>
+            <TableHead>
               <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>اسم النطاق</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>الحالة</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>حالة SSL</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>إعدادات DNS المطلوبة</TableCell>
-                <TableCell align="left" sx={{ fontWeight: 700 }}>الإجراءات</TableCell>
+                <TableCell>اسم النطاق</TableCell>
+                <TableCell>الحالة</TableCell>
+                <TableCell>حالة SSL</TableCell>
+                <TableCell>إعدادات DNS المطلوبة</TableCell>
+                <TableCell align="left">الإجراءات</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -264,8 +255,8 @@ export function DomainsPanel({ request }: DomainsPanelProps) {
             </TableBody>
           </Table>
         </TableContainer>
-      </Paper>
-    </Box>
+      </DataTableWrapper>
+    </AppPage>
   );
 }
 

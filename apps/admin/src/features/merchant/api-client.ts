@@ -4,6 +4,7 @@ import { attachCsrfHeader } from '../../lib/csrf';
 export interface MerchantRequestOptions {
   requiresAuth?: boolean;
   includeStoreHeader?: boolean;
+  responseType?: 'json' | 'blob' | 'text';
 }
 
 interface MerchantRequestInput {
@@ -68,7 +69,7 @@ async function executeRequest<T>(
   options: MerchantRequestOptions,
 ): Promise<ExecuteResult<T>> {
   const method = (init.method ?? 'GET').toUpperCase();
-  const headers = mergeHeaders(init.headers, session, options, init.body !== undefined);
+  const headers = mergeHeaders(init.headers, session, options, init.body);
   await attachCsrfHeader(session.apiBaseUrl, method, headers);
 
   const response = await fetch(`${session.apiBaseUrl}${path}`, {
@@ -99,19 +100,36 @@ async function executeRequest<T>(
     ok: true,
     status: response.status,
     response,
-    data: (await response.json()) as T,
+    data: (await resolveResponseData<T>(response, options.responseType ?? 'json')),
   };
+}
+
+async function resolveResponseData<T>(
+  response: Response,
+  responseType: NonNullable<MerchantRequestOptions['responseType']>,
+): Promise<T | null> {
+  if (responseType === 'blob') {
+    return (await response.blob()) as T;
+  }
+
+  if (responseType === 'text') {
+    return (await response.text()) as T;
+  }
+
+  return (await response.json()) as T;
 }
 
 function mergeHeaders(
   headers: HeadersInit | undefined,
   session: MerchantSession,
   options: MerchantRequestOptions,
-  hasBody: boolean,
+  body: BodyInit | null | undefined,
 ): Headers {
   const merged = new Headers(headers ?? undefined);
   const requiresAuth = options.requiresAuth ?? true;
   const includeStoreHeader = options.includeStoreHeader ?? requiresAuth;
+  const hasBody = body !== undefined && body !== null;
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
 
   if (requiresAuth) {
     merged.set('authorization', `Bearer ${session.accessToken}`);
@@ -121,7 +139,7 @@ function mergeHeaders(
     merged.set('x-store-id', session.user.storeId);
   }
 
-  if (!merged.has('content-type') && hasBody) {
+  if (!merged.has('content-type') && hasBody && !isFormData) {
     merged.set('content-type', 'application/json');
   }
 

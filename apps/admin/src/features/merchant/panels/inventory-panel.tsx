@@ -3,7 +3,6 @@ import {
   Alert,
   Box,
   Button,
-  Paper,
   Stack,
   TextField,
   Typography,
@@ -14,21 +13,20 @@ import {
   TableHead,
   TableRow,
   Chip,
-  Divider,
   CircularProgress,
-  Grid,
 } from '@mui/material';
-import WarehouseIcon from '@mui/icons-material/Warehouse';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import AssignmentReturnIcon from '@mui/icons-material/AssignmentReturn';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 
 import type { MerchantRequester } from '../merchant-dashboard.types';
+import { AppPage, DataTableWrapper, PageHeader, SectionCard } from '../components/ui';
 import type {
   InventoryVariantSnapshot,
   PaginatedInventoryMovements,
   PaginatedInventoryReservations,
+  Warehouse,
 } from '../types';
 
 interface InventoryPanelProps {
@@ -39,6 +37,7 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
   const [movements, setMovements] = useState<PaginatedInventoryMovements['items']>([]);
   const [reservations, setReservations] = useState<PaginatedInventoryReservations['items']>([]);
   const [alerts, setAlerts] = useState<InventoryVariantSnapshot[]>([]);
+  const [warehousePriority, setWarehousePriority] = useState<Warehouse[]>([]);
   
   const [adjustVariantId, setAdjustVariantId] = useState('');
   const [adjustDelta, setAdjustDelta] = useState('0');
@@ -49,6 +48,7 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
   
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [prioritySaving, setPrioritySaving] = useState(false);
   const [message, setMessage] = useState({ text: '', type: 'info' as 'info' | 'success' | 'error' });
 
   useEffect(() => {
@@ -60,7 +60,7 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
     setLoading(true);
     setMessage({ text: '', type: 'info' });
     try {
-      const [alertsData, movementsData, reservationsData] = await Promise.all([
+      const [alertsData, movementsData, reservationsData, warehousesData] = await Promise.all([
         request<InventoryVariantSnapshot[]>('/inventory/alerts/low-stock', { method: 'GET' }),
         request<PaginatedInventoryMovements>('/inventory/movements?page=1&limit=20', {
           method: 'GET',
@@ -68,11 +68,13 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
         request<PaginatedInventoryReservations>('/inventory/reservations?page=1&limit=20', {
           method: 'GET',
         }),
+        request<Warehouse[]>('/warehouses', { method: 'GET' }),
       ]);
 
       setAlerts(alertsData ?? []);
       setMovements(movementsData?.items ?? []);
       setReservations(reservationsData?.items ?? []);
+      setWarehousePriority(warehousesData ?? []);
     } catch (error) {
       setMessage({ text: error instanceof Error ? error.message : 'تعذر تحميل بيانات المخزون', type: 'error' });
     } finally {
@@ -143,29 +145,69 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
     }
   }
 
-  return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1, flexWrap: 'wrap', gap: 2 }}>
-        <Box>
-          <Typography variant="h4" fontWeight={800} gutterBottom>
-            إدارة المخزون
-          </Typography>
-          <Typography color="text.secondary">
-            راقب الحركات والتنبيهات، وقم بتعديل الكميات يدوياً.
-          </Typography>
-        </Box>
-        <Button 
-          variant="outlined" 
-          onClick={() => loadInventoryData().catch(() => undefined)}
-          disabled={loading}
-        >
-          تحديث البيانات
-        </Button>
-      </Box>
+  function moveWarehousePriority(warehouseId: string, direction: 'up' | 'down'): void {
+    setWarehousePriority((current) => {
+      const index = current.findIndex((item) => item.id === warehouseId);
+      if (index < 0) {
+        return current;
+      }
 
-      {message.text && (
-        <Alert severity={message.type} sx={{ borderRadius: 2 }}>{message.text}</Alert>
-      )}
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= current.length) {
+        return current;
+      }
+
+      const next = [...current];
+      const sourceItem = next[index];
+      const targetItem = next[targetIndex];
+      if (!sourceItem || !targetItem) {
+        return current;
+      }
+
+      next[index] = targetItem;
+      next[targetIndex] = sourceItem;
+      return next;
+    });
+  }
+
+  async function saveWarehousePriorityOrder(): Promise<void> {
+    if (warehousePriority.length === 0) {
+      setMessage({ text: 'لا توجد مستودعات لحفظ ترتيب السحب.', type: 'error' });
+      return;
+    }
+
+    setPrioritySaving(true);
+    setMessage({ text: '', type: 'info' });
+    try {
+      const updated = await request<Warehouse[]>('/warehouses/priority-order', {
+        method: 'PUT',
+        body: JSON.stringify({ warehouseIds: warehousePriority.map((item) => item.id) }),
+      });
+      setWarehousePriority(updated ?? []);
+      setMessage({ text: 'تم حفظ أولوية السحب من المستودعات بنجاح.', type: 'success' });
+    } catch (error) {
+      setMessage({
+        text: error instanceof Error ? error.message : 'تعذر حفظ ترتيب أولوية السحب',
+        type: 'error',
+      });
+    } finally {
+      setPrioritySaving(false);
+    }
+  }
+
+  return (
+    <AppPage>
+      <PageHeader
+        title="إدارة المخزون"
+        description="مراقبة الحركات والتنبيهات وتنفيذ التعديلات اليدوية بدقة."
+        actions={
+          <Button variant="outlined" onClick={() => loadInventoryData().catch(() => undefined)} disabled={loading}>
+            تحديث البيانات
+          </Button>
+        }
+      />
+
+      {message.text ? <Alert severity={message.type}>{message.text}</Alert> : null}
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
@@ -176,7 +218,7 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
           {/* Quick Actions / Adjustments */}
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
             <Box>
-              <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', height: '100%' }}>
+              <SectionCard>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
                   <AddShoppingCartIcon color="primary" />
                   <Typography variant="h6" fontWeight={800}>تعديل مخزون يدوي</Typography>
@@ -191,11 +233,11 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
                     تطبيق التعديل
                   </Button>
                 </Stack>
-              </Paper>
+              </SectionCard>
             </Box>
 
             <Box>
-              <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', height: '100%' }}>
+              <SectionCard>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
                   <WarningAmberIcon color="warning" />
                   <Typography variant="h6" fontWeight={800}>حد تنبيه انخفاض المخزون</Typography>
@@ -207,12 +249,79 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
                     تحديث الحد
                   </Button>
                 </Stack>
-              </Paper>
+              </SectionCard>
             </Box>
           </Box>
 
+          <DataTableWrapper>
+            <Box sx={{ p: 2, bgcolor: 'background.default', borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+              <Box>
+                <Typography variant="h6" fontWeight={800}>أولوية السحب من المستودعات</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  الترتيب من الأعلى إلى الأدنى. السحب يتم تلقائيًا وفق هذا التسلسل عند خصم المخزون.
+                </Typography>
+              </Box>
+              <Button variant="contained" onClick={() => saveWarehousePriorityOrder().catch(() => undefined)} disabled={prioritySaving || actionLoading || warehousePriority.length === 0}>
+                حفظ ترتيب السحب
+              </Button>
+            </Box>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 700 }}>الترتيب</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>المستودع</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>الكود</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>الحالة</TableCell>
+                    <TableCell align="left" sx={{ fontWeight: 700 }}>تحكم</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {warehousePriority.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
+                        <Typography color="text.secondary">لا توجد مستودعات متاحة.</Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    warehousePriority.map((warehouse, index) => (
+                      <TableRow key={warehouse.id} hover>
+                        <TableCell>
+                          <Chip size="small" color={index === 0 ? 'primary' : 'default'} label={`#${index + 1}`} />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight={700}>{warehouse.nameAr || warehouse.name}</Typography>
+                          <Typography variant="caption" color="text.secondary">{warehouse.nameEn}</Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" fontFamily="monospace">{warehouse.code}</Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Stack direction="row" spacing={0.8}>
+                            {warehouse.isDefault ? <Chip size="small" color="primary" label="افتراضي" /> : null}
+                            <Chip size="small" color={warehouse.isActive ? 'success' : 'default'} label={warehouse.isActive ? 'نشط' : 'غير نشط'} />
+                          </Stack>
+                        </TableCell>
+                        <TableCell align="left">
+                          <Stack direction="row" spacing={1}>
+                            <Button size="small" disabled={index === 0} onClick={() => moveWarehousePriority(warehouse.id, 'up')}>
+                              رفع
+                            </Button>
+                            <Button size="small" disabled={index === warehousePriority.length - 1} onClick={() => moveWarehousePriority(warehouse.id, 'down')}>
+                              خفض
+                            </Button>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </DataTableWrapper>
+
           {/* Alerts Table */}
-          <Paper elevation={0} sx={{ p: 0, borderRadius: 3, border: '1px solid', borderColor: 'error.light', overflow: 'hidden' }}>
+          <DataTableWrapper>
             <Box sx={{ p: 2, bgcolor: 'error.50', borderBottom: '1px solid', borderColor: 'error.light', display: 'flex', alignItems: 'center', gap: 1 }}>
               <WarningAmberIcon color="error" />
               <Typography variant="h6" fontWeight={800} color="error.dark">تنبيهات انخفاض المخزون ({alerts.length})</Typography>
@@ -258,12 +367,12 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
                 </TableBody>
               </Table>
             </TableContainer>
-          </Paper>
+          </DataTableWrapper>
 
           {/* Movements and Reservations */}
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 3 }}>
             <Box>
-              <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden', height: '100%' }}>
+              <DataTableWrapper>
                 <Box sx={{ p: 2, bgcolor: 'background.default', borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
                   <AssignmentReturnIcon color="action" />
                   <Typography variant="subtitle1" fontWeight={800}>آخر الحركات</Typography>
@@ -304,11 +413,11 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
                     </TableBody>
                   </Table>
                 </TableContainer>
-              </Paper>
+              </DataTableWrapper>
             </Box>
 
             <Box>
-              <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden', height: '100%' }}>
+              <DataTableWrapper>
                 <Box sx={{ p: 2, bgcolor: 'background.default', borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
                   <LocalOfferIcon color="action" />
                   <Typography variant="subtitle1" fontWeight={800}>الحجوزات النشطة (للطلبات غير المكتملة)</Typography>
@@ -351,11 +460,11 @@ export function InventoryPanel({ request }: InventoryPanelProps) {
                     </TableBody>
                   </Table>
                 </TableContainer>
-              </Paper>
+              </DataTableWrapper>
             </Box>
           </Box>
         </>
       )}
-    </Box>
+    </AppPage>
   );
 }

@@ -7,6 +7,7 @@ export type MerchantTabKey =
   | 'store'
   | 'products'
   | 'inventory'
+  | 'warehouses'
   | 'attributes'
   | 'categories'
   | 'orders'

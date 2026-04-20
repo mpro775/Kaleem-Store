@@ -20,7 +20,7 @@ export function MerchantMobileNav({
 
   return (
     <Paper
-      elevation={10}
+      elevation={0}
       sx={{
         position: 'fixed',
         insetBlockEnd: 0,
@@ -28,6 +28,7 @@ export function MerchantMobileNav({
         insetInlineEnd: 0,
         borderTop: '1px solid',
         borderColor: 'divider',
+        borderRadius: 0,
         display: { xs: 'block', lg: 'none' },
         zIndex: (theme) => theme.zIndex.appBar + 1,
       }}
@@ -35,6 +36,13 @@ export function MerchantMobileNav({
       <BottomNavigation
         value={value}
         showLabels
+        sx={{
+          height: 68,
+          '& .MuiBottomNavigationAction-root': {
+            minWidth: 0,
+            px: 1,
+          },
+        }}
         onChange={(_, nextValue: MerchantTabKey | 'more') => {
           if (nextValue === 'more') {
             onOpenMore();

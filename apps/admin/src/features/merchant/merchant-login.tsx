@@ -11,8 +11,8 @@ interface MerchantLoginProps {
 }
 
 export function MerchantLogin({ onLoggedIn }: MerchantLoginProps) {
-  const [email, setEmail] = useState('owner@example.com');
-  const [password, setPassword] = useState('Owner123!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');

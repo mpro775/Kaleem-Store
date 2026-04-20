@@ -16,7 +16,11 @@ import type {
 import type { AdjustInventoryDto } from './dto/adjust-inventory.dto';
 import type { ListInventoryMovementsQueryDto } from './dto/list-inventory-movements-query.dto';
 import type { ListInventoryReservationsQueryDto } from './dto/list-inventory-reservations-query.dto';
-import { InventoryRepository, type Queryable } from './inventory.repository';
+import {
+  InventoryRepository,
+  type Queryable,
+  type VariantWarehouseStockRecord,
+} from './inventory.repository';
 
 export interface InventoryOrderItemInput {
   variantId: string;
@@ -76,6 +80,17 @@ export interface InventoryVariantSnapshotResponse {
   variantTitle: string;
   stockQuantity: number;
   lowStockThreshold: number;
+  reservedQuantity: number;
+  availableQuantity: number;
+}
+
+export interface VariantWithdrawalPriorityResponse {
+  warehouseId: string;
+  warehouseName: string;
+  warehouseCode: string;
+  isDefault: boolean;
+  priority: number;
+  quantity: number;
   reservedQuantity: number;
   availableQuantity: number;
 }
@@ -166,6 +181,14 @@ export class InventoryService {
         );
       }
 
+      const warehousePlan = await this.applyWarehouseStockDelta(db, {
+        storeId: input.storeId,
+        variantId: item.variantId,
+        quantityDelta: -item.quantity,
+        lowStockThreshold: 0,
+        sku: item.sku,
+      });
+
       const stockChange = await this.inventoryRepository.decreaseVariantStock(db, {
         storeId: input.storeId,
         variantId: item.variantId,
@@ -183,7 +206,7 @@ export class InventoryService {
         movementType: 'sale',
         qtyDelta: -item.quantity,
         note: 'Stock deducted on order confirmation',
-        metadata: { source: 'order.status.confirmed' },
+        metadata: { source: 'order.status.confirmed', warehousePlan },
         createdBy: input.actorId,
       });
 
@@ -194,6 +217,45 @@ export class InventoryService {
     }
 
     return lowStockSignals;
+  }
+
+  async confirmOrderReservations(
+    db: Queryable,
+    input: {
+      storeId: string;
+      orderId: string;
+      actorId: string | null;
+    },
+  ): Promise<LowStockSignal[]> {
+    const reserved = await this.inventoryRepository.listReservedVariantsForOrder(
+      db,
+      input.storeId,
+      input.orderId,
+    );
+
+    const totalReservationRows = await this.inventoryRepository.countOrderReservations(
+      db,
+      input.storeId,
+      input.orderId,
+    );
+
+    if (reserved.length === 0) {
+      if (totalReservationRows > 0) {
+        throw new UnprocessableEntityException('Reservation missing or expired for this order');
+      }
+      return [];
+    }
+
+    return this.confirmReservedOrderItems(db, {
+      storeId: input.storeId,
+      orderId: input.orderId,
+      actorId: input.actorId,
+      items: reserved.map((item) => ({
+        variantId: item.variant_id,
+        quantity: item.quantity,
+        sku: item.sku,
+      })),
+    });
   }
 
   async releaseOrderReservations(
@@ -227,6 +289,14 @@ export class InventoryService {
         throw new NotFoundException(`Variant not found for SKU ${item.sku}`);
       }
 
+      const warehousePlan = await this.applyWarehouseStockDelta(db, {
+        storeId: input.storeId,
+        variantId: item.variantId,
+        quantityDelta: item.quantity,
+        lowStockThreshold: stockChange.low_stock_threshold,
+        sku: item.sku,
+      });
+
       await this.inventoryRepository.createMovement(db, {
         storeId: input.storeId,
         variantId: item.variantId,
@@ -234,10 +304,44 @@ export class InventoryService {
         movementType,
         qtyDelta: item.quantity,
         note: input.note,
-        metadata: { source: 'order.status.restock' },
+        metadata: { source: 'order.status.restock', warehousePlan },
         createdBy: input.actorId,
       });
     }
+  }
+
+  async restockOrderSales(
+    db: Queryable,
+    input: {
+      storeId: string;
+      orderId: string;
+      actorId: string | null;
+      note: string;
+      movementType?: InventoryMovementType;
+    },
+  ): Promise<void> {
+    const sold = await this.inventoryRepository.listSoldVariantsForOrder(
+      db,
+      input.storeId,
+      input.orderId,
+    );
+
+    if (sold.length === 0) {
+      return;
+    }
+
+    await this.restockOrderItems(db, {
+      storeId: input.storeId,
+      orderId: input.orderId,
+      actorId: input.actorId,
+      note: input.note,
+      ...(input.movementType ? { movementType: input.movementType } : {}),
+      items: sold.map((item) => ({
+        variantId: item.variant_id,
+        quantity: item.quantity,
+        sku: item.sku,
+      })),
+    });
   }
 
   async adjustVariantStock(
@@ -386,6 +490,25 @@ export class InventoryService {
     return rows.map((row) => this.mapVariantSnapshot(row));
   }
 
+  async listVariantWithdrawalPriority(
+    currentUser: AuthUser,
+    variantId: string,
+  ): Promise<VariantWithdrawalPriorityResponse[]> {
+    const availableStock = await this.inventoryRepository.findVariantAvailableQuantity(
+      currentUser.storeId,
+      variantId,
+    );
+    if (availableStock === null) {
+      throw new NotFoundException('Variant not found');
+    }
+
+    const rows = await this.inventoryRepository.listVariantWarehouseStocks(
+      currentUser.storeId,
+      variantId,
+    );
+    return rows.map((row) => this.mapVariantWarehouseStock(row));
+  }
+
   async publishLowStockAlerts(signals: LowStockSignal[]): Promise<void> {
     const dedupedSignals = new Map<string, LowStockSignal>();
 
@@ -440,6 +563,13 @@ export class InventoryService {
         quantityDelta,
       );
 
+      const warehousePlan = await this.applyWarehouseStockDelta(db, {
+        storeId: currentUser.storeId,
+        variantId,
+        quantityDelta,
+        lowStockThreshold: stockChange.low_stock_threshold,
+      });
+
       await this.inventoryRepository.createMovement(db, {
         storeId: currentUser.storeId,
         variantId,
@@ -447,7 +577,7 @@ export class InventoryService {
         movementType,
         qtyDelta: quantityDelta,
         note,
-        metadata: { source: 'inventory.adjustment' },
+        metadata: { source: 'inventory.adjustment', warehousePlan },
         createdBy: currentUser.id,
       });
       const snapshotAfter = await this.requireVariantSnapshot(db, currentUser.storeId, variantId);
@@ -573,6 +703,141 @@ export class InventoryService {
       sku: stockChange.sku,
       stockQuantity: stockChange.current_stock_quantity,
       lowStockThreshold: threshold,
+    };
+  }
+
+  private async applyWarehouseStockDelta(
+    db: Queryable,
+    input: {
+      storeId: string;
+      variantId: string;
+      quantityDelta: number;
+      lowStockThreshold: number;
+      sku?: string;
+    },
+  ): Promise<Array<{ warehouseId: string; warehouseCode: string; warehouseName: string; quantityDelta: number }>> {
+    if (input.quantityDelta === 0) {
+      return [];
+    }
+
+    const stocks = await this.inventoryRepository.listVariantWarehouseStocksForUpdate(
+      db,
+      input.storeId,
+      input.variantId,
+    );
+
+    if (stocks.length === 0) {
+      if (input.quantityDelta > 0) {
+        const preferredWarehouse = await this.inventoryRepository.findPreferredWarehouse(
+          db,
+          input.storeId,
+        );
+        if (!preferredWarehouse) {
+          return [];
+        }
+
+        await this.inventoryRepository.upsertVariantWarehouseStock(db, {
+          storeId: input.storeId,
+          variantId: input.variantId,
+          warehouseId: preferredWarehouse.id,
+          quantity: input.quantityDelta,
+          lowStockThreshold: input.lowStockThreshold,
+        });
+
+        return [
+          {
+            warehouseId: preferredWarehouse.id,
+            warehouseCode: preferredWarehouse.code,
+            warehouseName: preferredWarehouse.name,
+            quantityDelta: input.quantityDelta,
+          },
+        ];
+      }
+
+      return [];
+    }
+
+    if (input.quantityDelta > 0) {
+      const target = stocks[0] as VariantWarehouseStockRecord;
+      await this.inventoryRepository.updateWarehouseInventoryQuantity(db, {
+        storeId: input.storeId,
+        variantId: input.variantId,
+        warehouseId: target.warehouse_id,
+        quantity: target.quantity + input.quantityDelta,
+      });
+
+      return [
+        {
+          warehouseId: target.warehouse_id,
+          warehouseCode: target.warehouse_code,
+          warehouseName: target.warehouse_name,
+          quantityDelta: input.quantityDelta,
+        },
+      ];
+    }
+
+    let required = Math.abs(input.quantityDelta);
+    const totalAvailable = stocks.reduce((sum, row) => {
+      return sum + Math.max(row.quantity - row.reserved_quantity, 0);
+    }, 0);
+
+    if (totalAvailable < required) {
+      throw new UnprocessableEntityException(
+        `Insufficient prioritized warehouse stock for SKU ${input.sku ?? input.variantId}`,
+      );
+    }
+
+    const plan: Array<{
+      warehouseId: string;
+      warehouseCode: string;
+      warehouseName: string;
+      quantityDelta: number;
+    }> = [];
+
+    for (const stock of stocks) {
+      if (required <= 0) {
+        break;
+      }
+
+      const availableInWarehouse = Math.max(stock.quantity - stock.reserved_quantity, 0);
+      if (availableInWarehouse <= 0) {
+        continue;
+      }
+
+      const deducted = Math.min(availableInWarehouse, required);
+      await this.inventoryRepository.updateWarehouseInventoryQuantity(db, {
+        storeId: input.storeId,
+        variantId: input.variantId,
+        warehouseId: stock.warehouse_id,
+        quantity: stock.quantity - deducted,
+      });
+
+      plan.push({
+        warehouseId: stock.warehouse_id,
+        warehouseCode: stock.warehouse_code,
+        warehouseName: stock.warehouse_name,
+        quantityDelta: -deducted,
+      });
+
+      required -= deducted;
+    }
+
+    return plan;
+  }
+
+  private mapVariantWarehouseStock(
+    row: VariantWarehouseStockRecord,
+  ): VariantWithdrawalPriorityResponse {
+    const availableQuantity = Math.max(row.quantity - row.reserved_quantity, 0);
+    return {
+      warehouseId: row.warehouse_id,
+      warehouseName: row.warehouse_name,
+      warehouseCode: row.warehouse_code,
+      isDefault: row.is_default,
+      priority: row.priority,
+      quantity: row.quantity,
+      reservedQuantity: row.reserved_quantity,
+      availableQuantity,
     };
   }
 

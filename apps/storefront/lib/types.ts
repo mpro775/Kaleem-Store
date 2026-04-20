@@ -56,9 +56,16 @@ export interface StorefrontFilterAttribute {
 
 export interface StorefrontProduct {
   id: string;
+  productType: 'single' | 'bundled' | 'digital';
+  isVisible: boolean;
+  stockUnlimited: boolean;
   title: string;
   slug: string;
   description: string | null;
+  shortDescriptionAr: string | null;
+  shortDescriptionEn: string | null;
+  detailedDescriptionAr: string | null;
+  detailedDescriptionEn: string | null;
   categoryId: string | null;
   primaryImageUrl: string | null;
   priceFrom: number | null;
@@ -68,9 +75,16 @@ export interface StorefrontProduct {
   descriptionEn: string | null;
   brand: string | null;
   weight: number | null;
+  weightUnit: string | null;
   dimensions: { length?: number; width?: number; height?: number } | null;
+  productLabel: string | null;
+  youtubeUrl: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
+  seoTitleAr: string | null;
+  seoTitleEn: string | null;
+  seoDescriptionAr: string | null;
+  seoDescriptionEn: string | null;
   tags: string[];
   isFeatured: boolean;
   isTaxable: boolean;

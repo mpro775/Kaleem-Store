@@ -12,6 +12,7 @@ import { StaffPanel } from './panels/staff-panel';
 import { StoreSettingsPanel } from './panels/store-settings-panel';
 import { ThemesPanel } from './panels/themes-panel';
 import { WebhooksPanel } from './panels/webhooks-panel';
+import { WarehousesPanel } from './panels/warehouses-panel';
 import { OverviewPanel } from './overview/overview-panel';
 import type { MerchantPanelProps, MerchantTabKey } from './merchant-dashboard.types';
 
@@ -20,6 +21,7 @@ const panelRenderers: Record<MerchantTabKey, (props: MerchantPanelProps) => Reac
   store: (props) => <StoreSettingsPanel request={props.request} />,
   products: (props) => <ProductsPanel request={props.request} />,
   inventory: (props) => <InventoryPanel request={props.request} />,
+  warehouses: (props) => <WarehousesPanel request={props.request} />,
   attributes: (props) => <AttributesPanel request={props.request} />,
   categories: (props) => <CategoriesPanel request={props.request} />,
   orders: (props) => <OrdersPanel request={props.request} />,

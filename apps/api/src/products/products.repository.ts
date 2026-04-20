@@ -2,11 +2,22 @@ import { Injectable } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { DatabaseService } from '../database/database.service';
 import type { ProductStatus } from './constants/product-status.constants';
+import type { ProductType } from './constants/product-type.constants';
+
+interface Queryable {
+  query: <T = unknown>(
+    queryText: string,
+    values?: unknown[],
+  ) => Promise<{ rows: T[]; rowCount: number | null }>;
+}
 
 export interface ProductRecord {
   id: string;
   store_id: string;
   category_id: string | null;
+  product_type: ProductType;
+  is_visible: boolean;
+  stock_unlimited: boolean;
   title: string;
   title_ar: string | null;
   title_en: string | null;
@@ -14,13 +25,32 @@ export interface ProductRecord {
   description: string | null;
   description_ar: string | null;
   description_en: string | null;
+  short_description_ar: string | null;
+  short_description_en: string | null;
+  detailed_description_ar: string | null;
+  detailed_description_en: string | null;
   status: ProductStatus;
   brand: string | null;
   weight: string | null;
+  weight_unit: string | null;
   dimensions: { length?: number; width?: number; height?: number } | null;
   cost_price: string | null;
+  product_label: string | null;
+  youtube_url: string | null;
   seo_title: string | null;
   seo_description: string | null;
+  seo_title_ar: string | null;
+  seo_title_en: string | null;
+  seo_description_ar: string | null;
+  seo_description_en: string | null;
+  custom_fields: Array<Record<string, unknown>>;
+  inline_discount_type: 'percent' | 'fixed' | null;
+  inline_discount_value: string | null;
+  inline_discount_starts_at: string | null;
+  inline_discount_ends_at: string | null;
+  inline_discount_active: boolean;
+  digital_download_attempts_limit: number | null;
+  digital_download_expires_at: string | null;
   tags: string[];
   is_featured: boolean;
   is_taxable: boolean;
@@ -60,6 +90,27 @@ export interface ProductImageRecord {
   is_primary: boolean;
 }
 
+export interface ProductBundleItemRecord {
+  id: string;
+  bundle_product_id: string;
+  bundled_product_id: string;
+  bundled_variant_id: string | null;
+  quantity: number;
+  sort_order: number;
+  bundled_product_title: string;
+  bundled_variant_title: string | null;
+}
+
+export interface ProductDigitalFileRecord {
+  id: string;
+  product_id: string;
+  media_asset_id: string;
+  file_name: string | null;
+  sort_order: number;
+  public_url: string;
+  file_size_bytes: number;
+}
+
 export interface MediaAssetRecord {
   id: string;
   store_id: string;
@@ -68,7 +119,7 @@ export interface MediaAssetRecord {
   file_size_bytes: number;
 }
 
-const PRODUCT_COLUMNS = `id, store_id, category_id, title, title_ar, title_en, slug, description, description_ar, description_en, status, brand, weight, dimensions, cost_price, seo_title, seo_description, tags, is_featured, is_taxable, tax_rate, min_order_quantity, max_order_quantity, published_at, rating_avg, rating_count`;
+const PRODUCT_COLUMNS = `id, store_id, category_id, product_type, is_visible, stock_unlimited, title, title_ar, title_en, slug, description, description_ar, description_en, short_description_ar, short_description_en, detailed_description_ar, detailed_description_en, status, brand, weight, weight_unit, dimensions, cost_price, product_label, youtube_url, seo_title, seo_description, seo_title_ar, seo_title_en, seo_description_ar, seo_description_en, custom_fields, inline_discount_type, inline_discount_value, inline_discount_starts_at, inline_discount_ends_at, inline_discount_active, digital_download_attempts_limit, digital_download_expires_at, tags, is_featured, is_taxable, tax_rate, min_order_quantity, max_order_quantity, published_at, rating_avg, rating_count`;
 
 export interface ProductListAttributeFilter {
   attributeSlug: string;
@@ -78,6 +129,21 @@ export interface ProductListAttributeFilter {
 @Injectable()
 export class ProductsRepository {
   constructor(private readonly databaseService: DatabaseService) {}
+
+  async withTransaction<T>(callback: (db: Queryable) => Promise<T>): Promise<T> {
+    const client = await this.databaseService.db.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await callback(client);
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 
   async findById(storeId: string, productId: string): Promise<ProductRecord | null> {
     const result = await this.databaseService.db.query<ProductRecord>(
@@ -111,6 +177,9 @@ export class ProductsRepository {
     id: string;
     storeId: string;
     categoryId: string | null;
+    productType: ProductType;
+    isVisible: boolean;
+    stockUnlimited: boolean;
     title: string;
     titleAr: string | null;
     titleEn: string | null;
@@ -118,13 +187,32 @@ export class ProductsRepository {
     description: string | null;
     descriptionAr: string | null;
     descriptionEn: string | null;
+    shortDescriptionAr: string | null;
+    shortDescriptionEn: string | null;
+    detailedDescriptionAr: string | null;
+    detailedDescriptionEn: string | null;
     status: ProductStatus;
     brand: string | null;
     weight: number | null;
+    weightUnit: string | null;
     dimensions: { length?: number; width?: number; height?: number } | null;
     costPrice: number | null;
+    productLabel: string | null;
+    youtubeUrl: string | null;
     seoTitle: string | null;
     seoDescription: string | null;
+    seoTitleAr: string | null;
+    seoTitleEn: string | null;
+    seoDescriptionAr: string | null;
+    seoDescriptionEn: string | null;
+    customFields: Array<Record<string, unknown>>;
+    inlineDiscountType: 'percent' | 'fixed' | null;
+    inlineDiscountValue: number | null;
+    inlineDiscountStartsAt: Date | null;
+    inlineDiscountEndsAt: Date | null;
+    inlineDiscountActive: boolean;
+    digitalDownloadAttemptsLimit: number | null;
+    digitalDownloadExpiresAt: Date | null;
     tags: string[];
     isFeatured: boolean;
     isTaxable: boolean;
@@ -134,14 +222,69 @@ export class ProductsRepository {
   }): Promise<ProductRecord> {
     const result = await this.databaseService.db.query<ProductRecord>(
       `
-        INSERT INTO products (id, store_id, category_id, title, title_ar, title_en, slug, description, description_ar, description_en, status, brand, weight, dimensions, cost_price, seo_title, seo_description, tags, is_featured, is_taxable, tax_rate, min_order_quantity, max_order_quantity)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+        INSERT INTO products (
+          id,
+          store_id,
+          category_id,
+          product_type,
+          is_visible,
+          stock_unlimited,
+          title,
+          title_ar,
+          title_en,
+          slug,
+          description,
+          description_ar,
+          description_en,
+          short_description_ar,
+          short_description_en,
+          detailed_description_ar,
+          detailed_description_en,
+          status,
+          brand,
+          weight,
+          weight_unit,
+          dimensions,
+          cost_price,
+          product_label,
+          youtube_url,
+          seo_title,
+          seo_description,
+          seo_title_ar,
+          seo_title_en,
+          seo_description_ar,
+          seo_description_en,
+          custom_fields,
+          inline_discount_type,
+          inline_discount_value,
+          inline_discount_starts_at,
+          inline_discount_ends_at,
+          inline_discount_active,
+          digital_download_attempts_limit,
+          digital_download_expires_at,
+          tags,
+          is_featured,
+          is_taxable,
+          tax_rate,
+          min_order_quantity,
+          max_order_quantity
+        )
+        VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+          $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+          $21, $22::jsonb, $23, $24, $25, $26, $27, $28, $29, $30,
+          $31, $32::jsonb, $33, $34, $35, $36, $37, $38, $39, $40,
+          $41, $42, $43, $44, $45
+        )
         RETURNING ${PRODUCT_COLUMNS}
       `,
       [
         input.id,
         input.storeId,
         input.categoryId,
+        input.productType,
+        input.isVisible,
+        input.stockUnlimited,
         input.title,
         input.titleAr,
         input.titleEn,
@@ -149,13 +292,32 @@ export class ProductsRepository {
         input.description,
         input.descriptionAr,
         input.descriptionEn,
+        input.shortDescriptionAr,
+        input.shortDescriptionEn,
+        input.detailedDescriptionAr,
+        input.detailedDescriptionEn,
         input.status,
         input.brand,
         input.weight,
+        input.weightUnit,
         input.dimensions ? JSON.stringify(input.dimensions) : null,
         input.costPrice,
+        input.productLabel,
+        input.youtubeUrl,
         input.seoTitle,
         input.seoDescription,
+        input.seoTitleAr,
+        input.seoTitleEn,
+        input.seoDescriptionAr,
+        input.seoDescriptionEn,
+        JSON.stringify(input.customFields),
+        input.inlineDiscountType,
+        input.inlineDiscountValue,
+        input.inlineDiscountStartsAt,
+        input.inlineDiscountEndsAt,
+        input.inlineDiscountActive,
+        input.digitalDownloadAttemptsLimit,
+        input.digitalDownloadExpiresAt,
         input.tags,
         input.isFeatured,
         input.isTaxable,
@@ -172,6 +334,8 @@ export class ProductsRepository {
     q?: string | undefined;
     status?: ProductStatus | undefined;
     categoryId?: string | undefined;
+    productType?: ProductType | undefined;
+    isVisible?: boolean | undefined;
     isFeatured?: boolean | undefined;
     brand?: string | undefined;
     attributeFilters?: ProductListAttributeFilter[] | undefined;
@@ -230,6 +394,9 @@ export class ProductsRepository {
     storeId: string;
     productId: string;
     categoryId: string | null;
+    productType: ProductType;
+    isVisible: boolean;
+    stockUnlimited: boolean;
     title: string;
     titleAr: string | null;
     titleEn: string | null;
@@ -237,13 +404,32 @@ export class ProductsRepository {
     description: string | null;
     descriptionAr: string | null;
     descriptionEn: string | null;
+    shortDescriptionAr: string | null;
+    shortDescriptionEn: string | null;
+    detailedDescriptionAr: string | null;
+    detailedDescriptionEn: string | null;
     status: ProductStatus;
     brand: string | null;
     weight: number | null;
+    weightUnit: string | null;
     dimensions: { length?: number; width?: number; height?: number } | null;
     costPrice: number | null;
+    productLabel: string | null;
+    youtubeUrl: string | null;
     seoTitle: string | null;
     seoDescription: string | null;
+    seoTitleAr: string | null;
+    seoTitleEn: string | null;
+    seoDescriptionAr: string | null;
+    seoDescriptionEn: string | null;
+    customFields: Array<Record<string, unknown>>;
+    inlineDiscountType: 'percent' | 'fixed' | null;
+    inlineDiscountValue: number | null;
+    inlineDiscountStartsAt: Date | null;
+    inlineDiscountEndsAt: Date | null;
+    inlineDiscountActive: boolean;
+    digitalDownloadAttemptsLimit: number | null;
+    digitalDownloadExpiresAt: Date | null;
     tags: string[];
     isFeatured: boolean;
     isTaxable: boolean;
@@ -255,26 +441,48 @@ export class ProductsRepository {
       `
         UPDATE products
         SET category_id = $3,
-            title = $4,
-            title_ar = $5,
-            title_en = $6,
-            slug = $7,
-            description = $8,
-            description_ar = $9,
-            description_en = $10,
-            status = $11,
-            brand = $12,
-            weight = $13,
-            dimensions = $14::jsonb,
-            cost_price = $15,
-            seo_title = $16,
-            seo_description = $17,
-            tags = $18,
-            is_featured = $19,
-            is_taxable = $20,
-            tax_rate = $21,
-            min_order_quantity = $22,
-            max_order_quantity = $23,
+            product_type = $4,
+            is_visible = $5,
+            stock_unlimited = $6,
+            title = $7,
+            title_ar = $8,
+            title_en = $9,
+            slug = $10,
+            description = $11,
+            description_ar = $12,
+            description_en = $13,
+            short_description_ar = $14,
+            short_description_en = $15,
+            detailed_description_ar = $16,
+            detailed_description_en = $17,
+            status = $18,
+            brand = $19,
+            weight = $20,
+            weight_unit = $21,
+            dimensions = $22::jsonb,
+            cost_price = $23,
+            product_label = $24,
+            youtube_url = $25,
+            seo_title = $26,
+            seo_description = $27,
+            seo_title_ar = $28,
+            seo_title_en = $29,
+            seo_description_ar = $30,
+            seo_description_en = $31,
+            custom_fields = $32::jsonb,
+            inline_discount_type = $33,
+            inline_discount_value = $34,
+            inline_discount_starts_at = $35,
+            inline_discount_ends_at = $36,
+            inline_discount_active = $37,
+            digital_download_attempts_limit = $38,
+            digital_download_expires_at = $39,
+            tags = $40,
+            is_featured = $41,
+            is_taxable = $42,
+            tax_rate = $43,
+            min_order_quantity = $44,
+            max_order_quantity = $45,
             updated_at = NOW()
         WHERE store_id = $1
           AND id = $2
@@ -284,6 +492,9 @@ export class ProductsRepository {
         input.storeId,
         input.productId,
         input.categoryId,
+        input.productType,
+        input.isVisible,
+        input.stockUnlimited,
         input.title,
         input.titleAr,
         input.titleEn,
@@ -291,13 +502,32 @@ export class ProductsRepository {
         input.description,
         input.descriptionAr,
         input.descriptionEn,
+        input.shortDescriptionAr,
+        input.shortDescriptionEn,
+        input.detailedDescriptionAr,
+        input.detailedDescriptionEn,
         input.status,
         input.brand,
         input.weight,
+        input.weightUnit,
         input.dimensions ? JSON.stringify(input.dimensions) : null,
         input.costPrice,
+        input.productLabel,
+        input.youtubeUrl,
         input.seoTitle,
         input.seoDescription,
+        input.seoTitleAr,
+        input.seoTitleEn,
+        input.seoDescriptionAr,
+        input.seoDescriptionEn,
+        JSON.stringify(input.customFields),
+        input.inlineDiscountType,
+        input.inlineDiscountValue,
+        input.inlineDiscountStartsAt,
+        input.inlineDiscountEndsAt,
+        input.inlineDiscountActive,
+        input.digitalDownloadAttemptsLimit,
+        input.digitalDownloadExpiresAt,
         input.tags,
         input.isFeatured,
         input.isTaxable,
@@ -563,11 +793,240 @@ export class ProductsRepository {
     );
   }
 
+  async listProductCategoryIds(storeId: string, productId: string): Promise<string[]> {
+    const result = await this.databaseService.db.query<{ category_id: string }>(
+      `
+        SELECT category_id
+        FROM product_categories
+        WHERE store_id = $1
+          AND product_id = $2
+        ORDER BY created_at ASC
+      `,
+      [storeId, productId],
+    );
+    return result.rows.map((row) => row.category_id);
+  }
+
+  async replaceProductCategories(
+    db: Queryable,
+    input: { storeId: string; productId: string; categoryIds: string[] },
+  ): Promise<void> {
+    await db.query(
+      `DELETE FROM product_categories WHERE store_id = $1 AND product_id = $2`,
+      [input.storeId, input.productId],
+    );
+
+    for (const categoryId of input.categoryIds) {
+      await db.query(
+        `
+          INSERT INTO product_categories (id, store_id, product_id, category_id)
+          VALUES ($1, $2, $3, $4)
+        `,
+        [uuidv4(), input.storeId, input.productId, categoryId],
+      );
+    }
+  }
+
+  async listRelatedProductIds(storeId: string, productId: string): Promise<string[]> {
+    const result = await this.databaseService.db.query<{ related_product_id: string }>(
+      `
+        SELECT related_product_id
+        FROM product_related_products
+        WHERE store_id = $1
+          AND product_id = $2
+        ORDER BY created_at ASC
+      `,
+      [storeId, productId],
+    );
+    return result.rows.map((row) => row.related_product_id);
+  }
+
+  async replaceRelatedProducts(
+    db: Queryable,
+    input: { storeId: string; productId: string; relatedProductIds: string[] },
+  ): Promise<void> {
+    await db.query(
+      `DELETE FROM product_related_products WHERE store_id = $1 AND product_id = $2`,
+      [input.storeId, input.productId],
+    );
+
+    for (const relatedProductId of input.relatedProductIds) {
+      await db.query(
+        `
+          INSERT INTO product_related_products (id, store_id, product_id, related_product_id)
+          VALUES ($1, $2, $3, $4)
+        `,
+        [uuidv4(), input.storeId, input.productId, relatedProductId],
+      );
+    }
+  }
+
+  async listBundleItems(storeId: string, productId: string): Promise<ProductBundleItemRecord[]> {
+    const result = await this.databaseService.db.query<ProductBundleItemRecord>(
+      `
+        SELECT
+          pbi.id,
+          pbi.bundle_product_id,
+          pbi.bundled_product_id,
+          pbi.bundled_variant_id,
+          pbi.quantity,
+          pbi.sort_order,
+          bp.title AS bundled_product_title,
+          bv.title AS bundled_variant_title
+        FROM product_bundle_items pbi
+        INNER JOIN products bp ON bp.id = pbi.bundled_product_id
+        LEFT JOIN product_variants bv ON bv.id = pbi.bundled_variant_id
+        WHERE pbi.store_id = $1
+          AND pbi.bundle_product_id = $2
+        ORDER BY pbi.sort_order ASC, pbi.created_at ASC
+      `,
+      [storeId, productId],
+    );
+
+    return result.rows;
+  }
+
+  async replaceBundleItems(
+    db: Queryable,
+    input: {
+      storeId: string;
+      productId: string;
+      bundleItems: Array<{
+        bundledProductId: string;
+        bundledVariantId: string | null;
+        quantity: number;
+        sortOrder: number;
+      }>;
+    },
+  ): Promise<void> {
+    await db.query(
+      `DELETE FROM product_bundle_items WHERE store_id = $1 AND bundle_product_id = $2`,
+      [input.storeId, input.productId],
+    );
+
+    for (const item of input.bundleItems) {
+      await db.query(
+        `
+          INSERT INTO product_bundle_items (
+            id,
+            store_id,
+            bundle_product_id,
+            bundled_product_id,
+            bundled_variant_id,
+            quantity,
+            sort_order
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `,
+        [
+          uuidv4(),
+          input.storeId,
+          input.productId,
+          item.bundledProductId,
+          item.bundledVariantId,
+          item.quantity,
+          item.sortOrder,
+        ],
+      );
+    }
+  }
+
+  async listDigitalFiles(storeId: string, productId: string): Promise<ProductDigitalFileRecord[]> {
+    const result = await this.databaseService.db.query<ProductDigitalFileRecord>(
+      `
+        SELECT
+          pdf.id,
+          pdf.product_id,
+          pdf.media_asset_id,
+          pdf.file_name,
+          pdf.sort_order,
+          ma.public_url,
+          ma.file_size_bytes
+        FROM product_digital_files pdf
+        INNER JOIN media_assets ma ON ma.id = pdf.media_asset_id
+        WHERE pdf.store_id = $1
+          AND pdf.product_id = $2
+        ORDER BY pdf.sort_order ASC, pdf.created_at ASC
+      `,
+      [storeId, productId],
+    );
+
+    return result.rows;
+  }
+
+  async replaceDigitalFiles(
+    db: Queryable,
+    input: {
+      storeId: string;
+      productId: string;
+      files: Array<{ mediaAssetId: string; fileName: string | null; sortOrder: number }>;
+    },
+  ): Promise<void> {
+    await db.query(
+      `DELETE FROM product_digital_files WHERE store_id = $1 AND product_id = $2`,
+      [input.storeId, input.productId],
+    );
+
+    for (const file of input.files) {
+      await db.query(
+        `
+          INSERT INTO product_digital_files (
+            id,
+            store_id,
+            product_id,
+            media_asset_id,
+            file_name,
+            sort_order
+          )
+          VALUES ($1, $2, $3, $4, $5, $6)
+        `,
+        [uuidv4(), input.storeId, input.productId, file.mediaAssetId, file.fileName, file.sortOrder],
+      );
+    }
+  }
+
+  async listMediaAssetsByIds(storeId: string, mediaAssetIds: string[]): Promise<MediaAssetRecord[]> {
+    if (mediaAssetIds.length === 0) {
+      return [];
+    }
+
+    const result = await this.databaseService.db.query<MediaAssetRecord>(
+      `
+        SELECT id, store_id, public_url, mime_type, file_size_bytes
+        FROM media_assets
+        WHERE store_id = $1
+          AND id = ANY($2::uuid[])
+      `,
+      [storeId, mediaAssetIds],
+    );
+    return result.rows;
+  }
+
+  async findDefaultVariantByProductId(
+    storeId: string,
+    productId: string,
+  ): Promise<ProductVariantRecord | null> {
+    const result = await this.databaseService.db.query<ProductVariantRecord>(
+      `
+        SELECT id, product_id, store_id, title, title_ar, title_en, sku, barcode, price, compare_at_price, stock_quantity, low_stock_threshold, attributes, is_default
+        FROM product_variants
+        WHERE store_id = $1
+          AND product_id = $2
+        ORDER BY is_default DESC, created_at ASC
+        LIMIT 1
+      `,
+      [storeId, productId],
+    );
+    return result.rows[0] ?? null;
+  }
+
   private buildListQuery(input: {
     storeId: string;
     q?: string | undefined;
     status?: ProductStatus | undefined;
     categoryId?: string | undefined;
+    productType?: ProductType | undefined;
+    isVisible?: boolean | undefined;
     isFeatured?: boolean | undefined;
     brand?: string | undefined;
     attributeFilters?: ProductListAttributeFilter[] | undefined;
@@ -583,8 +1042,20 @@ export class ProductsRepository {
     }
 
     if (input.categoryId) {
-      conditions.push(`p.category_id = $${nextParam}`);
+      conditions.push(`(p.category_id = $${nextParam} OR EXISTS (SELECT 1 FROM product_categories pc WHERE pc.store_id = p.store_id AND pc.product_id = p.id AND pc.category_id = $${nextParam}))`);
       values.push(input.categoryId);
+      nextParam += 1;
+    }
+
+    if (input.productType) {
+      conditions.push(`p.product_type = $${nextParam}`);
+      values.push(input.productType);
+      nextParam += 1;
+    }
+
+    if (input.isVisible !== undefined) {
+      conditions.push(`p.is_visible = $${nextParam}`);
+      values.push(input.isVisible);
       nextParam += 1;
     }
 
