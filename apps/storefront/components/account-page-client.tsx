@@ -435,6 +435,9 @@ export function AccountPageClient() {
                         <span className="badge">شراء موثق</span>
                       )}
                     </div>
+                    <p className="muted">
+                      {review.productTitle || `Product #${review.productId}`}
+                    </p>
                     {review.comment && <p style={{ margin: '0.5rem 0' }}>{review.comment}</p>}
                     <p className="muted" style={{ fontSize: '0.8rem' }}>
                       {new Date(review.createdAt).toLocaleDateString('ar')}

@@ -10,6 +10,12 @@ interface OwnerRegistrationOtpEmailInput {
   storeName: string;
 }
 
+interface BackInStockEmailInput {
+  to: string;
+  productTitle: string;
+  productUrl: string;
+}
+
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
@@ -52,6 +58,44 @@ export class EmailService {
 
     this.logger.log(
       `OTP email (mode=log) to ${input.to}. Code: ${input.otpCode}. Expires in ${input.expiresInMinutes} minutes.`,
+    );
+  }
+
+  async sendBackInStockAlert(input: BackInStockEmailInput): Promise<void> {
+    const mode = this.configService.get<string>('EMAIL_DELIVERY_MODE', 'log');
+    const from = this.configService.get<string>('EMAIL_FROM', 'no-reply@kaleem.store');
+    const subject = 'Product back in stock';
+    const text = [
+      'A product you asked about is available again.',
+      '',
+      `Product: ${input.productTitle}`,
+      `Open product: ${input.productUrl}`,
+      '',
+      'This link may expire after a limited time.',
+    ].join('\n');
+
+    if (mode === 'smtp') {
+      await this.sendWithSmtp({
+        to: input.to,
+        from,
+        subject,
+        text,
+      });
+      return;
+    }
+
+    if (mode === 'resend') {
+      await this.sendWithResend({
+        to: input.to,
+        from,
+        subject,
+        text,
+      });
+      return;
+    }
+
+    this.logger.log(
+      `Back-in-stock email (mode=log) to ${input.to}. Product: ${input.productTitle}. Link: ${input.productUrl}`,
     );
   }
 

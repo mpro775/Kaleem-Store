@@ -61,6 +61,7 @@ interface ProductsPanelProps {
 const productFormDefault = {
   productType: 'single' as ProductType,
   isVisible: true,
+  questionsEnabled: false,
   title: '',
   slug: '',
   description: '',
@@ -214,12 +215,13 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
       setSelectedVariantId('');
       if (data) {
         setHasChosenProductType(true);
-        setProductForm({
-          productType: (data as any).productType ?? 'single',
-          isVisible: (data as any).isVisible ?? true,
-          title: data.title,
-          slug: data.slug,
-          description: data.description ?? '',
+          setProductForm({
+            productType: (data as any).productType ?? 'single',
+            isVisible: (data as any).isVisible ?? true,
+            questionsEnabled: (data as any).questionsEnabled ?? false,
+            title: data.title,
+            slug: data.slug,
+            description: data.description ?? '',
           categoryId: data.categoryId ?? '',
           status: data.status,
           titleAr: (data as any).titleAr ?? data.title,
@@ -778,6 +780,21 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                           />
                         }
                         label={productForm.isVisible ? 'المنتج ظاهر في المتجر' : 'المنتج مخفي في المتجر'}
+                      />
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={productForm.questionsEnabled}
+                            onChange={(event) =>
+                              setProductForm((prev) => ({ ...prev, questionsEnabled: event.target.checked }))
+                            }
+                          />
+                        }
+                        label={
+                          productForm.questionsEnabled
+                            ? 'استقبال أسئلة العملاء مفعّل'
+                            : 'استقبال أسئلة العملاء متوقف'
+                        }
                       />
                     </Stack>
                   </Box>
@@ -1631,6 +1648,7 @@ function buildProductPayload(
     title: string;
     productType: ProductType;
     isVisible: boolean;
+    questionsEnabled: boolean;
     slug?: string;
     description?: string;
     categoryId?: string;
@@ -1681,6 +1699,7 @@ function buildProductPayload(
     title: primaryArabicTitle,
     productType: form.productType,
     isVisible: form.isVisible,
+    questionsEnabled: form.questionsEnabled,
     titleAr: primaryArabicTitle,
     status: form.status,
   };

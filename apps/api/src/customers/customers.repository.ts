@@ -12,6 +12,10 @@ export interface CustomerRecord {
   password_hash: string | null;
   email_verified_at: Date | null;
   last_login_at: Date | null;
+  gender: 'male' | 'female' | null;
+  country: string | null;
+  city: string | null;
+  birth_date: Date | null;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -69,12 +73,14 @@ export interface ProductReviewRecord {
   id: string;
   store_id: string;
   product_id: string;
+  product_title: string | null;
   customer_id: string;
   customer_name: string;
   order_id: string | null;
   rating: number;
   comment: string | null;
   is_verified_purchase: boolean;
+  moderation_status: 'PENDING' | 'APPROVED' | 'HIDDEN';
   created_at: Date;
   updated_at: Date;
 }
@@ -85,6 +91,39 @@ export interface ProductReviewStats {
   rating_distribution: { rating: number; count: number }[];
 }
 
+export interface ManagedCustomerSummaryRecord {
+  id: string;
+  store_id: string;
+  full_name: string;
+  phone: string;
+  email: string | null;
+  gender: 'male' | 'female' | null;
+  country: string | null;
+  city: string | null;
+  birth_date: Date | null;
+  is_active: boolean;
+  created_at: Date;
+  last_login_at: Date | null;
+  orders_count: string;
+  total_spent: string;
+}
+
+export interface ManagedCustomerAbandonedCartRecord {
+  id: string;
+  cart_data: Record<string, unknown>;
+  cart_total: number;
+  items_count: number;
+  recovery_sent_at: Date | null;
+  recovered_at: Date | null;
+  expires_at: Date;
+  created_at: Date;
+}
+
+const CUSTOMER_SELECT_FIELDS = `
+  id, store_id, full_name, phone, email, email_normalized, password_hash,
+  email_verified_at, last_login_at, gender, country, city, birth_date, is_active, created_at, updated_at
+`;
+
 @Injectable()
 export class CustomersRepository {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -92,8 +131,7 @@ export class CustomersRepository {
   async findByPhone(storeId: string, phone: string): Promise<CustomerRecord | null> {
     const result = await this.databaseService.db.query<CustomerRecord>(
       `
-        SELECT id, store_id, full_name, phone, email, email_normalized, password_hash, 
-               email_verified_at, last_login_at, is_active, created_at, updated_at
+        SELECT ${CUSTOMER_SELECT_FIELDS}
         FROM customers
         WHERE store_id = $1 AND phone = $2
         LIMIT 1
@@ -107,8 +145,7 @@ export class CustomersRepository {
     const emailNormalized = email.trim().toLowerCase();
     const result = await this.databaseService.db.query<CustomerRecord>(
       `
-        SELECT id, store_id, full_name, phone, email, email_normalized, password_hash, 
-               email_verified_at, last_login_at, is_active, created_at, updated_at
+        SELECT ${CUSTOMER_SELECT_FIELDS}
         FROM customers
         WHERE store_id = $1 AND LOWER(email_normalized) = $2
         LIMIT 1
@@ -121,8 +158,7 @@ export class CustomersRepository {
   async findById(customerId: string): Promise<CustomerRecord | null> {
     const result = await this.databaseService.db.query<CustomerRecord>(
       `
-        SELECT id, store_id, full_name, phone, email, email_normalized, password_hash, 
-               email_verified_at, last_login_at, is_active, created_at, updated_at
+        SELECT ${CUSTOMER_SELECT_FIELDS}
         FROM customers
         WHERE id = $1
         LIMIT 1
@@ -135,8 +171,7 @@ export class CustomersRepository {
   async findByIdAndStore(customerId: string, storeId: string): Promise<CustomerRecord | null> {
     const result = await this.databaseService.db.query<CustomerRecord>(
       `
-        SELECT id, store_id, full_name, phone, email, email_normalized, password_hash, 
-               email_verified_at, last_login_at, is_active, created_at, updated_at
+        SELECT ${CUSTOMER_SELECT_FIELDS}
         FROM customers
         WHERE id = $1 AND store_id = $2
         LIMIT 1
@@ -159,12 +194,212 @@ export class CustomersRepository {
       `
         INSERT INTO customers (id, store_id, full_name, phone, email, email_normalized, password_hash, email_verified_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-        RETURNING id, store_id, full_name, phone, email, email_normalized, password_hash, 
-                  email_verified_at, last_login_at, is_active, created_at, updated_at
+        RETURNING ${CUSTOMER_SELECT_FIELDS}
       `,
       [id, input.storeId, input.fullName, input.phone, input.email, input.emailNormalized, input.passwordHash],
     );
     return result.rows[0]!;
+  }
+
+  async createManaged(input: {
+    storeId: string;
+    fullName: string;
+    phone: string;
+    email: string | null;
+    emailNormalized: string | null;
+    gender: 'male' | 'female' | null;
+    country: string;
+    city: string | null;
+    birthDate: Date | null;
+  }): Promise<CustomerRecord> {
+    const id = uuidv4();
+    const result = await this.databaseService.db.query<CustomerRecord>(
+      `
+        INSERT INTO customers (
+          id,
+          store_id,
+          full_name,
+          phone,
+          email,
+          email_normalized,
+          gender,
+          country,
+          city,
+          birth_date
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        RETURNING ${CUSTOMER_SELECT_FIELDS}
+      `,
+      [
+        id,
+        input.storeId,
+        input.fullName,
+        input.phone,
+        input.email,
+        input.emailNormalized,
+        input.gender,
+        input.country,
+        input.city,
+        input.birthDate,
+      ],
+    );
+    return result.rows[0]!;
+  }
+
+  async listManagedCustomers(input: {
+    storeId: string;
+    q: string | null;
+    limit: number;
+    offset: number;
+  }): Promise<ManagedCustomerSummaryRecord[]> {
+    const result = await this.databaseService.db.query<ManagedCustomerSummaryRecord>(
+      `
+        SELECT
+          c.id,
+          c.store_id,
+          c.full_name,
+          c.phone,
+          c.email,
+          c.gender,
+          c.country,
+          c.city,
+          c.birth_date,
+          c.is_active,
+          c.created_at,
+          c.last_login_at,
+          COALESCE(order_stats.orders_count, 0)::text AS orders_count,
+          COALESCE(order_stats.total_spent, 0)::text AS total_spent
+        FROM customers c
+        LEFT JOIN (
+          SELECT
+            customer_id,
+            COUNT(*) AS orders_count,
+            SUM(total) AS total_spent
+          FROM orders
+          WHERE store_id = $1
+          GROUP BY customer_id
+        ) order_stats ON order_stats.customer_id = c.id
+        WHERE c.store_id = $1
+          AND (
+            $2::text IS NULL
+            OR c.full_name ILIKE '%' || $2 || '%'
+            OR c.phone ILIKE '%' || $2 || '%'
+            OR COALESCE(c.email, '') ILIKE '%' || $2 || '%'
+          )
+        ORDER BY c.created_at DESC
+        LIMIT $3 OFFSET $4
+      `,
+      [input.storeId, input.q, input.limit, input.offset],
+    );
+    return result.rows;
+  }
+
+  async countManagedCustomers(storeId: string, q: string | null): Promise<number> {
+    const result = await this.databaseService.db.query<{ total: string }>(
+      `
+        SELECT COUNT(*)::text AS total
+        FROM customers c
+        WHERE c.store_id = $1
+          AND (
+            $2::text IS NULL
+            OR c.full_name ILIKE '%' || $2 || '%'
+            OR c.phone ILIKE '%' || $2 || '%'
+            OR COALESCE(c.email, '') ILIKE '%' || $2 || '%'
+          )
+      `,
+      [storeId, q],
+    );
+    return Number(result.rows[0]?.total ?? '0');
+  }
+
+  async updateManaged(input: {
+    customerId: string;
+    storeId: string;
+    fullName?: string;
+    phone?: string;
+    email?: string | null;
+    emailNormalized?: string | null;
+    gender?: 'male' | 'female' | null;
+    country?: string;
+    city?: string | null;
+    birthDate?: Date | null;
+  }): Promise<CustomerRecord | null> {
+    const updates: string[] = [];
+    const values: unknown[] = [];
+    let paramIndex = 1;
+
+    if (input.fullName !== undefined) {
+      updates.push(`full_name = $${paramIndex++}`);
+      values.push(input.fullName);
+    }
+
+    if (input.phone !== undefined) {
+      updates.push(`phone = $${paramIndex++}`);
+      values.push(input.phone);
+    }
+
+    if (input.email !== undefined) {
+      updates.push(`email = $${paramIndex++}`);
+      values.push(input.email);
+      updates.push(`email_normalized = $${paramIndex++}`);
+      values.push(input.emailNormalized ?? null);
+    }
+
+    if (input.gender !== undefined) {
+      updates.push(`gender = $${paramIndex++}`);
+      values.push(input.gender);
+    }
+
+    if (input.country !== undefined) {
+      updates.push(`country = $${paramIndex++}`);
+      values.push(input.country);
+    }
+
+    if (input.city !== undefined) {
+      updates.push(`city = $${paramIndex++}`);
+      values.push(input.city);
+    }
+
+    if (input.birthDate !== undefined) {
+      updates.push(`birth_date = $${paramIndex++}`);
+      values.push(input.birthDate);
+    }
+
+    if (updates.length === 0) {
+      return this.findByIdAndStore(input.customerId, input.storeId);
+    }
+
+    updates.push(`updated_at = NOW()`);
+    values.push(input.customerId, input.storeId);
+
+    const result = await this.databaseService.db.query<CustomerRecord>(
+      `
+        UPDATE customers
+        SET ${updates.join(', ')}
+        WHERE id = $${paramIndex++}
+          AND store_id = $${paramIndex}
+        RETURNING ${CUSTOMER_SELECT_FIELDS}
+      `,
+      values,
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async updateManagedStatus(
+    customerId: string,
+    storeId: string,
+    isActive: boolean,
+  ): Promise<CustomerRecord | null> {
+    const result = await this.databaseService.db.query<CustomerRecord>(
+      `
+        UPDATE customers
+        SET is_active = $3, updated_at = NOW()
+        WHERE id = $1 AND store_id = $2
+        RETURNING ${CUSTOMER_SELECT_FIELDS}
+      `,
+      [customerId, storeId, isActive],
+    );
+    return result.rows[0] ?? null;
   }
 
   async updateProfile(input: {
@@ -205,8 +440,7 @@ export class CustomersRepository {
         UPDATE customers
         SET ${updates.join(', ')}
         WHERE id = $${paramIndex}
-        RETURNING id, store_id, full_name, phone, email, email_normalized, password_hash, 
-                  email_verified_at, last_login_at, is_active, created_at, updated_at
+        RETURNING ${CUSTOMER_SELECT_FIELDS}
       `,
       values,
     );
@@ -498,11 +732,22 @@ export class CustomersRepository {
     const id = uuidv4();
     const result = await this.databaseService.db.query<ProductReviewRecord & { customer_name: string }>(
       `
-        INSERT INTO product_reviews (id, store_id, product_id, customer_id, order_id, rating, comment, is_verified_purchase)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        INSERT INTO product_reviews (
+          id,
+          store_id,
+          product_id,
+          customer_id,
+          order_id,
+          rating,
+          comment,
+          is_verified_purchase,
+          moderation_status
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'PENDING')
         RETURNING id, store_id, product_id, customer_id, 
                   (SELECT full_name FROM customers WHERE id = customer_id) AS customer_name,
-                  order_id, rating, comment, is_verified_purchase, created_at, updated_at
+                  (SELECT title FROM products WHERE id = product_id) AS product_title,
+                  order_id, rating, comment, is_verified_purchase, moderation_status, created_at, updated_at
       `,
       [id, input.storeId, input.productId, input.customerId, input.orderId ?? null, input.rating, input.comment ?? null, input.isVerifiedPurchase],
     );
@@ -532,6 +777,7 @@ export class CustomersRepository {
       return this.findReviewById(input.reviewId, input.customerId);
     }
 
+    updates.push(`moderation_status = 'PENDING'`);
     updates.push(`updated_at = NOW()`);
     values.push(input.reviewId, input.customerId);
 
@@ -542,7 +788,8 @@ export class CustomersRepository {
         WHERE id = $${paramIndex++} AND customer_id = $${paramIndex}
         RETURNING id, store_id, product_id, customer_id,
                   (SELECT full_name FROM customers WHERE id = customer_id) AS customer_name,
-                  order_id, rating, comment, is_verified_purchase, created_at, updated_at
+                  (SELECT title FROM products WHERE id = product_id) AS product_title,
+                  order_id, rating, comment, is_verified_purchase, moderation_status, created_at, updated_at
       `,
       values,
     );
@@ -565,7 +812,8 @@ export class CustomersRepository {
       `
         SELECT id, store_id, product_id, customer_id,
                (SELECT full_name FROM customers WHERE id = customer_id) AS customer_name,
-               order_id, rating, comment, is_verified_purchase, created_at, updated_at
+               (SELECT title FROM products WHERE id = product_id) AS product_title,
+               order_id, rating, comment, is_verified_purchase, moderation_status, created_at, updated_at
         FROM product_reviews
         WHERE id = $1 AND customer_id = $2
         LIMIT 1
@@ -580,7 +828,8 @@ export class CustomersRepository {
       `
         SELECT id, store_id, product_id, customer_id,
                (SELECT full_name FROM customers WHERE id = customer_id) AS customer_name,
-               order_id, rating, comment, is_verified_purchase, created_at, updated_at
+               (SELECT title FROM products WHERE id = product_id) AS product_title,
+               order_id, rating, comment, is_verified_purchase, moderation_status, created_at, updated_at
         FROM product_reviews
         WHERE customer_id = $1 AND product_id = $2
         LIMIT 1
@@ -595,7 +844,8 @@ export class CustomersRepository {
       `
         SELECT id, store_id, product_id, customer_id,
                (SELECT full_name FROM customers WHERE id = customer_id) AS customer_name,
-               order_id, rating, comment, is_verified_purchase, created_at, updated_at
+               (SELECT title FROM products WHERE id = product_id) AS product_title,
+               order_id, rating, comment, is_verified_purchase, moderation_status, created_at, updated_at
         FROM product_reviews
         WHERE customer_id = $1 AND store_id = $2
         ORDER BY created_at DESC
@@ -610,9 +860,11 @@ export class CustomersRepository {
       `
         SELECT id, store_id, product_id, customer_id,
                (SELECT full_name FROM customers WHERE id = customer_id) AS customer_name,
-               order_id, rating, comment, is_verified_purchase, created_at, updated_at
+               (SELECT title FROM products WHERE id = product_id) AS product_title,
+               order_id, rating, comment, is_verified_purchase, moderation_status, created_at, updated_at
         FROM product_reviews
         WHERE store_id = $1 AND product_id = $2
+          AND moderation_status = 'APPROVED'
         ORDER BY created_at DESC
         LIMIT $3 OFFSET $4
       `,
@@ -626,7 +878,9 @@ export class CustomersRepository {
       `
         SELECT AVG(rating) AS avg, COUNT(*) AS count
         FROM product_reviews
-        WHERE store_id = $1 AND product_id = $2
+        WHERE store_id = $1
+          AND product_id = $2
+          AND moderation_status = 'APPROVED'
       `,
       [storeId, productId],
     );
@@ -635,7 +889,9 @@ export class CustomersRepository {
       `
         SELECT rating, COUNT(*) AS count
         FROM product_reviews
-        WHERE store_id = $1 AND product_id = $2
+        WHERE store_id = $1
+          AND product_id = $2
+          AND moderation_status = 'APPROVED'
         GROUP BY rating
         ORDER BY rating DESC
       `,
@@ -658,7 +914,7 @@ export class CustomersRepository {
         WHERE o.customer_id = $1 
           AND o.store_id = $2 
           AND oi.product_id = $3
-          AND o.status IN ('completed', 'delivered')
+          AND o.status IN ('completed')
         LIMIT 1
       `,
       [customerId, storeId, productId],
@@ -678,6 +934,33 @@ export class CustomersRepository {
         LIMIT $3 OFFSET $4
       `,
       [customerId, storeId, limit, offset],
+    );
+    return result.rows;
+  }
+
+  async listCustomerAbandonedCarts(
+    customerId: string,
+    storeId: string,
+    limit = 30,
+  ): Promise<ManagedCustomerAbandonedCartRecord[]> {
+    const result = await this.databaseService.db.query<ManagedCustomerAbandonedCartRecord>(
+      `
+        SELECT
+          id,
+          cart_data,
+          cart_total,
+          items_count,
+          recovery_sent_at,
+          recovered_at,
+          expires_at,
+          created_at
+        FROM abandoned_carts
+        WHERE customer_id = $1
+          AND store_id = $2
+        ORDER BY created_at DESC
+        LIMIT $3
+      `,
+      [customerId, storeId, limit],
     );
     return result.rows;
   }

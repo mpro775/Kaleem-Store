@@ -11,6 +11,7 @@ import {
   type StorefrontFilterAttributeResponse,
 } from '../attributes/attributes.service';
 import { CategoriesRepository } from '../categories/categories.repository';
+import { CustomerEngagementService } from '../customers/customer-engagement.service';
 import { CustomersService } from '../customers/customers.service';
 import { IdempotencyService } from '../idempotency/idempotency.service';
 import { InventoryService } from '../inventory/inventory.service';
@@ -55,6 +56,7 @@ export interface StorefrontProductResponse {
   productType: 'single' | 'bundled' | 'digital';
   isVisible: boolean;
   stockUnlimited: boolean;
+  questionsEnabled: boolean;
   title: string;
   titleAr: string | null;
   titleEn: string | null;
@@ -214,6 +216,7 @@ export class StorefrontService {
     private readonly storesRepository: StoresRepository,
     private readonly webhooksService: WebhooksService,
     private readonly customersService: CustomersService,
+    private readonly customerEngagementService: CustomerEngagementService,
     private readonly storefrontTrackingService: StorefrontTrackingService,
   ) {}
 
@@ -542,6 +545,7 @@ export class StorefrontService {
       metadata: {
         paymentMethod: input.paymentMethod,
         hasCoupon: Boolean(input.couponCode?.trim()),
+        hasRestockToken: Boolean(input.restockToken?.trim()),
       },
     });
 
@@ -570,6 +574,17 @@ export class StorefrontService {
       orderId,
       orderCode,
     );
+
+    const restockToken = input.restockToken?.trim();
+    if (restockToken && order.customer_id) {
+      await this.customerEngagementService.attachRestockConversion({
+        token: restockToken,
+        storeId: store.id,
+        customerId: order.customer_id,
+        orderId: order.id,
+        amount: Number(order.total),
+      });
+    }
 
     await this.publishOrderCreated(order, store.id);
     await this.webhooksService.dispatchEvent(store.id, 'order.created', {
@@ -646,6 +661,10 @@ export class StorefrontService {
     };
   }
 
+  async trackRestockToken(token: string): Promise<string> {
+    return this.customerEngagementService.trackRestockClickAndBuildRedirect(token.trim());
+  }
+
   private mapProduct(
     row: ProductRecord,
     listingMeta: { primaryImageUrl: string | null; priceFrom: number | null },
@@ -655,6 +674,7 @@ export class StorefrontService {
       productType: row.product_type,
       isVisible: row.is_visible,
       stockUnlimited: row.stock_unlimited,
+      questionsEnabled: row.questions_enabled,
       title: row.title,
       titleAr: row.title_ar,
       titleEn: row.title_en,

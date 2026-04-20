@@ -59,6 +59,7 @@ export interface StorefrontProduct {
   productType: 'single' | 'bundled' | 'digital';
   isVisible: boolean;
   stockUnlimited: boolean;
+  questionsEnabled: boolean;
   title: string;
   slug: string;
   description: string | null;

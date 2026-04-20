@@ -44,6 +44,7 @@ export interface WishlistItem {
 export interface ProductReview {
   id: string;
   productId: string;
+  productTitle: string | null;
   customerId: string;
   customerName: string;
   rating: number;
@@ -57,6 +58,22 @@ export interface ProductReviewStats {
   averageRating: number;
   totalReviews: number;
   ratingDistribution: { rating: number; count: number }[];
+}
+
+export interface ProductQuestion {
+  id: string;
+  productId: string;
+  productTitle: string;
+  customerId: string | null;
+  customerName: string | null;
+  question: string;
+  answer: string | null;
+  answeredBy: string | null;
+  answeredByName: string | null;
+  answeredAt: string | null;
+  moderationStatus: 'PENDING' | 'APPROVED' | 'HIDDEN';
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CustomerOrder {
@@ -247,6 +264,38 @@ export async function listProductReviews(
 ): Promise<{ reviews: ProductReview[]; stats: ProductReviewStats }> {
   const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
   return fetchJson(`/customers/products/${encodeURIComponent(productId)}/reviews?${params.toString()}`);
+}
+
+// ==================== PRODUCT QUESTIONS ====================
+
+export async function listPublicProductQuestions(
+  productId: string,
+  limit = 20,
+  offset = 0,
+): Promise<{ items: ProductQuestion[]; total: number }> {
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  return fetchJson(`/customers/products/${encodeURIComponent(productId)}/questions?${params.toString()}`);
+}
+
+export async function createProductQuestion(
+  productId: string,
+  question: string,
+): Promise<ProductQuestion> {
+  return fetchJson<ProductQuestion>(`/customers/products/${encodeURIComponent(productId)}/questions`, {
+    method: 'POST',
+    body: JSON.stringify({ question }),
+  });
+}
+
+export async function subscribeToRestock(
+  productId: string,
+): Promise<{ subscriptionId: string; message: string }> {
+  return fetchJson<{ subscriptionId: string; message: string }>(
+    `/customers/products/${encodeURIComponent(productId)}/restock-subscriptions`,
+    {
+      method: 'POST',
+    },
+  );
 }
 
 // ==================== ORDERS ====================

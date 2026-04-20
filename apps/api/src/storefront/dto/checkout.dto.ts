@@ -52,4 +52,9 @@ export class CheckoutDto {
   @IsOptional()
   @IsString()
   customerAccessToken?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  restockToken?: string;
 }

@@ -242,6 +242,7 @@ export interface Product {
   productType: ProductType;
   isVisible: boolean;
   stockUnlimited: boolean;
+  questionsEnabled: boolean;
   title: string;
   slug: string;
   description: string | null;
@@ -388,6 +389,185 @@ export interface OrderDetail extends Order {
     amount: number;
     receiptUrl: string | null;
   } | null;
+}
+
+export type CustomerGender = 'male' | 'female' | null;
+
+export interface ManagedCustomerSummary {
+  id: string;
+  fullName: string;
+  phone: string;
+  email: string | null;
+  gender: CustomerGender;
+  country: string;
+  city: string | null;
+  birthDate: string | null;
+  isActive: boolean;
+  createdAt: string;
+  lastLoginAt: string | null;
+  ordersCount: number;
+  totalSpent: number;
+}
+
+export interface ManagedCustomerProfile {
+  id: string;
+  storeId: string;
+  fullName: string;
+  phone: string;
+  email: string | null;
+  gender: CustomerGender;
+  country: string;
+  city: string | null;
+  birthDate: string | null;
+  isActive: boolean;
+  emailVerifiedAt: string | null;
+  lastLoginAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ManagedCustomerAbandonedCart {
+  id: string;
+  cartData: Record<string, unknown>;
+  cartTotal: number;
+  itemsCount: number;
+  recoverySentAt: string | null;
+  recoveredAt: string | null;
+  expiresAt: string;
+  createdAt: string;
+}
+
+export interface ManagedCustomerDetails {
+  customer: ManagedCustomerProfile;
+  reviews: ProductReviewResponse[];
+  wishlist: WishlistItemResponse[];
+  addresses: CustomerAddressResponse[];
+  abandonedCarts: ManagedCustomerAbandonedCart[];
+  orders: CustomerOrderResponse[];
+}
+
+export interface ManagedCustomersListResponse {
+  items: ManagedCustomerSummary[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface CustomerAddressResponse {
+  id: string;
+  addressLine: string;
+  city: string | null;
+  area: string | null;
+  notes: string | null;
+  isDefault: boolean;
+}
+
+export interface WishlistItemResponse {
+  id: string;
+  productId: string;
+  title: string;
+  slug: string;
+  primaryImageUrl: string | null;
+  priceFrom: number | null;
+  createdAt: string;
+}
+
+export interface ProductReviewResponse {
+  id: string;
+  productId: string;
+  productTitle: string | null;
+  customerId: string;
+  customerName: string;
+  rating: number;
+  comment: string | null;
+  isVerifiedPurchase: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CustomerOrderResponse {
+  id: string;
+  orderCode: string;
+  status: string;
+  subtotal: number;
+  total: number;
+  shippingFee: number;
+  discountTotal: number;
+  currencyCode: string;
+  createdAt: string;
+}
+
+export type ModerationStatus = 'PENDING' | 'APPROVED' | 'HIDDEN';
+
+export interface ManagedReviewModeration {
+  id: string;
+  productId: string;
+  productTitle: string;
+  customerId: string | null;
+  customerName: string;
+  orderId: string | null;
+  rating: number;
+  comment: string | null;
+  isVerifiedPurchase: boolean;
+  moderationStatus: ModerationStatus;
+  moderatedBy: string | null;
+  moderatedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ManagedReviewsListResponse {
+  items: ManagedReviewModeration[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface ManagedProductQuestion {
+  id: string;
+  productId: string;
+  productTitle: string;
+  customerId: string | null;
+  customerName: string | null;
+  question: string;
+  answer: string | null;
+  answeredBy: string | null;
+  answeredByName: string | null;
+  answeredAt: string | null;
+  moderationStatus: ModerationStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ManagedQuestionsListResponse {
+  items: ManagedProductQuestion[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface RestockOverviewResponse {
+  subscribersCount: number;
+  sentCount: number;
+  ordersCount: number;
+  salesAmount: number;
+}
+
+export interface RestockProductStatsItem {
+  productId: string;
+  productTitle: string;
+  productSlug: string;
+  subscribersCount: number;
+  sentCount: number;
+  ordersCount: number;
+  salesAmount: number;
+}
+
+export interface RestockProductStatsListResponse {
+  items: RestockProductStatsItem[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 export interface AnalyticsOverview {

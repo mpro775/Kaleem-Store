@@ -5,6 +5,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { clearCartIdFromStorage, getCartIdFromStorage } from '../lib/cart-storage';
 import { checkout, getCart, listShippingZones } from '../lib/storefront-client';
 import { getAccessToken } from '../lib/customer-auth-storage';
+import {
+  clearRestockTokenFromStorage,
+  getRestockTokenFromStorage,
+} from '../lib/restock-token-storage';
 import * as customerClient from '../lib/customer-client';
 import { useCustomerAuth } from '../lib/customer-auth-context';
 import { trackStorefrontEvent } from '../lib/storefront-analytics';
@@ -151,7 +155,7 @@ export function CheckoutPageClient() {
     setSubmitting(true);
     setError(null);
     try {
-      const payload = buildCheckoutPayload(cart.cartId, form);
+      const payload = buildCheckoutPayload(cart.cartId, form, getRestockTokenFromStorage());
       await trackStorefrontEvent('sf_checkout_submitted', {
         cartId: cart.cartId,
         metadata: {
@@ -169,6 +173,7 @@ export function CheckoutPageClient() {
         },
       });
       clearCartIdFromStorage();
+      clearRestockTokenFromStorage();
       setOrderCode(response.orderCode);
       setCart(null);
     } catch (requestError) {
@@ -461,6 +466,7 @@ function buildCheckoutPayload(
     note: string;
     paymentMethod: 'cod' | 'transfer';
   },
+  restockToken: string | null,
 ): {
   cartId: string;
   customerName: string;
@@ -474,6 +480,7 @@ function buildCheckoutPayload(
   note?: string;
   paymentMethod: 'cod' | 'transfer';
   customerAccessToken?: string;
+  restockToken?: string;
 } {
   const accessToken = getAccessToken();
   const payload: {
@@ -489,6 +496,7 @@ function buildCheckoutPayload(
     note?: string;
     paymentMethod: 'cod' | 'transfer';
     customerAccessToken?: string;
+    restockToken?: string;
   } = {
     cartId,
     customerName: form.customerName,
@@ -517,6 +525,9 @@ function buildCheckoutPayload(
   }
   if (accessToken) {
     payload.customerAccessToken = accessToken;
+  }
+  if (restockToken) {
+    payload.restockToken = restockToken;
   }
 
   return payload;

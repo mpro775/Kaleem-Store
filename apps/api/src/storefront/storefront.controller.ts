@@ -11,9 +11,10 @@ import {
   Put,
   Query,
   Req,
+  Res,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { Public } from '../auth/decorators/public.decorator';
 import { AddCartItemDto } from './dto/add-cart-item.dto';
 import { CheckoutDto } from './dto/checkout.dto';
@@ -127,6 +128,16 @@ export class StorefrontController {
   async checkout(@Req() request: Request, @Body() body: CheckoutDto) {
     const idempotencyKey = this.extractIdempotencyKey(request);
     return this.storefrontService.checkout(request, body, idempotencyKey);
+  }
+
+  @Get('restock/track/:token')
+  @ApiOkResponse({ description: 'Track restock notification click and redirect to product page' })
+  async trackRestock(
+    @Param('token') token: string,
+    @Res() response: Response,
+  ) {
+    const redirectUrl = await this.storefrontService.trackRestockToken(token);
+    return response.redirect(HttpStatus.FOUND, redirectUrl);
   }
 
   @Get('orders/:orderCode/track')

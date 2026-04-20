@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -9,12 +8,11 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
-import { createHmac } from 'node:crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { AuditService } from '../audit/audit.service';
 import { EmailService } from '../email/email.service';
 import type { RequestContextData } from '../common/utils/request-context.util';
-import { StoreResolverService } from '../storefront/store-resolver.service';
+import type { AuthUser } from '../auth/interfaces/auth-user.interface';
 import { buildRefreshToken, parseRefreshToken } from '../auth/utils/refresh-token.util';
 import {
   CustomersRepository,
@@ -32,6 +30,10 @@ import type { CustomerResetPasswordDto } from './dto/customer-reset-password.dto
 import type { CustomerRefreshTokenDto } from './dto/customer-refresh-token.dto';
 import type { UpdateCustomerProfileDto } from './dto/update-customer-profile.dto';
 import type { CreateCustomerAddressDto } from './dto/create-customer-address.dto';
+import type { CreateManagedCustomerDto } from './dto/create-managed-customer.dto';
+import type { ListManagedCustomersQueryDto } from './dto/list-managed-customers-query.dto';
+import type { UpdateManagedCustomerStatusDto } from './dto/update-managed-customer-status.dto';
+import type { UpdateManagedCustomerDto } from './dto/update-managed-customer.dto';
 
 export interface CustomerProfileResponse {
   id: string;
@@ -65,11 +67,13 @@ export interface WishlistItemResponse {
 export interface ProductReviewResponse {
   id: string;
   productId: string;
+  productTitle: string | null;
   customerId: string;
   customerName: string;
   rating: number;
   comment: string | null;
   isVerifiedPurchase: boolean;
+  moderationStatus: 'PENDING' | 'APPROVED' | 'HIDDEN';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -103,15 +107,69 @@ export interface CustomerOrderResponse {
   createdAt: Date;
 }
 
+export interface ManagedCustomerSummaryResponse {
+  id: string;
+  fullName: string;
+  phone: string;
+  email: string | null;
+  gender: 'male' | 'female' | null;
+  country: string;
+  city: string | null;
+  birthDate: Date | null;
+  isActive: boolean;
+  createdAt: Date;
+  lastLoginAt: Date | null;
+  ordersCount: number;
+  totalSpent: number;
+}
+
+export interface ManagedCustomerProfileResponse {
+  id: string;
+  storeId: string;
+  fullName: string;
+  phone: string;
+  email: string | null;
+  gender: 'male' | 'female' | null;
+  country: string;
+  city: string | null;
+  birthDate: Date | null;
+  isActive: boolean;
+  emailVerifiedAt: Date | null;
+  lastLoginAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ManagedCustomerAbandonedCartResponse {
+  id: string;
+  cartData: Record<string, unknown>;
+  cartTotal: number;
+  itemsCount: number;
+  recoverySentAt: Date | null;
+  recoveredAt: Date | null;
+  expiresAt: Date;
+  createdAt: Date;
+}
+
+export interface ManagedCustomerDetailsResponse {
+  customer: ManagedCustomerProfileResponse;
+  reviews: ProductReviewResponse[];
+  wishlist: WishlistItemResponse[];
+  addresses: CustomerAddressResponse[];
+  abandonedCarts: ManagedCustomerAbandonedCartResponse[];
+  orders: CustomerOrderResponse[];
+}
+
 @Injectable()
 export class CustomersService {
+  private static readonly DEFAULT_COUNTRY = 'اليمن';
+
   constructor(
     private readonly customersRepository: CustomersRepository,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly auditService: AuditService,
     private readonly emailService: EmailService,
-    private readonly storeResolverService: StoreResolverService,
   ) {}
 
   async register(
@@ -419,6 +477,278 @@ export class CustomersService {
     return this.toProfileResponse(updated);
   }
 
+  async listManagedCustomers(
+    currentUser: AuthUser,
+    query: ListManagedCustomersQueryDto,
+  ): Promise<{ items: ManagedCustomerSummaryResponse[]; total: number; page: number; limit: number }> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const search = query.q?.trim() || null;
+
+    const [rows, total] = await Promise.all([
+      this.customersRepository.listManagedCustomers({
+        storeId: currentUser.storeId,
+        q: search,
+        limit,
+        offset: (page - 1) * limit,
+      }),
+      this.customersRepository.countManagedCustomers(currentUser.storeId, search),
+    ]);
+
+    return {
+      items: rows.map((row) => ({
+        id: row.id,
+        fullName: row.full_name,
+        phone: row.phone,
+        email: row.email,
+        gender: row.gender,
+        country: row.country ?? CustomersService.DEFAULT_COUNTRY,
+        city: row.city,
+        birthDate: row.birth_date,
+        isActive: row.is_active,
+        createdAt: row.created_at,
+        lastLoginAt: row.last_login_at,
+        ordersCount: Number(row.orders_count),
+        totalSpent: Number(row.total_spent),
+      })),
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async createManagedCustomer(
+    currentUser: AuthUser,
+    input: CreateManagedCustomerDto,
+    context: RequestContextData,
+  ): Promise<ManagedCustomerProfileResponse> {
+    const phone = input.phone.trim();
+    const email = input.email?.trim().toLowerCase() ?? null;
+    const emailNormalized = email ? email.toLowerCase() : null;
+
+    const existingByPhone = await this.customersRepository.findByPhone(currentUser.storeId, phone);
+    if (existingByPhone) {
+      throw new ConflictException('رقم الجوال مستخدم مسبقاً');
+    }
+
+    if (emailNormalized) {
+      const existingByEmail = await this.customersRepository.findByEmail(
+        currentUser.storeId,
+        emailNormalized,
+      );
+      if (existingByEmail) {
+        throw new ConflictException('البريد الإلكتروني مستخدم مسبقاً');
+      }
+    }
+
+    const customer = await this.customersRepository.createManaged({
+      storeId: currentUser.storeId,
+      fullName: input.fullName.trim(),
+      phone,
+      email,
+      emailNormalized,
+      gender: input.gender ?? null,
+      country: this.normalizeCountry(input.country),
+      city: this.normalizeOptionalText(input.city),
+      birthDate: this.parseOptionalBirthDate(input.birthDate),
+    });
+
+    await this.auditService.log({
+      action: 'customers.manage.created',
+      storeId: currentUser.storeId,
+      storeUserId: currentUser.id,
+      targetType: 'customer',
+      targetId: customer.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: { requestId: context.requestId },
+    });
+
+    return this.toManagedProfileResponse(customer);
+  }
+
+  async updateManagedCustomer(
+    currentUser: AuthUser,
+    customerId: string,
+    input: UpdateManagedCustomerDto,
+    context: RequestContextData,
+  ): Promise<ManagedCustomerProfileResponse> {
+    if (
+      input.fullName === undefined &&
+      input.phone === undefined &&
+      input.email === undefined &&
+      input.gender === undefined &&
+      input.country === undefined &&
+      input.city === undefined &&
+      input.birthDate === undefined
+    ) {
+      throw new BadRequestException('يجب إرسال حقل واحد على الأقل للتحديث');
+    }
+
+    const existing = await this.customersRepository.findByIdAndStore(customerId, currentUser.storeId);
+    if (!existing) {
+      throw new NotFoundException('العميل غير موجود');
+    }
+
+    if (input.phone !== undefined) {
+      const phone = input.phone.trim();
+      const customerByPhone = await this.customersRepository.findByPhone(currentUser.storeId, phone);
+      if (customerByPhone && customerByPhone.id !== customerId) {
+        throw new ConflictException('رقم الجوال مستخدم مسبقاً');
+      }
+    }
+
+    let emailNormalized: string | null | undefined;
+    if (input.email !== undefined) {
+      emailNormalized = input.email ? input.email.trim().toLowerCase() : null;
+      if (emailNormalized) {
+        const existingByEmail = await this.customersRepository.findByEmail(
+          currentUser.storeId,
+          emailNormalized,
+        );
+        if (existingByEmail && existingByEmail.id !== customerId) {
+          throw new ConflictException('البريد الإلكتروني مستخدم مسبقاً');
+        }
+      }
+    }
+
+    const updatePayload: {
+      customerId: string;
+      storeId: string;
+      fullName?: string;
+      phone?: string;
+      email?: string | null;
+      emailNormalized?: string | null;
+      gender?: 'male' | 'female' | null;
+      country?: string;
+      city?: string | null;
+      birthDate?: Date | null;
+    } = {
+      customerId,
+      storeId: currentUser.storeId,
+    };
+
+    if (input.fullName !== undefined) {
+      updatePayload.fullName = input.fullName.trim();
+    }
+    if (input.phone !== undefined) {
+      updatePayload.phone = input.phone.trim();
+    }
+    if (input.email !== undefined) {
+      updatePayload.email = input.email.trim();
+      updatePayload.emailNormalized = emailNormalized ?? null;
+    }
+    if (input.gender !== undefined) {
+      updatePayload.gender = input.gender;
+    }
+    if (input.country !== undefined) {
+      updatePayload.country = this.normalizeCountry(input.country);
+    }
+    if (input.city !== undefined) {
+      updatePayload.city = this.normalizeOptionalText(input.city);
+    }
+    if (input.birthDate !== undefined) {
+      updatePayload.birthDate = this.parseOptionalBirthDate(input.birthDate);
+    }
+
+    const updated = await this.customersRepository.updateManaged(updatePayload);
+
+    if (!updated) {
+      throw new NotFoundException('العميل غير موجود');
+    }
+
+    await this.auditService.log({
+      action: 'customers.manage.updated',
+      storeId: currentUser.storeId,
+      storeUserId: currentUser.id,
+      targetType: 'customer',
+      targetId: customerId,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: { requestId: context.requestId },
+    });
+
+    return this.toManagedProfileResponse(updated);
+  }
+
+  async updateManagedCustomerStatus(
+    currentUser: AuthUser,
+    customerId: string,
+    input: UpdateManagedCustomerStatusDto,
+    context: RequestContextData,
+  ): Promise<ManagedCustomerProfileResponse> {
+    const updated = await this.customersRepository.updateManagedStatus(
+      customerId,
+      currentUser.storeId,
+      input.isActive,
+    );
+
+    if (!updated) {
+      throw new NotFoundException('العميل غير موجود');
+    }
+
+    if (!input.isActive) {
+      await this.customersRepository.revokeAllSessionsForCustomer(customerId);
+    }
+
+    await this.auditService.log({
+      action: 'customers.manage.status_updated',
+      storeId: currentUser.storeId,
+      storeUserId: currentUser.id,
+      targetType: 'customer',
+      targetId: customerId,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: { requestId: context.requestId, isActive: input.isActive },
+    });
+
+    return this.toManagedProfileResponse(updated);
+  }
+
+  async getManagedCustomerDetails(
+    currentUser: AuthUser,
+    customerId: string,
+  ): Promise<ManagedCustomerDetailsResponse> {
+    const customer = await this.customersRepository.findByIdAndStore(customerId, currentUser.storeId);
+    if (!customer) {
+      throw new NotFoundException('العميل غير موجود');
+    }
+
+    const [reviews, wishlist, addresses, abandonedCarts, orders] = await Promise.all([
+      this.customersRepository.listCustomerReviews(customerId, currentUser.storeId),
+      this.customersRepository.listWishlist(customerId, currentUser.storeId),
+      this.customersRepository.listAddresses(customerId, currentUser.storeId),
+      this.customersRepository.listCustomerAbandonedCarts(customerId, currentUser.storeId, 30),
+      this.customersRepository.listCustomerOrders(customerId, currentUser.storeId, 100, 0),
+    ]);
+
+    return {
+      customer: this.toManagedProfileResponse(customer),
+      reviews: reviews.map((review) => this.toReviewResponse(review)),
+      wishlist: wishlist.map((item) => ({
+        id: item.id,
+        productId: item.product_id,
+        title: item.title,
+        slug: item.slug,
+        primaryImageUrl: item.primary_image_url,
+        priceFrom: item.price_from,
+        createdAt: item.created_at,
+      })),
+      addresses: addresses.map((address) => this.toAddressResponse(address)),
+      abandonedCarts: abandonedCarts.map((cart) => ({
+        id: cart.id,
+        cartData: cart.cart_data,
+        cartTotal: Number(cart.cart_total),
+        itemsCount: cart.items_count,
+        recoverySentAt: cart.recovery_sent_at,
+        recoveredAt: cart.recovered_at,
+        expiresAt: cart.expires_at,
+        createdAt: cart.created_at,
+      })),
+      orders: orders.map((order) => this.toOrderResponse(order)),
+    };
+  }
+
   async createAddress(
     customer: CustomerUser,
     input: CreateCustomerAddressDto,
@@ -562,6 +892,9 @@ export class CustomersService {
       customer.storeId,
       input.productId,
     );
+    if (!purchasedOrderId) {
+      throw new BadRequestException('You can only review products after completing a purchase.');
+    }
 
     const review = await this.customersRepository.createReview({
       storeId: customer.storeId,
@@ -570,7 +903,7 @@ export class CustomersService {
       orderId: purchasedOrderId,
       rating: input.rating,
       comment: input.comment ?? null,
-      isVerifiedPurchase: Boolean(purchasedOrderId),
+      isVerifiedPurchase: true,
     });
 
     await this.auditService.log({
@@ -679,22 +1012,26 @@ export class CustomersService {
   private toReviewResponse(review: {
     id: string;
     product_id: string;
+    product_title: string | null;
     customer_id: string;
     customer_name: string;
     rating: number;
     comment: string | null;
     is_verified_purchase: boolean;
+    moderation_status: 'PENDING' | 'APPROVED' | 'HIDDEN';
     created_at: Date;
     updated_at: Date;
   }): ProductReviewResponse {
     return {
       id: review.id,
       productId: review.product_id,
+      productTitle: review.product_title,
       customerId: review.customer_id,
       customerName: review.customer_name,
       rating: review.rating,
       comment: review.comment,
       isVerifiedPurchase: review.is_verified_purchase,
+      moderationStatus: review.moderation_status,
       createdAt: review.created_at,
       updatedAt: review.updated_at,
     };
@@ -713,17 +1050,7 @@ export class CustomersService {
     ]);
 
     return {
-      orders: orders.map((order) => ({
-        id: order.id,
-        orderCode: order.order_code,
-        status: order.status,
-        subtotal: Number(order.subtotal),
-        total: Number(order.total),
-        shippingFee: Number(order.shipping_fee),
-        discountTotal: Number(order.discount_total),
-        currencyCode: order.currency_code,
-        createdAt: order.created_at,
-      })),
+      orders: orders.map((order) => this.toOrderResponse(order)),
       total,
     };
   }
@@ -835,6 +1162,76 @@ export class CustomersService {
       notes: address.notes,
       isDefault: address.is_default,
     };
+  }
+
+  private toManagedProfileResponse(customer: CustomerRecord): ManagedCustomerProfileResponse {
+    return {
+      id: customer.id,
+      storeId: customer.store_id,
+      fullName: customer.full_name,
+      phone: customer.phone,
+      email: customer.email,
+      gender: customer.gender ?? null,
+      country: customer.country ?? CustomersService.DEFAULT_COUNTRY,
+      city: customer.city ?? null,
+      birthDate: customer.birth_date ?? null,
+      isActive: customer.is_active,
+      emailVerifiedAt: customer.email_verified_at,
+      lastLoginAt: customer.last_login_at,
+      createdAt: customer.created_at,
+      updatedAt: customer.updated_at,
+    };
+  }
+
+  private toOrderResponse(order: {
+    id: string;
+    order_code: string;
+    status: string;
+    subtotal: number;
+    total: number;
+    shipping_fee: number;
+    discount_total: number;
+    currency_code: string;
+    created_at: Date;
+  }): CustomerOrderResponse {
+    return {
+      id: order.id,
+      orderCode: order.order_code,
+      status: order.status,
+      subtotal: Number(order.subtotal),
+      total: Number(order.total),
+      shippingFee: Number(order.shipping_fee),
+      discountTotal: Number(order.discount_total),
+      currencyCode: order.currency_code,
+      createdAt: order.created_at,
+    };
+  }
+
+  private normalizeCountry(country: string | undefined): string {
+    const normalized = country?.trim();
+    return normalized && normalized.length > 0
+      ? normalized
+      : CustomersService.DEFAULT_COUNTRY;
+  }
+
+  private normalizeOptionalText(value: string | undefined): string | null {
+    if (value === undefined) {
+      return null;
+    }
+    const normalized = value.trim();
+    return normalized.length > 0 ? normalized : null;
+  }
+
+  private parseOptionalBirthDate(value: string | undefined): Date | null {
+    if (!value) {
+      return null;
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new BadRequestException('تاريخ الميلاد غير صالح');
+    }
+    return parsed;
   }
 
   private async hashValue(value: string): Promise<string> {

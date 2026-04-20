@@ -137,6 +137,7 @@ export async function setupTopology(
   await channel.bindQueue(queues.mainQueue, exchange, 'order.created');
   await channel.bindQueue(queues.mainQueue, exchange, 'order.status.changed');
   await channel.bindQueue(queues.mainQueue, exchange, 'inventory.low_stock');
+  await channel.bindQueue(queues.mainQueue, exchange, 'inventory.back_in_stock');
 
   await channel.assertQueue(queues.retryCreatedQueue, {
     durable: true,
@@ -290,6 +291,9 @@ function resolveRetryQueueName(eventType: string, queues: QueueNames): string {
     return queues.retryCreatedQueue;
   }
   if (eventType === 'inventory.low_stock') {
+    return queues.retryInventoryQueue;
+  }
+  if (eventType === 'inventory.back_in_stock') {
     return queues.retryInventoryQueue;
   }
   return queues.retryStatusQueue;

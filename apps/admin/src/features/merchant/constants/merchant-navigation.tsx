@@ -1,4 +1,4 @@
-import DashboardIcon from '@mui/icons-material/Dashboard';
+﻿import DashboardIcon from '@mui/icons-material/Dashboard';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
@@ -12,6 +12,10 @@ import PaletteIcon from '@mui/icons-material/Palette';
 import LanguageIcon from '@mui/icons-material/Language';
 import WebhookIcon from '@mui/icons-material/Webhook';
 import PeopleIcon from '@mui/icons-material/People';
+import PersonSearchIcon from '@mui/icons-material/PersonSearch';
+import RateReviewOutlinedIcon from '@mui/icons-material/RateReviewOutlined';
+import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
+import NotificationsActiveOutlinedIcon from '@mui/icons-material/NotificationsActiveOutlined';
 import type { MerchantNavItem, MerchantTabKey } from '../merchant-dashboard.types';
 import { ADMIN_TOKENS } from '../../../theme/tokens';
 
@@ -24,6 +28,10 @@ export const MERCHANT_NAV_ITEMS: MerchantNavItem[] = [
   { key: 'inventory', label: 'المخزون', icon: <InventoryIcon /> },
   { key: 'warehouses', label: 'المستودعات', icon: <WarehouseIcon /> },
   { key: 'categories', label: 'التصنيفات', icon: <AccountTreeIcon /> },
+  { key: 'customers', label: 'العملاء', icon: <PersonSearchIcon /> },
+  { key: 'customerReviews', label: 'تقييمات العملاء', icon: <RateReviewOutlinedIcon /> },
+  { key: 'customerQuestions', label: 'أسئلة المنتجات', icon: <QuizOutlinedIcon /> },
+  { key: 'restockAlerts', label: 'تنبيهات التوفر', icon: <NotificationsActiveOutlinedIcon /> },
   { key: 'attributes', label: 'الخصائص', icon: <StyleIcon /> },
   { key: 'payments', label: 'المدفوعات', icon: <PaymentsIcon /> },
   { key: 'shipping', label: 'الشحن', icon: <LocalShippingIcon /> },

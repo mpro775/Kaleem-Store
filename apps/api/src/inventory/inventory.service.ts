@@ -37,6 +37,14 @@ export interface LowStockSignal {
   lowStockThreshold: number;
 }
 
+export interface BackInStockSignal {
+  storeId: string;
+  productId: string;
+  variantId: string;
+  sku: string;
+  stockQuantity: number;
+}
+
 export interface InventoryMovementResponse {
   id: string;
   variantId: string;
@@ -275,8 +283,9 @@ export class InventoryService {
       note: string;
       movementType?: InventoryMovementType;
     },
-  ): Promise<void> {
+  ): Promise<BackInStockSignal[]> {
     const movementType = input.movementType ?? 'return';
+    const backInStockSignals: BackInStockSignal[] = [];
 
     for (const item of input.items) {
       const stockChange = await this.inventoryRepository.increaseVariantStock(db, {
@@ -307,7 +316,14 @@ export class InventoryService {
         metadata: { source: 'order.status.restock', warehousePlan },
         createdBy: input.actorId,
       });
+
+      const backInStockSignal = this.buildBackInStockSignal(input.storeId, stockChange);
+      if (backInStockSignal) {
+        backInStockSignals.push(backInStockSignal);
+      }
     }
+
+    return backInStockSignals;
   }
 
   async restockOrderSales(
@@ -319,7 +335,7 @@ export class InventoryService {
       note: string;
       movementType?: InventoryMovementType;
     },
-  ): Promise<void> {
+  ): Promise<BackInStockSignal[]> {
     const sold = await this.inventoryRepository.listSoldVariantsForOrder(
       db,
       input.storeId,
@@ -327,10 +343,10 @@ export class InventoryService {
     );
 
     if (sold.length === 0) {
-      return;
+      return [];
     }
 
-    await this.restockOrderItems(db, {
+    return this.restockOrderItems(db, {
       storeId: input.storeId,
       orderId: input.orderId,
       actorId: input.actorId,
@@ -364,6 +380,9 @@ export class InventoryService {
 
     if (result.signal) {
       await this.publishLowStockAlerts([result.signal]);
+    }
+    if (result.backInStockSignal) {
+      await this.publishBackInStockAlerts([result.backInStockSignal]);
     }
 
     await this.logInventoryAdjustment(currentUser, variantId, quantityDelta, input.note, context);
@@ -534,6 +553,30 @@ export class InventoryService {
     }
   }
 
+  async publishBackInStockAlerts(signals: BackInStockSignal[]): Promise<void> {
+    const dedupedSignals = new Map<string, BackInStockSignal>();
+
+    for (const signal of signals) {
+      dedupedSignals.set(`${signal.storeId}:${signal.variantId}`, signal);
+    }
+
+    for (const signal of dedupedSignals.values()) {
+      await this.outboxService.enqueue({
+        aggregateType: 'inventory',
+        aggregateId: signal.variantId,
+        eventType: 'inventory.back_in_stock',
+        payload: {
+          storeId: signal.storeId,
+          productId: signal.productId,
+          variantId: signal.variantId,
+          sku: signal.sku,
+          stockQuantity: signal.stockQuantity,
+          observedAt: new Date().toISOString(),
+        },
+      });
+    }
+  }
+
   private async executeVariantAdjustment(
     currentUser: AuthUser,
     variantId: string,
@@ -552,6 +595,7 @@ export class InventoryService {
       available_quantity: number;
     };
     signal: LowStockSignal | null;
+    backInStockSignal: BackInStockSignal | null;
   }> {
     return this.inventoryRepository.withTransaction(async (db) => {
       await this.requireVariantSnapshot(db, currentUser.storeId, variantId);
@@ -585,6 +629,7 @@ export class InventoryService {
       return {
         snapshot: snapshotAfter,
         signal: this.buildLowStockSignal(currentUser.storeId, stockChange),
+        backInStockSignal: this.buildBackInStockSignal(currentUser.storeId, stockChange),
       };
     });
   }
@@ -703,6 +748,29 @@ export class InventoryService {
       sku: stockChange.sku,
       stockQuantity: stockChange.current_stock_quantity,
       lowStockThreshold: threshold,
+    };
+  }
+
+  private buildBackInStockSignal(
+    storeId: string,
+    stockChange: {
+      variant_id: string;
+      product_id: string;
+      sku: string;
+      previous_stock_quantity: number;
+      current_stock_quantity: number;
+    },
+  ): BackInStockSignal | null {
+    if (stockChange.previous_stock_quantity > 0 || stockChange.current_stock_quantity <= 0) {
+      return null;
+    }
+
+    return {
+      storeId,
+      productId: stockChange.product_id,
+      variantId: stockChange.variant_id,
+      sku: stockChange.sku,
+      stockQuantity: stockChange.current_stock_quantity,
     };
   }
 

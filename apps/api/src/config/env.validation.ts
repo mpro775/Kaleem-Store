@@ -108,4 +108,12 @@ export const envValidationSchema = Joi.object({
   JWT_CUSTOMER_ACCESS_EXPIRES_IN: Joi.string().default('15m'),
   CUSTOMER_REFRESH_TOKEN_TTL_DAYS: Joi.number().integer().min(1).max(90).default(30),
   CUSTOMER_PASSWORD_RESET_TTL_MINUTES: Joi.number().integer().min(1).max(1440).default(60),
+  API_PUBLIC_BASE_URL: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .default('http://localhost:3000'),
+  STOREFRONT_BASE_URL: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .default('http://localhost:3001'),
+  RESTOCK_CONVERSION_WINDOW_DAYS: Joi.number().integer().min(1).max(30).default(7),
+  RESTOCK_NOTIFICATION_COOLDOWN_HOURS: Joi.number().integer().min(1).max(168).default(6),
 });

@@ -1,12 +1,16 @@
 import type { ReactElement } from 'react';
 import { AttributesPanel } from './panels/attributes-panel';
 import { CategoriesPanel } from './panels/categories-panel';
+import { CustomerQuestionsPanel } from './panels/customer-questions-panel';
+import { CustomerReviewsPanel } from './panels/customer-reviews-panel';
+import { CustomersPanel } from './panels/customers-panel';
 import { DomainsPanel } from './panels/domains-panel';
 import { InventoryPanel } from './panels/inventory-panel';
 import { OrdersPanel } from './panels/orders-panel';
 import { PaymentsPanel } from './panels/payments-panel';
 import { ProductsPanel } from './panels/products-panel';
 import { PromotionsPanel } from './panels/promotions-panel';
+import { RestockAlertsPanel } from './panels/restock-alerts-panel';
 import { ShippingPanel } from './panels/shipping-panel';
 import { StaffPanel } from './panels/staff-panel';
 import { StoreSettingsPanel } from './panels/store-settings-panel';
@@ -24,6 +28,10 @@ const panelRenderers: Record<MerchantTabKey, (props: MerchantPanelProps) => Reac
   warehouses: (props) => <WarehousesPanel request={props.request} />,
   attributes: (props) => <AttributesPanel request={props.request} />,
   categories: (props) => <CategoriesPanel request={props.request} />,
+  customers: (props) => <CustomersPanel request={props.request} />,
+  customerReviews: (props) => <CustomerReviewsPanel request={props.request} />,
+  customerQuestions: (props) => <CustomerQuestionsPanel request={props.request} />,
+  restockAlerts: (props) => <RestockAlertsPanel request={props.request} />,
   orders: (props) => <OrdersPanel request={props.request} />,
   payments: (props) => <PaymentsPanel request={props.request} />,
   shipping: (props) => <ShippingPanel request={props.request} />,

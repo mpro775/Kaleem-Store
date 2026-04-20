@@ -88,6 +88,10 @@ export class UpdateProductDto {
   stockUnlimited?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  questionsEnabled?: boolean;
+
+  @IsOptional()
   @IsString()
   @MaxLength(120)
   brand?: string;

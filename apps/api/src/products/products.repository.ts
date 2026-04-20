@@ -18,6 +18,7 @@ export interface ProductRecord {
   product_type: ProductType;
   is_visible: boolean;
   stock_unlimited: boolean;
+  questions_enabled: boolean;
   title: string;
   title_ar: string | null;
   title_en: string | null;
@@ -119,7 +120,7 @@ export interface MediaAssetRecord {
   file_size_bytes: number;
 }
 
-const PRODUCT_COLUMNS = `id, store_id, category_id, product_type, is_visible, stock_unlimited, title, title_ar, title_en, slug, description, description_ar, description_en, short_description_ar, short_description_en, detailed_description_ar, detailed_description_en, status, brand, weight, weight_unit, dimensions, cost_price, product_label, youtube_url, seo_title, seo_description, seo_title_ar, seo_title_en, seo_description_ar, seo_description_en, custom_fields, inline_discount_type, inline_discount_value, inline_discount_starts_at, inline_discount_ends_at, inline_discount_active, digital_download_attempts_limit, digital_download_expires_at, tags, is_featured, is_taxable, tax_rate, min_order_quantity, max_order_quantity, published_at, rating_avg, rating_count`;
+const PRODUCT_COLUMNS = `id, store_id, category_id, product_type, is_visible, stock_unlimited, questions_enabled, title, title_ar, title_en, slug, description, description_ar, description_en, short_description_ar, short_description_en, detailed_description_ar, detailed_description_en, status, brand, weight, weight_unit, dimensions, cost_price, product_label, youtube_url, seo_title, seo_description, seo_title_ar, seo_title_en, seo_description_ar, seo_description_en, custom_fields, inline_discount_type, inline_discount_value, inline_discount_starts_at, inline_discount_ends_at, inline_discount_active, digital_download_attempts_limit, digital_download_expires_at, tags, is_featured, is_taxable, tax_rate, min_order_quantity, max_order_quantity, published_at, rating_avg, rating_count`;
 
 export interface ProductListAttributeFilter {
   attributeSlug: string;
@@ -180,6 +181,7 @@ export class ProductsRepository {
     productType: ProductType;
     isVisible: boolean;
     stockUnlimited: boolean;
+    questionsEnabled: boolean;
     title: string;
     titleAr: string | null;
     titleEn: string | null;
@@ -267,14 +269,15 @@ export class ProductsRepository {
           is_taxable,
           tax_rate,
           min_order_quantity,
-          max_order_quantity
+          max_order_quantity,
+          questions_enabled
         )
         VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
           $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
           $21, $22::jsonb, $23, $24, $25, $26, $27, $28, $29, $30,
           $31, $32::jsonb, $33, $34, $35, $36, $37, $38, $39, $40,
-          $41, $42, $43, $44, $45
+          $41, $42, $43, $44, $45, $46
         )
         RETURNING ${PRODUCT_COLUMNS}
       `,
@@ -324,6 +327,7 @@ export class ProductsRepository {
         input.taxRate,
         input.minOrderQuantity,
         input.maxOrderQuantity,
+        input.questionsEnabled,
       ],
     );
     return result.rows[0] as ProductRecord;
@@ -397,6 +401,7 @@ export class ProductsRepository {
     productType: ProductType;
     isVisible: boolean;
     stockUnlimited: boolean;
+    questionsEnabled: boolean;
     title: string;
     titleAr: string | null;
     titleEn: string | null;
@@ -483,6 +488,7 @@ export class ProductsRepository {
             tax_rate = $43,
             min_order_quantity = $44,
             max_order_quantity = $45,
+            questions_enabled = $46,
             updated_at = NOW()
         WHERE store_id = $1
           AND id = $2
@@ -534,6 +540,7 @@ export class ProductsRepository {
         input.taxRate,
         input.minOrderQuantity,
         input.maxOrderQuantity,
+        input.questionsEnabled,
       ],
     );
 

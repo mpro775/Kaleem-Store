@@ -65,6 +65,7 @@ export async function checkout(input: {
   note?: string;
   paymentMethod: 'cod' | 'transfer';
   customerAccessToken?: string;
+  restockToken?: string;
 }): Promise<CheckoutResponse> {
   const idempotencyKey = generateIdempotencyKey();
   return fetchJson('/sf/checkout', {

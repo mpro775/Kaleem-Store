@@ -97,6 +97,7 @@ export interface ProductResponse {
   productType: ProductType;
   isVisible: boolean;
   stockUnlimited: boolean;
+  questionsEnabled: boolean;
   title: string;
   titleAr: string | null;
   titleEn: string | null;
@@ -198,6 +199,7 @@ export class ProductsService {
         productType,
         isVisible: input.isVisible ?? true,
         stockUnlimited,
+        questionsEnabled: input.questionsEnabled ?? false,
         title: primaryArabicTitle,
         titleAr: primaryArabicTitle,
         titleEn: input.titleEn ?? null,
@@ -620,6 +622,7 @@ export class ProductsService {
         productType,
         isVisible: input.isVisible ?? existing.is_visible,
         stockUnlimited,
+        questionsEnabled: input.questionsEnabled ?? existing.questions_enabled,
         title: primaryArabicTitle,
         titleAr: primaryArabicTitle,
         titleEn: input.titleEn ?? existing.title_en,
@@ -1263,6 +1266,7 @@ export class ProductsService {
       productType: record.product_type,
       isVisible: record.is_visible,
       stockUnlimited: record.stock_unlimited,
+      questionsEnabled: record.questions_enabled,
       title: record.title,
       titleAr: record.title_ar,
       titleEn: record.title_en,

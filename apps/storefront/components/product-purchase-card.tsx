@@ -6,6 +6,9 @@ import { addCartItem } from '../lib/storefront-client';
 import { getCartIdFromStorage, saveCartIdToStorage } from '../lib/cart-storage';
 import { trackStorefrontEvent } from '../lib/storefront-analytics';
 import type { ProductVariant } from '../lib/types';
+import { useCustomerAuth } from '../lib/customer-auth-context';
+import * as customerClient from '../lib/customer-client';
+import { AuthModal } from './auth-modal';
 
 function bilingual(ar: string | null | undefined, en: string | null | undefined, fallback: string): string {
   if (ar && en) return `${ar} / ${en}`;
@@ -13,6 +16,7 @@ function bilingual(ar: string | null | undefined, en: string | null | undefined,
 }
 
 interface ProductPurchaseCardProps {
+  productId: string;
   variants: ProductVariant[];
   productType: 'single' | 'bundled' | 'digital';
   stockUnlimited: boolean;
@@ -21,6 +25,7 @@ interface ProductPurchaseCardProps {
 }
 
 export function ProductPurchaseCard({
+  productId,
   variants,
   productType,
   stockUnlimited,
@@ -33,6 +38,7 @@ export function ProductPurchaseCard({
 
   return (
     <ProductPurchaseForm
+      productId={productId}
       variants={variants}
       productType={productType}
       stockUnlimited={stockUnlimited}
@@ -43,6 +49,7 @@ export function ProductPurchaseCard({
 }
 
 function ProductPurchaseForm({
+  productId,
   variants,
   productType,
   stockUnlimited,
@@ -50,19 +57,26 @@ function ProductPurchaseForm({
   maxOrderQuantity,
 }: ProductPurchaseCardProps) {
   const router = useRouter();
+  const { isAuthenticated } = useCustomerAuth();
   const [quantity, setQuantity] = useState(minOrderQuantity > 0 ? minOrderQuantity : 1);
   const [variantId, setVariantId] = useState(() => resolveDefaultVariant(variants)?.id ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [restockBusy, setRestockBusy] = useState(false);
+  const [restockError, setRestockError] = useState<string | null>(null);
+  const [restockMessage, setRestockMessage] = useState<string | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const selectedVariant = useMemo(
     () => variants.find((variant) => variant.id === variantId) ?? null,
     [variantId, variants],
   );
   const hasUnlimitedStock = stockUnlimited || productType === 'bundled' || productType === 'digital';
+  const productOutOfStock = !hasUnlimitedStock && variants.every((variant) => variant.stockQuantity <= 0);
   const maxStock = selectedVariant?.stockQuantity ?? 0;
   const effectiveMax = maxOrderQuantity ?? (hasUnlimitedStock ? Number.MAX_SAFE_INTEGER : maxStock);
   const canSubmit =
+    !productOutOfStock &&
     quantity >= (minOrderQuantity || 1) &&
     quantity <= effectiveMax &&
     (hasUnlimitedStock || quantity <= maxStock) &&
@@ -93,6 +107,29 @@ function ProductPurchaseForm({
       );
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function onSubscribeToRestock() {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    setRestockBusy(true);
+    setRestockError(null);
+    setRestockMessage(null);
+    try {
+      const response = await customerClient.subscribeToRestock(productId);
+      setRestockMessage(response.message);
+    } catch (requestError) {
+      setRestockError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Unable to subscribe for stock alerts',
+      );
+    } finally {
+      setRestockBusy(false);
     }
   }
 
@@ -159,9 +196,26 @@ function ProductPurchaseForm({
       ) : null}
       {error ? <p className="error-message">{error}</p> : null}
 
-      <button className="button-primary" type="button" onClick={onAddToCart} disabled={!canSubmit}>
-        {busy ? 'Adding...' : 'Add to cart'}
-      </button>
+      {productOutOfStock ? (
+        <div className="stack-sm">
+          <p className="purchase-urgency">This product is currently out of stock.</p>
+          <button
+            className="button-primary"
+            type="button"
+            onClick={onSubscribeToRestock}
+            disabled={restockBusy}
+          >
+            {restockBusy ? 'Submitting...' : 'Notify me when available'}
+          </button>
+          {restockMessage ? <p className="success-message">{restockMessage}</p> : null}
+          {restockError ? <p className="error-message">{restockError}</p> : null}
+        </div>
+      ) : (
+        <button className="button-primary" type="button" onClick={onAddToCart} disabled={!canSubmit}>
+          {busy ? 'Adding...' : 'Add to cart'}
+        </button>
+      )}
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </div>
   );
 }

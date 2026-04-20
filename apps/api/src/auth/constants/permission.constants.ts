@@ -14,6 +14,8 @@ export const PERMISSIONS = {
   mediaWrite: 'media:write',
   ordersRead: 'orders:read',
   ordersWrite: 'orders:write',
+  customersRead: 'customers:read',
+  customersWrite: 'customers:write',
   themesRead: 'themes:read',
   themesWrite: 'themes:write',
   domainsRead: 'domains:read',

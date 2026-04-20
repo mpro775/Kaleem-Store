@@ -2,7 +2,11 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { AuditService } from '../audit/audit.service';
 import type { AuthUser } from '../auth/interfaces/auth-user.interface';
 import type { RequestContextData } from '../common/utils/request-context.util';
-import { InventoryService, type LowStockSignal } from '../inventory/inventory.service';
+import {
+  InventoryService,
+  type BackInStockSignal,
+  type LowStockSignal,
+} from '../inventory/inventory.service';
 import type { Queryable } from '../inventory/inventory.repository';
 import { OutboxService } from '../messaging/outbox.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
@@ -117,6 +121,7 @@ export class OrdersService {
     this.ensureTransitionAllowed(order.status, input.status);
 
     const lowStockSignals: LowStockSignal[] = [];
+    const backInStockSignals: BackInStockSignal[] = [];
 
     await this.ordersRepository.withTransaction(async (db) => {
       await this.inventoryService.releaseExpiredReservationsInTransaction(db, currentUser.storeId);
@@ -127,7 +132,8 @@ export class OrdersService {
         storeId: currentUser.storeId,
         actorId: currentUser.id,
       });
-      lowStockSignals.push(...transitionSignals);
+      lowStockSignals.push(...transitionSignals.lowStockSignals);
+      backInStockSignals.push(...transitionSignals.backInStockSignals);
 
       await this.ordersRepository.updateOrderStatus(db, {
         orderId,
@@ -146,6 +152,7 @@ export class OrdersService {
     });
 
     await this.inventoryService.publishLowStockAlerts(lowStockSignals);
+    await this.inventoryService.publishBackInStockAlerts(backInStockSignals);
     await this.logAndPublishStatusChange(currentUser, order, input.status, input.note, context);
     await this.webhooksService.dispatchEvent(currentUser.storeId, 'order.updated', {
       orderId,
@@ -184,31 +191,32 @@ export class OrdersService {
       storeId: string;
       actorId: string | null;
     },
-  ): Promise<LowStockSignal[]> {
+  ): Promise<{ lowStockSignals: LowStockSignal[]; backInStockSignals: BackInStockSignal[] }> {
     if (input.currentStatus === 'new' && input.nextStatus === 'confirmed') {
-      return this.inventoryService.confirmOrderReservations(db, {
+      const lowStockSignals = await this.inventoryService.confirmOrderReservations(db, {
         storeId: input.storeId,
         orderId: input.orderId,
         actorId: input.actorId,
       });
+      return { lowStockSignals, backInStockSignals: [] };
     }
 
     if (input.currentStatus === 'new' && input.nextStatus === 'cancelled') {
       await this.releaseOrderReservations(db, input.storeId, input.orderId);
-      return [];
+      return { lowStockSignals: [], backInStockSignals: [] };
     }
 
     if (this.isCancellationAfterStockDeduction(input.currentStatus, input.nextStatus)) {
-      await this.restockCancelledOrder(db, input);
-      return [];
+      const backInStockSignals = await this.restockCancelledOrder(db, input);
+      return { lowStockSignals: [], backInStockSignals };
     }
 
     if (input.currentStatus === 'out_for_delivery' && input.nextStatus === 'returned') {
-      await this.restockReturnedOrder(db, input);
-      return [];
+      const backInStockSignals = await this.restockReturnedOrder(db, input);
+      return { lowStockSignals: [], backInStockSignals };
     }
 
-    return [];
+    return { lowStockSignals: [], backInStockSignals: [] };
   }
 
   private isCancellationAfterStockDeduction(
@@ -239,8 +247,8 @@ export class OrdersService {
       storeId: string;
       actorId: string | null;
     },
-  ): Promise<void> {
-    await this.inventoryService.restockOrderSales(db, {
+  ): Promise<BackInStockSignal[]> {
+    return this.inventoryService.restockOrderSales(db, {
       storeId: input.storeId,
       orderId: input.orderId,
       actorId: input.actorId,
@@ -256,8 +264,8 @@ export class OrdersService {
       storeId: string;
       actorId: string | null;
     },
-  ): Promise<void> {
-    await this.inventoryService.restockOrderSales(db, {
+  ): Promise<BackInStockSignal[]> {
+    return this.inventoryService.restockOrderSales(db, {
       storeId: input.storeId,
       orderId: input.orderId,
       actorId: input.actorId,

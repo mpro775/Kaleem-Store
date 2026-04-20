@@ -3,8 +3,10 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { AnalyticsPageView } from '../../../components/analytics-page-view';
 import { ProductPurchaseCard } from '../../../components/product-purchase-card';
+import { ProductQuestionsSection } from '../../../components/product-questions-section';
 import { WishlistButton } from '../../../components/wishlist-button';
 import { ProductReviewsSection } from '../../../components/product-reviews-section';
+import { RestockTokenCapture } from '../../../components/restock-token-capture';
 import { getProduct, resolveStore } from '../../../lib/storefront-server';
 import { absoluteUrl, cleanText } from '../../../lib/seo';
 
@@ -117,6 +119,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   return (
     <main className="page-shell stack-lg">
+      <RestockTokenCapture />
       <AnalyticsPageView
         eventName="sf_product_viewed"
         metadata={{ productId: product.id, slug: product.slug, priceFrom: product.priceFrom }}
@@ -203,6 +206,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           </article>
 
           <ProductPurchaseCard
+            productId={product.id}
             variants={product.variants}
             productType={product.productType}
             stockUnlimited={product.stockUnlimited}
@@ -212,6 +216,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         </section>
       </div>
 
+      <ProductQuestionsSection productId={product.id} enabled={product.questionsEnabled} />
       <ProductReviewsSection productId={product.id} />
     </main>
   );
