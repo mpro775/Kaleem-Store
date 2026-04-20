@@ -663,6 +663,9 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
   }
 
   const filteredProducts = products.filter(p => p.title.toLowerCase().includes(searchQuery.toLowerCase()) || p.slug.toLowerCase().includes(searchQuery.toLowerCase()));
+  const isSingleProduct = productForm.productType === 'single';
+  const isBundledProduct = productForm.productType === 'bundled';
+  const isDigitalProduct = productForm.productType === 'digital';
 
   // --- DETAIL VIEW ---
   if (viewMode === 'detail') {
@@ -747,6 +750,13 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                         <MenuItem value="bundled">منتج مجمع</MenuItem>
                         <MenuItem value="digital">ملفات رقمية</MenuItem>
                       </TextField>
+                      <Typography variant="caption" color="text.secondary">
+                        {isDigitalProduct
+                          ? 'نوع رقمي: سيتم إخفاء حقول المخزون والمستودعات وإظهار سياسة التحميل.'
+                          : isBundledProduct
+                            ? 'نوع مجمع: أضف المنتجات المضمنة وسيتم حسم مخزونها عند الشراء.'
+                            : 'نوع فردي: جميع حقول المخزون والمتغيرات متاحة.'}
+                      </Typography>
                       <TextField 
                         select 
                         label="الحالة" 
@@ -942,14 +952,18 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                   </AccordionSummary>
                   <AccordionDetails>
                     <Stack spacing={3}>
-                      {/* قسم العلامة التجارية والوزن */}
-                      <Typography variant="subtitle2" fontWeight={700}>العلامة التجارية والوزن</Typography>
-                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(4, 1fr)' }, gap: 2 }}>
-                        <TextField size="small" label="العلامة التجارية" fullWidth value={formBrand} onChange={(e) => setFormBrand(e.target.value)} />
-                        <TextField size="small" label="الوزن (كجم)" type="number" fullWidth value={formWeight} onChange={(e) => setFormWeight(e.target.value)} />
-                        <TextField size="small" label="وحدة الوزن (اختياري)" fullWidth value={formWeightUnit} onChange={(e) => setFormWeightUnit(e.target.value)} placeholder="kg / g / lb" />
-                        <TextField size="small" label="سعر التكلفة" type="number" fullWidth value={formCostPrice} onChange={(e) => setFormCostPrice(e.target.value)} />
-                      </Box>
+                      {!isDigitalProduct ? (
+                        <>
+                          {/* قسم العلامة التجارية والوزن */}
+                          <Typography variant="subtitle2" fontWeight={700}>العلامة التجارية والوزن</Typography>
+                          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(4, 1fr)' }, gap: 2 }}>
+                            <TextField size="small" label="العلامة التجارية" fullWidth value={formBrand} onChange={(e) => setFormBrand(e.target.value)} />
+                            <TextField size="small" label="الوزن (كجم)" type="number" fullWidth value={formWeight} onChange={(e) => setFormWeight(e.target.value)} />
+                            <TextField size="small" label="وحدة الوزن (اختياري)" fullWidth value={formWeightUnit} onChange={(e) => setFormWeightUnit(e.target.value)} placeholder="kg / g / lb" />
+                            <TextField size="small" label="سعر التكلفة" type="number" fullWidth value={formCostPrice} onChange={(e) => setFormCostPrice(e.target.value)} />
+                          </Box>
+                        </>
+                      ) : null}
 
                       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                         <TextField
@@ -970,13 +984,17 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                         />
                       </Box>
 
-                      {/* قسم الأبعاد */}
-                      <Typography variant="subtitle2" fontWeight={700}>الأبعاد</Typography>
-                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2 }}>
-                        <TextField size="small" label="الطول (سم)" type="number" fullWidth value={formDimensionsLength} onChange={(e) => setFormDimensionsLength(e.target.value)} />
-                        <TextField size="small" label="العرض (سم)" type="number" fullWidth value={formDimensionsWidth} onChange={(e) => setFormDimensionsWidth(e.target.value)} />
-                        <TextField size="small" label="الارتفاع (سم)" type="number" fullWidth value={formDimensionsHeight} onChange={(e) => setFormDimensionsHeight(e.target.value)} />
-                      </Box>
+                      {!isDigitalProduct ? (
+                        <>
+                          {/* قسم الأبعاد */}
+                          <Typography variant="subtitle2" fontWeight={700}>الأبعاد</Typography>
+                          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2 }}>
+                            <TextField size="small" label="الطول (سم)" type="number" fullWidth value={formDimensionsLength} onChange={(e) => setFormDimensionsLength(e.target.value)} />
+                            <TextField size="small" label="العرض (سم)" type="number" fullWidth value={formDimensionsWidth} onChange={(e) => setFormDimensionsWidth(e.target.value)} />
+                            <TextField size="small" label="الارتفاع (سم)" type="number" fullWidth value={formDimensionsHeight} onChange={(e) => setFormDimensionsHeight(e.target.value)} />
+                          </Box>
+                        </>
+                      ) : null}
 
                       {/* قسم SEO */}
                       <Typography variant="subtitle2" fontWeight={700}>تحسين محركات البحث (SEO)</Typography>
@@ -1002,10 +1020,12 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
                         <FormControlLabel control={<Switch checked={formIsFeatured} onChange={(e) => setFormIsFeatured(e.target.checked)} />} label="منتج مميز" />
                         <FormControlLabel control={<Switch checked={formIsTaxable} onChange={(e) => setFormIsTaxable(e.target.checked)} />} label="خاضع للضريبة" />
-                        <FormControlLabel
-                          control={<Switch checked={formStockUnlimited} onChange={(e) => setFormStockUnlimited(e.target.checked)} disabled={productForm.productType !== 'single'} />}
-                          label="مخزون غير محدود"
-                        />
+                        {isSingleProduct ? (
+                          <FormControlLabel
+                            control={<Switch checked={formStockUnlimited} onChange={(e) => setFormStockUnlimited(e.target.checked)} />}
+                            label="مخزون غير محدود"
+                          />
+                        ) : null}
                       </Box>
                       {formIsTaxable && (
                         <TextField size="small" label="نسبة الضريبة (%)" type="number" fullWidth value={formTaxRate} onChange={(e) => setFormTaxRate(e.target.value)} sx={{ maxWidth: 300 }} />
@@ -1043,7 +1063,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                         </Box>
                       ) : null}
 
-                      {productForm.productType === 'bundled' ? (
+                      {isBundledProduct ? (
                         <>
                           <Typography variant="subtitle2" fontWeight={700}>المنتجات المضمنة داخل المنتج المجمع</Typography>
                           <Stack spacing={1.5}>
@@ -1108,7 +1128,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
                         </>
                       ) : null}
 
-                      {productForm.productType === 'digital' ? (
+                      {isDigitalProduct ? (
                         <>
                           <Typography variant="subtitle2" fontWeight={700}>الملفات الرقمية وسياسة التحميل</Typography>
                           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
@@ -1220,7 +1240,7 @@ export function ProductsPanel({ request }: ProductsPanelProps) {
             </Paper>
 
             {/* Variants Card (Only if product exists) */}
-            {selectedProduct && (
+            {selectedProduct && !isDigitalProduct && (
               <Paper elevation={0} sx={{ p: { xs: 3, md: 4 }, borderRadius: 4, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
                   <StyleIcon color="primary" />
