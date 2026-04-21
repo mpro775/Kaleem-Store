@@ -17,6 +17,11 @@ export class UpdateShippingZoneDto {
   area?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  description?: string;
+
+  @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   fee?: number;

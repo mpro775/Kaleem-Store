@@ -155,7 +155,21 @@ export interface ShippingZone {
   name: string;
   city: string | null;
   area: string | null;
+  description: string | null;
   fee: number;
+}
+
+export interface ShippingMethodQuote {
+  id: string;
+  zoneId: string;
+  type: string;
+  displayName: string;
+  description: string | null;
+  cost: number;
+  minDeliveryDays: number;
+  maxDeliveryDays: number;
+  isActive: boolean;
+  sortOrder: number;
 }
 
 export interface CheckoutResponse {
@@ -174,6 +188,8 @@ export interface CheckoutResponse {
 export interface CheckoutQuoteResponse {
   subtotal: number;
   shippingFee: number;
+  availableShippingMethods: ShippingMethodQuote[];
+  selectedShippingMethodId: string | null;
   promotionDiscount: number;
   pointsDiscount: number;
   total: number;

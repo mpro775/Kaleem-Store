@@ -31,6 +31,10 @@ export class UpdateManualOrderDto {
   shippingZoneId?: string;
 
   @IsOptional()
+  @IsUUID('4')
+  shippingMethodId?: string;
+
+  @IsOptional()
   @IsString()
   @MaxLength(40)
   couponCode?: string;

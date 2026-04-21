@@ -25,6 +25,7 @@ export interface CouponResponse {
   storeId: string;
   code: string;
   affiliateId: string | null;
+  isFreeShipping: boolean;
   discountType: DiscountType;
   discountValue: number;
   minOrderAmount: number;
@@ -54,6 +55,7 @@ export interface CouponApplyResult {
   code: string;
   discount: number;
   subtotal: number;
+  isFreeShipping: boolean;
 }
 
 export interface PromotionComputationInput {
@@ -66,6 +68,7 @@ export interface PromotionComputationInput {
 export interface PromotionComputationResult {
   couponId: string | null;
   couponCode: string | null;
+  couponIsFreeShipping: boolean;
   couponDiscount: number;
   offerId: string | null;
   offerDiscount: number;
@@ -103,6 +106,7 @@ export class PromotionsService {
       storeId: currentUser.storeId,
       code: input.code,
       affiliateId: input.affiliateId ?? null,
+      isFreeShipping: input.isFreeShipping ?? false,
       discountType: input.discountType,
       discountValue: input.discountValue,
       minOrderAmount: input.minOrderAmount ?? 0,
@@ -178,6 +182,7 @@ export class PromotionsService {
       code: coupon.code,
       discount,
       subtotal: input.subtotal,
+      isFreeShipping: coupon.is_free_shipping,
     };
   }
 
@@ -332,6 +337,7 @@ export class PromotionsService {
     return {
       couponId,
       couponCode,
+      couponIsFreeShipping: coupon?.is_free_shipping ?? false,
       couponDiscount,
       offerId,
       offerDiscount,
@@ -420,6 +426,7 @@ export class PromotionsService {
       maxUses: number | null;
       isActive: boolean;
       affiliateId: string | null;
+      isFreeShipping: boolean;
   }> {
     const code = this.resolveCouponCode(input.code, existing.code);
     await this.assertCouponCodeAvailable(storeId, couponId, code, existing.code);
@@ -444,6 +451,7 @@ export class PromotionsService {
       maxUses: input.maxUses ?? existing.max_uses,
       isActive: input.isActive ?? existing.is_active,
       affiliateId,
+      isFreeShipping: input.isFreeShipping ?? existing.is_free_shipping,
     };
   }
 
@@ -586,6 +594,7 @@ export class PromotionsService {
       storeId: row.store_id,
       code: row.code,
       affiliateId: row.affiliate_id,
+      isFreeShipping: row.is_free_shipping,
       discountType: row.discount_type,
       discountValue: Number(row.discount_value),
       minOrderAmount: Number(row.min_order_amount),

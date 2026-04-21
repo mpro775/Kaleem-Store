@@ -24,6 +24,7 @@ export interface StoreVariantSnapshot {
   sku: string;
   variant_title: string;
   price: string;
+  product_weight: string | null;
   stock_quantity: number;
   attributes: Record<string, string>;
 }
@@ -44,6 +45,7 @@ export interface CartItemSnapshot {
   variant_id: string;
   quantity: number;
   unit_price: string;
+  product_weight: string | null;
   stock_quantity: number;
   product_title: string;
   sku: string;
@@ -59,6 +61,8 @@ export interface OrderRecord {
   subtotal: string;
   total: string;
   shipping_zone_id: string | null;
+  shipping_method_id?: string | null;
+  shipping_method_snapshot?: Record<string, unknown> | null;
   shipping_fee: string;
   discount_total: string;
   points_redeemed: number;
@@ -153,6 +157,8 @@ interface CreateOrderInput {
   subtotal: number;
   total: number;
   shippingZoneId: string | null;
+  shippingMethodId?: string | null;
+  shippingMethodSnapshot?: Record<string, unknown> | null;
   shippingFee: number;
   discountTotal: number;
   couponCode: string | null;
@@ -162,7 +168,7 @@ interface CreateOrderInput {
 }
 
 const ORDER_RETURNING_FIELDS =
-  'id, store_id, customer_id, order_code, status, subtotal, total, shipping_zone_id, shipping_fee, discount_total, points_redeemed, points_discount_amount, points_earned, coupon_code, currency_code, note, shipping_address, created_at, updated_at';
+  'id, store_id, customer_id, order_code, status, subtotal, total, shipping_zone_id, shipping_method_id, shipping_method_snapshot, shipping_fee, discount_total, points_redeemed, points_discount_amount, points_earned, coupon_code, currency_code, note, shipping_address, created_at, updated_at';
 
 const INSERT_ORDER_QUERY = `
   INSERT INTO orders (
@@ -174,13 +180,15 @@ const INSERT_ORDER_QUERY = `
     subtotal,
     total,
     shipping_zone_id,
+    shipping_method_id,
+    shipping_method_snapshot,
     shipping_fee,
     discount_total,
     coupon_code,
     currency_code,
     note,
     shipping_address
-  ) VALUES ($1, $2, $3, $4, 'new', $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb)
+  ) VALUES ($1, $2, $3, $4, 'new', $5, $6, $7, $8, $9::jsonb, $10, $11, $12, $13, $14::jsonb)
   RETURNING ${ORDER_RETURNING_FIELDS}
 `;
 
@@ -220,6 +228,7 @@ export class OrdersRepository {
           pv.sku,
           pv.title AS variant_title,
           pv.price,
+          p.weight AS product_weight,
           pv.stock_quantity,
           pv.attributes
         FROM product_variants pv
@@ -312,6 +321,7 @@ export class OrdersRepository {
           ci.variant_id,
           ci.quantity,
           ci.unit_price,
+          p.weight AS product_weight,
           pv.stock_quantity,
           p.title AS product_title,
           pv.sku,
@@ -453,6 +463,8 @@ export class OrdersRepository {
       input.subtotal,
       input.total,
       input.shippingZoneId,
+      input.shippingMethodId ?? null,
+      JSON.stringify(input.shippingMethodSnapshot ?? null),
       input.shippingFee,
       input.discountTotal,
       input.couponCode,
@@ -573,7 +585,7 @@ export class OrdersRepository {
   async findOrderByCode(storeId: string, orderCode: string): Promise<OrderRecord | null> {
     const result = await this.databaseService.db.query<OrderRecord>(
       `
-        SELECT id, store_id, customer_id, order_code, status, subtotal, total, shipping_zone_id, shipping_fee, discount_total, points_redeemed, points_discount_amount, points_earned, coupon_code, currency_code, note, shipping_address, created_at, updated_at
+        SELECT ${ORDER_RETURNING_FIELDS}
         FROM orders
         WHERE store_id = $1
           AND order_code = $2
@@ -602,7 +614,7 @@ export class OrdersRepository {
   async findOrderById(storeId: string, orderId: string): Promise<OrderRecord | null> {
     const result = await this.databaseService.db.query<OrderRecord>(
       `
-        SELECT id, store_id, customer_id, order_code, status, subtotal, total, shipping_zone_id, shipping_fee, discount_total, points_redeemed, points_discount_amount, points_earned, coupon_code, currency_code, note, shipping_address, created_at, updated_at
+        SELECT ${ORDER_RETURNING_FIELDS}
         FROM orders
         WHERE store_id = $1
           AND id = $2
@@ -961,6 +973,8 @@ export class OrdersRepository {
       subtotal: number;
       total: number;
       shippingZoneId: string | null;
+      shippingMethodId: string | null;
+      shippingMethodSnapshot: Record<string, unknown> | null;
       shippingFee: number;
       discountTotal: number;
       couponCode: string | null;
@@ -975,11 +989,13 @@ export class OrdersRepository {
             subtotal = $4,
             total = $5,
             shipping_zone_id = $6,
-            shipping_fee = $7,
-            discount_total = $8,
-            coupon_code = $9,
-            note = $10,
-            shipping_address = $11::jsonb,
+            shipping_method_id = $7,
+            shipping_method_snapshot = $8::jsonb,
+            shipping_fee = $9,
+            discount_total = $10,
+            coupon_code = $11,
+            note = $12,
+            shipping_address = $13::jsonb,
             updated_at = NOW()
         WHERE id = $1
           AND store_id = $2
@@ -991,6 +1007,8 @@ export class OrdersRepository {
         input.subtotal,
         input.total,
         input.shippingZoneId,
+        input.shippingMethodId,
+        JSON.stringify(input.shippingMethodSnapshot),
         input.shippingFee,
         input.discountTotal,
         input.couponCode,
@@ -1044,7 +1062,7 @@ export class OrdersRepository {
             updated_at = NOW()
         WHERE id = $1
           AND store_id = $2
-        RETURNING id, store_id, customer_id, order_code, status, subtotal, total, shipping_zone_id, shipping_fee, discount_total, points_redeemed, points_discount_amount, points_earned, coupon_code, currency_code, note, shipping_address, created_at, updated_at
+        RETURNING ${ORDER_RETURNING_FIELDS}
       `,
       [input.orderId, input.storeId, input.nextStatus],
     );
@@ -1068,7 +1086,6 @@ export class OrdersRepository {
     );
     return (result.rowCount ?? 0) > 0;
   }
-
   private buildListFilters(filters: OrdersListFilters): { whereClause: string; values: unknown[] } {
     const values: unknown[] = [];
     const conditions: string[] = [];

@@ -13,6 +13,7 @@ import {
 import type { Queryable } from '../inventory/inventory.repository';
 import { OutboxService } from '../messaging/outbox.service';
 import { PromotionsService } from '../promotions/promotions.service';
+import { ShippingCalculatorService } from '../shipping/shipping-calculator.service';
 import { ShippingRepository } from '../shipping/shipping.repository';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { AffiliatesService } from '../affiliates/affiliates.service';
@@ -52,12 +53,16 @@ interface ManualResolvedLine {
   lineTotal: number;
   attributes: Record<string, string>;
   stockUnlimited: boolean;
+  productWeight: number | null;
 }
 
 interface ManualOrderComputation {
   customer: CustomerSummaryRow;
   shippingAddress: Record<string, unknown>;
   shippingZoneId: string | null;
+  shippingMethodId: string | null;
+  shippingMethodSnapshot: Record<string, unknown> | null;
+  shippingMethodType: string | null;
   shippingFee: number;
   couponCode: string | null;
   couponId: string | null;
@@ -122,6 +127,7 @@ export class OrdersService {
     private readonly inventoryService: InventoryService,
     private readonly promotionsService: PromotionsService,
     private readonly shippingRepository: ShippingRepository,
+    private readonly shippingCalculatorService: ShippingCalculatorService,
     private readonly auditService: AuditService,
     private readonly outboxService: OutboxService,
     private readonly webhooksService: WebhooksService,
@@ -236,6 +242,8 @@ export class OrdersService {
         subtotal: computation.subtotal,
         total: computation.total,
         shippingZoneId: computation.shippingZoneId,
+        shippingMethodId: computation.shippingMethodId,
+        shippingMethodSnapshot: computation.shippingMethodSnapshot,
         shippingFee: computation.shippingFee,
         discountTotal: computation.discountTotal,
         couponCode: computation.couponCode,
@@ -360,6 +368,7 @@ export class OrdersService {
       customerId: string;
       customerAddressId?: string;
       shippingZoneId?: string;
+      shippingMethodId?: string;
       couponCode?: string;
       note?: string;
       paymentMethod: PaymentMethod;
@@ -379,6 +388,13 @@ export class OrdersService {
           : {}
         : order.shipping_zone_id
           ? { shippingZoneId: order.shipping_zone_id }
+          : {}),
+      ...(input.shippingMethodId !== undefined
+        ? input.shippingMethodId
+          ? { shippingMethodId: input.shippingMethodId }
+          : {}
+        : order.shipping_method_id
+          ? { shippingMethodId: order.shipping_method_id }
           : {}),
       ...(input.couponCode !== undefined
         ? input.couponCode
@@ -426,6 +442,8 @@ export class OrdersService {
         subtotal: computation.subtotal,
         total: computation.total,
         shippingZoneId: computation.shippingZoneId,
+        shippingMethodId: computation.shippingMethodId,
+        shippingMethodSnapshot: computation.shippingMethodSnapshot,
         shippingFee: computation.shippingFee,
         discountTotal: computation.discountTotal,
         couponCode: computation.couponCode,
@@ -807,6 +825,7 @@ export class OrdersService {
       customerId: string;
       customerAddressId?: string;
       shippingZoneId?: string;
+      shippingMethodId?: string;
       couponCode?: string;
       note?: string;
       paymentMethod: PaymentMethod;
@@ -838,6 +857,7 @@ export class OrdersService {
     let couponCode: string | null = null;
     let couponId: string | null = null;
     let couponDiscount = 0;
+    let couponIsFreeShipping = false;
 
     if (normalizedCouponCode) {
       const coupon = await this.promotionsService.applyCoupon(currentUser, {
@@ -847,6 +867,7 @@ export class OrdersService {
       couponCode = coupon.code;
       couponId = coupon.couponId;
       couponDiscount = coupon.discount;
+      couponIsFreeShipping = coupon.isFreeShipping;
     }
 
     const shippingZone = input.shippingZoneId
@@ -856,7 +877,31 @@ export class OrdersService {
       throw new BadRequestException('Shipping zone not found or inactive');
     }
 
-    const shippingFee = shippingZone ? Number(shippingZone.fee) : 0;
+    const selectedShipping = shippingZone
+      ? this.shippingCalculatorService.resolveMethod({
+          zone: shippingZone,
+          methods: await this.shippingRepository.listMethodsByZone(
+            currentUser.storeId,
+            shippingZone.id,
+            true,
+          ),
+          items: lines.map((line) => ({
+            quantity: line.quantity,
+            productWeight: line.productWeight,
+          })),
+          subtotal: subtotal - lineDiscountTotal,
+          couponCode,
+          couponIsFreeShipping,
+          requestedMethodId: input.shippingMethodId ?? null,
+          autoSelectStrategy: 'free_then_first',
+        }).selectedMethod
+      : null;
+
+    if (shippingZone && !selectedShipping) {
+      throw new BadRequestException('No applicable shipping methods for selected zone');
+    }
+
+    const shippingFee = selectedShipping?.cost ?? 0;
     const discountTotal = Number((lineDiscountTotal + couponDiscount).toFixed(2));
     const total = Number((subtotal + shippingFee - discountTotal).toFixed(2));
     if (total < 0) {
@@ -880,12 +925,29 @@ export class OrdersService {
       ...(input.area !== undefined ? { area: input.area } : {}),
       ...(input.note ? { note: input.note } : {}),
     };
-    const shippingAddress = await this.resolveShippingAddress(currentUser.storeId, customer, shippingInput);
+    const shippingAddress = await this.resolveShippingAddress(
+      currentUser.storeId,
+      customer,
+      shippingInput,
+      selectedShipping?.type !== 'store_pickup',
+    );
 
     return {
       customer,
       shippingAddress,
       shippingZoneId: shippingZone?.id ?? null,
+      shippingMethodId: selectedShipping?.id?.startsWith('legacy-') ? null : (selectedShipping?.id ?? null),
+      shippingMethodSnapshot: selectedShipping
+        ? {
+            type: selectedShipping.type,
+            displayName: selectedShipping.displayName,
+            description: selectedShipping.description,
+            cost: selectedShipping.cost,
+            minDeliveryDays: selectedShipping.minDeliveryDays,
+            maxDeliveryDays: selectedShipping.maxDeliveryDays,
+          }
+        : null,
+      shippingMethodType: selectedShipping?.type ?? null,
       shippingFee,
       couponCode,
       couponId,
@@ -965,6 +1027,7 @@ export class OrdersService {
         lineTotal,
         attributes: variant.attributes ?? {},
         stockUnlimited: variant.stock_unlimited,
+        productWeight: variant.product_weight !== null ? Number(variant.product_weight) : null,
       });
     }
 
@@ -996,6 +1059,7 @@ export class OrdersService {
       area?: string | null;
       note?: string;
     },
+    requireAddressLine = true,
   ): Promise<Record<string, unknown>> {
     let selectedAddress: CustomerAddressSummaryRow | null = null;
     if (input.customerAddressId) {
@@ -1010,14 +1074,14 @@ export class OrdersService {
     }
 
     const addressLine = selectedAddress?.address_line ?? input.addressLine?.trim();
-    if (!addressLine) {
+    if (requireAddressLine && !addressLine) {
       throw new BadRequestException('addressLine is required for manual orders');
     }
 
     return {
       fullName: input.customerName?.trim() || customer.full_name,
       phone: input.customerPhone?.trim() || customer.phone,
-      addressLine,
+      addressLine: addressLine ?? null,
       city: selectedAddress?.city ?? input.city?.trim() ?? null,
       area: selectedAddress?.area ?? input.area?.trim() ?? null,
       note: selectedAddress?.notes ?? input.note?.trim() ?? null,

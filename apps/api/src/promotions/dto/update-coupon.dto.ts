@@ -52,4 +52,8 @@ export class UpdateCouponDto {
   @IsOptional()
   @IsUUID('4')
   affiliateId?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  isFreeShipping?: boolean;
 }

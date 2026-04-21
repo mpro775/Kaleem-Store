@@ -33,6 +33,10 @@ import {
   type PromotionComputationResult,
 } from '../promotions/promotions.service';
 import { SaasService } from '../saas/saas.service';
+import {
+  ShippingCalculatorService,
+  type ShippingMethodQuote,
+} from '../shipping/shipping-calculator.service';
 import { ShippingRepository, type ShippingZoneRecord } from '../shipping/shipping.repository';
 import { ThemesService } from '../themes/themes.service';
 import { StoresRepository } from '../stores/stores.repository';
@@ -122,6 +126,7 @@ export interface StorefrontShippingZoneResponse {
   name: string;
   city: string | null;
   area: string | null;
+  description: string | null;
   fee: number;
 }
 
@@ -180,6 +185,8 @@ export interface CheckoutResponse {
 export interface CheckoutQuoteResponse {
   subtotal: number;
   shippingFee: number;
+  availableShippingMethods: ShippingMethodQuote[];
+  selectedShippingMethodId: string | null;
   promotionDiscount: number;
   pointsDiscount: number;
   total: number;
@@ -202,6 +209,8 @@ interface CheckoutData {
   inventoryReservationItems: Array<{ variantId: string; quantity: number; sku: string }>;
   subtotal: number;
   shippingZone: ShippingZoneRecord | null;
+  shippingMethod: ShippingMethodQuote | null;
+  availableShippingMethods: ShippingMethodQuote[];
   promotion: PromotionComputationResult;
   pointsToRedeem: number;
   pointsDiscountAmount: number;
@@ -237,6 +246,7 @@ export class StorefrontService {
     private readonly productsRepository: ProductsRepository,
     private readonly ordersRepository: OrdersRepository,
     private readonly shippingRepository: ShippingRepository,
+    private readonly shippingCalculatorService: ShippingCalculatorService,
     private readonly promotionsService: PromotionsService,
     private readonly saasService: SaasService,
     private readonly themesService: ThemesService,
@@ -324,6 +334,7 @@ export class StorefrontService {
         name: zone.name,
         city: zone.city,
         area: zone.area,
+        description: zone.description,
         fee: Number(zone.fee),
       }));
   }
@@ -581,7 +592,9 @@ export class StorefrontService {
 
     return {
       subtotal: checkoutData.subtotal,
-      shippingFee: checkoutData.shippingZone?.fee ? Number(checkoutData.shippingZone.fee) : 0,
+      shippingFee: checkoutData.shippingMethod?.cost ?? 0,
+      availableShippingMethods: checkoutData.availableShippingMethods,
+      selectedShippingMethodId: checkoutData.shippingMethod?.id ?? null,
       promotionDiscount: checkoutData.promotion.totalDiscount,
       pointsDiscount: checkoutData.pointsDiscountAmount,
       total: checkoutData.total,
@@ -1268,7 +1281,12 @@ export class StorefrontService {
     storeId: string,
     input: Pick<
       CheckoutDto,
-      'cartId' | 'shippingZoneId' | 'couponCode' | 'customerAccessToken' | 'pointsToRedeem'
+      | 'cartId'
+      | 'shippingZoneId'
+      | 'shippingMethodId'
+      | 'couponCode'
+      | 'customerAccessToken'
+      | 'pointsToRedeem'
     >,
     request: Request,
   ): Promise<CheckoutData> {
@@ -1286,6 +1304,9 @@ export class StorefrontService {
     await this.validateCartStock(storeId, items);
     const inventoryReservationItems = await this.mapCheckoutItemsToInventoryInput(storeId, items);
     const subtotal = this.calculateTotals(items).subtotal;
+    if (input.shippingMethodId && !input.shippingZoneId) {
+      throw new BadRequestException('shippingZoneId is required when shippingMethodId is provided');
+    }
     const shippingZone = await this.resolveShippingZone(storeId, input.shippingZoneId);
     const customerIdForLoyalty = await this.resolveCustomerIdFromAccessToken(
       storeId,
@@ -1305,6 +1326,7 @@ export class StorefrontService {
       promotion = {
         couponId: null,
         couponCode: null,
+        couponIsFreeShipping: false,
         couponDiscount: 0,
         offerId: null,
         offerDiscount: 0,
@@ -1321,7 +1343,23 @@ export class StorefrontService {
       throw new BadRequestException('Cannot combine loyalty points with offers or coupons');
     }
 
-    const shippingFee = shippingZone?.fee ? Number(shippingZone.fee) : 0;
+    const shippingResolution = shippingZone
+      ? this.shippingCalculatorService.resolveMethod({
+          zone: shippingZone,
+          methods: await this.shippingRepository.listMethodsByZone(storeId, shippingZone.id, true),
+          items: items.map((item) => ({
+            quantity: item.quantity,
+            productWeight: item.product_weight !== null ? Number(item.product_weight) : null,
+          })),
+          subtotal,
+          couponCode: promotion.couponCode,
+          couponIsFreeShipping: promotion.couponIsFreeShipping,
+          requestedMethodId: input.shippingMethodId ?? null,
+          autoSelectStrategy: 'free_then_first',
+        })
+      : { availableMethods: [] as ShippingMethodQuote[], selectedMethod: null };
+
+    const shippingFee = shippingResolution.selectedMethod?.cost ?? 0;
     const baseTotal = this.calculateTotal(subtotal, shippingFee, promotion.totalDiscount);
     let pointsRedeemed = 0;
     let pointsDiscountAmount = 0;
@@ -1369,6 +1407,8 @@ export class StorefrontService {
       inventoryReservationItems,
       subtotal,
       shippingZone,
+      shippingMethod: shippingResolution.selectedMethod,
+      availableShippingMethods: shippingResolution.availableMethods,
       promotion,
       pointsToRedeem: requestedPointsToRedeem,
       pointsDiscountAmount,
@@ -1404,7 +1444,8 @@ export class StorefrontService {
     if (checkoutData.pointsToRedeem > 0 && checkoutData.customerIdForLoyalty !== customerId) {
       throw new BadRequestException('Loyalty redemption requires authenticated customer');
     }
-    await this.saveCheckoutAddress(db, storeId, customerId, input);
+    const requiresAddress = checkoutData.shippingMethod?.type !== 'store_pickup';
+    await this.saveCheckoutAddress(db, storeId, customerId, input, requiresAddress);
 
     const order = await this.ordersRepository.createOrder(db, {
       id: orderId,
@@ -1414,12 +1455,26 @@ export class StorefrontService {
       subtotal: checkoutData.subtotal,
       total: checkoutData.total,
       shippingZoneId: checkoutData.shippingZone?.id ?? null,
-      shippingFee: checkoutData.shippingZone?.fee ? Number(checkoutData.shippingZone.fee) : 0,
+      shippingMethodId:
+        checkoutData.shippingMethod?.id && !checkoutData.shippingMethod.id.startsWith('legacy-')
+          ? checkoutData.shippingMethod.id
+          : null,
+      shippingMethodSnapshot: checkoutData.shippingMethod
+        ? {
+            type: checkoutData.shippingMethod.type,
+            displayName: checkoutData.shippingMethod.displayName,
+            description: checkoutData.shippingMethod.description,
+            cost: checkoutData.shippingMethod.cost,
+            minDeliveryDays: checkoutData.shippingMethod.minDeliveryDays,
+            maxDeliveryDays: checkoutData.shippingMethod.maxDeliveryDays,
+          }
+        : null,
+      shippingFee: checkoutData.shippingMethod?.cost ?? 0,
       discountTotal: checkoutData.promotion.totalDiscount + checkoutData.pointsDiscountAmount,
       couponCode: checkoutData.promotion.couponCode,
       currencyCode: checkoutData.cart.currency_code,
       note: input.note?.trim() ?? null,
-      shippingAddress: this.buildShippingAddress(input),
+      shippingAddress: this.buildShippingAddress(input, requiresAddress),
     });
 
     await this.completeCheckoutArtifacts(
@@ -1464,11 +1519,17 @@ export class StorefrontService {
     storeId: string,
     customerId: string,
     input: CheckoutDto,
+    requireAddressLine = true,
   ): Promise<void> {
+    const addressLine = input.addressLine?.trim();
+    if (!requireAddressLine && (!addressLine || addressLine.length === 0)) {
+      return;
+    }
+
     await this.ordersRepository.insertCustomerAddress(db, {
       storeId,
       customerId,
-      addressLine: input.addressLine.trim(),
+      addressLine: addressLine ?? '',
       city: input.city?.trim() ?? null,
       area: input.area?.trim() ?? null,
       notes: input.note?.trim() ?? null,
@@ -1510,7 +1571,7 @@ export class StorefrontService {
         orderId,
         pointsToRedeem: checkoutData.pointsToRedeem,
         totalBeforeDiscount:
-          checkoutData.subtotal + (checkoutData.shippingZone?.fee ? Number(checkoutData.shippingZone.fee) : 0),
+          checkoutData.subtotal + (checkoutData.shippingMethod?.cost ?? 0),
         createdByStoreUserId: null,
       });
     }
@@ -1698,11 +1759,19 @@ export class StorefrontService {
     return raw;
   }
 
-  private buildShippingAddress(input: CheckoutDto): Record<string, unknown> {
+  private buildShippingAddress(
+    input: CheckoutDto,
+    requireAddressLine = true,
+  ): Record<string, unknown> {
+    const addressLine = input.addressLine?.trim();
+    if (requireAddressLine && !addressLine) {
+      throw new BadRequestException('addressLine is required');
+    }
+
     return {
       fullName: input.customerName.trim(),
       phone: input.customerPhone.trim(),
-      addressLine: input.addressLine.trim(),
+      addressLine: addressLine ?? null,
       city: input.city?.trim() ?? null,
       area: input.area?.trim() ?? null,
       note: input.note?.trim() ?? null,

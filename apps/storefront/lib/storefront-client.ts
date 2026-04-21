@@ -67,6 +67,7 @@ export async function checkout(input: {
   city?: string;
   area?: string;
   shippingZoneId?: string;
+  shippingMethodId?: string;
   couponCode?: string;
   note?: string;
   paymentMethod: 'cod' | 'transfer';
@@ -87,6 +88,7 @@ export async function checkout(input: {
 export async function checkoutQuote(input: {
   cartId: string;
   shippingZoneId?: string;
+  shippingMethodId?: string;
   couponCode?: string;
   customerAccessToken?: string;
   pointsToRedeem?: number;

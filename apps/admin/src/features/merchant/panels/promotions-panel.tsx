@@ -46,6 +46,7 @@ const couponFormDefault = {
   discountType: 'percent' as DiscountType,
   discountValue: '10',
   minOrderAmount: '0',
+  isFreeShipping: false,
   startsAt: '',
   endsAt: '',
   maxUses: '',
@@ -269,6 +270,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
       discountType: coupon.discountType,
       discountValue: String(coupon.discountValue),
       minOrderAmount: String(coupon.minOrderAmount),
+      isFreeShipping: coupon.isFreeShipping,
       startsAt: coupon.startsAt ? coupon.startsAt.slice(0, 16) : '',
       endsAt: coupon.endsAt ? coupon.endsAt.slice(0, 16) : '',
       maxUses: coupon.maxUses !== null ? String(coupon.maxUses) : '',
@@ -356,6 +358,7 @@ export function PromotionsPanel({ request }: PromotionsPanelProps) {
                 </Box>
 
                 <TextField label="الحد الأقصى لعدد الاستخدامات (اختياري)" type="number" inputProps={{ min: 1 }} fullWidth value={couponForm.maxUses} onChange={(event) => setCouponForm((prev) => ({ ...prev, maxUses: event.target.value }))} />
+                <FormControlLabel control={<Checkbox checked={couponForm.isFreeShipping} onChange={(event) => setCouponForm((prev) => ({ ...prev, isFreeShipping: event.target.checked }))} />} label="كوبون شحن مجاني" />
                 <FormControlLabel control={<Checkbox checked={couponForm.isActive} onChange={(event) => setCouponForm((prev) => ({ ...prev, isActive: event.target.checked }))} />} label="الكوبون فعال" />
                 <Button variant="contained" size="large" onClick={() => (selectedCouponId ? updateCoupon() : createCoupon()).catch(() => undefined)} disabled={actionLoading}>
                   {actionLoading ? 'جارِ الحفظ...' : 'حفظ الكوبون'}
@@ -627,6 +630,7 @@ function buildCouponCreatePayload(form: typeof couponFormDefault) {
     discountType: DiscountType;
     discountValue: number;
     minOrderAmount: number;
+    isFreeShipping: boolean;
     startsAt?: string;
     endsAt?: string;
     maxUses?: number;
@@ -635,6 +639,7 @@ function buildCouponCreatePayload(form: typeof couponFormDefault) {
     discountType: form.discountType,
     discountValue: Number(form.discountValue || '0'),
     minOrderAmount: Number(form.minOrderAmount || '0'),
+    isFreeShipping: form.isFreeShipping,
   };
 
   if (form.startsAt) {

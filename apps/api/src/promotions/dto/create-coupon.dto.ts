@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
 import {
+  IsBoolean,
   IsDateString,
   IsIn,
   IsInt,
@@ -46,4 +47,8 @@ export class CreateCouponDto {
   @IsOptional()
   @IsUUID('4')
   affiliateId?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isFreeShipping?: boolean;
 }

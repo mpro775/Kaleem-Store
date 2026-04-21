@@ -13,7 +13,12 @@ import * as customerClient from '../lib/customer-client';
 import { useCustomerAuth } from '../lib/customer-auth-context';
 import { trackStorefrontEvent } from '../lib/storefront-analytics';
 import { AuthModal } from './auth-modal';
-import type { CheckoutQuoteResponse, ShippingZone, StorefrontCart } from '../lib/types';
+import type {
+  CheckoutQuoteResponse,
+  ShippingMethodQuote,
+  ShippingZone,
+  StorefrontCart,
+} from '../lib/types';
 import type { CustomerAddress } from '../lib/customer-client';
 
 export function CheckoutPageClient() {
@@ -38,6 +43,7 @@ export function CheckoutPageClient() {
     city: '',
     area: '',
     shippingZoneId: '',
+    shippingMethodId: '',
     couponCode: '',
     pointsToRedeem: '',
     note: '',
@@ -85,10 +91,11 @@ export function CheckoutPageClient() {
     }));
   }
 
-  const shippingFee = useMemo(() => {
-    const zone = zones.find((entry) => entry.id === form.shippingZoneId);
-    return zone?.fee ?? 0;
-  }, [form.shippingZoneId, zones]);
+  const availableShippingMethods = quote?.availableShippingMethods ?? [];
+  const selectedShippingMethod = useMemo(() => {
+    return availableShippingMethods.find((method) => method.id === form.shippingMethodId) ?? null;
+  }, [availableShippingMethods, form.shippingMethodId]);
+  const shippingFee = quote?.shippingFee ?? selectedShippingMethod?.cost ?? 0;
 
   const estimatedTotal = quote?.total ?? (cart?.subtotal ?? 0) + shippingFee;
   const checkoutStep = resolveCheckoutStep(form, zones.length > 0);
@@ -98,7 +105,7 @@ export function CheckoutPageClient() {
       return;
     }
     void refreshQuote();
-  }, [cart?.cartId, form.shippingZoneId, form.couponCode, form.pointsToRedeem]);
+  }, [cart?.cartId, form.shippingZoneId, form.shippingMethodId, form.couponCode, form.pointsToRedeem]);
 
   useEffect(() => {
     if (!loading) {
@@ -153,11 +160,15 @@ export function CheckoutPageClient() {
       const quoteData = await checkoutQuote({
         cartId: cartResponse.cartId,
         ...(form.shippingZoneId ? { shippingZoneId: form.shippingZoneId } : {}),
+        ...(form.shippingMethodId ? { shippingMethodId: form.shippingMethodId } : {}),
         ...(form.couponCode.trim() ? { couponCode: form.couponCode.trim() } : {}),
         ...(accessToken ? { customerAccessToken: accessToken } : {}),
         ...(form.pointsToRedeem.trim() ? { pointsToRedeem: Number(form.pointsToRedeem) } : {}),
       });
       setQuote(quoteData);
+      if (!form.shippingMethodId && quoteData.selectedShippingMethodId) {
+        setForm((prev) => ({ ...prev, shippingMethodId: quoteData.selectedShippingMethodId ?? '' }));
+      }
     } catch (requestError) {
       setError(
         requestError instanceof Error ? requestError.message : 'Failed to load checkout data',
@@ -176,11 +187,15 @@ export function CheckoutPageClient() {
       const quoteData = await checkoutQuote({
         cartId: cart.cartId,
         ...(form.shippingZoneId ? { shippingZoneId: form.shippingZoneId } : {}),
+        ...(form.shippingMethodId ? { shippingMethodId: form.shippingMethodId } : {}),
         ...(form.couponCode.trim() ? { couponCode: form.couponCode.trim() } : {}),
         ...(accessToken ? { customerAccessToken: accessToken } : {}),
         ...(form.pointsToRedeem.trim() ? { pointsToRedeem: Number(form.pointsToRedeem) } : {}),
       });
       setQuote(quoteData);
+      if (!form.shippingMethodId && quoteData.selectedShippingMethodId) {
+        setForm((prev) => ({ ...prev, shippingMethodId: quoteData.selectedShippingMethodId ?? '' }));
+      }
     } catch {
       setQuote(null);
     }
@@ -242,14 +257,14 @@ export function CheckoutPageClient() {
     return (
       <main className="page-shell">
         <div className="panel">
-          <h1>تم إكمال الطلب بنجاح</h1>
-          <p>رقم طلبك هو: {orderCode}</p>
-          <p className="muted">سنتواصل معك قريباً لتأكيد الطلب</p>
+          <h1>طھظ… ط¥ظƒظ…ط§ظ„ ط§ظ„ط·ظ„ط¨ ط¨ظ†ط¬ط§ط­</h1>
+          <p>ط±ظ‚ظ… ط·ظ„ط¨ظƒ ظ‡ظˆ: {orderCode}</p>
+          <p className="muted">ط³ظ†طھظˆط§طµظ„ ظ…ط¹ظƒ ظ‚ط±ظٹط¨ط§ظ‹ ظ„طھط£ظƒظٹط¯ ط§ظ„ط·ظ„ط¨</p>
           <Link
             href={`/track-order?orderCode=${encodeURIComponent(orderCode)}`}
             className="button-primary"
           >
-            تتبع الطلب
+            طھطھط¨ط¹ ط§ظ„ط·ظ„ط¨
           </Link>
         </div>
       </main>
@@ -260,9 +275,9 @@ export function CheckoutPageClient() {
     return (
       <main className="page-shell">
         <div className="panel">
-          <h1>سلة التسوق فارغة</h1>
+          <h1>ط³ظ„ط© ط§ظ„طھط³ظˆظ‚ ظپط§ط±ط؛ط©</h1>
           <Link href="/categories" className="button-primary">
-            تابع التسوق
+            طھط§ط¨ط¹ ط§ظ„طھط³ظˆظ‚
           </Link>
         </div>
       </main>
@@ -272,36 +287,36 @@ export function CheckoutPageClient() {
   return (
     <main className="page-shell">
       <header className="page-header">
-        <h1>إتمام الشراء</h1>
-        <p>أكمل بياناتك وأكد طلبك</p>
+        <h1>ط¥طھظ…ط§ظ… ط§ظ„ط´ط±ط§ط،</h1>
+        <p>ط£ظƒظ…ظ„ ط¨ظٹط§ظ†ط§طھظƒ ظˆط£ظƒط¯ ط·ظ„ط¨ظƒ</p>
       </header>
 
       <div className="checkout-stepper" aria-label="Checkout progress">
-        <div className={`checkout-step ${checkoutStep >= 1 ? 'active' : ''}`}>1. العميل</div>
-        <div className={`checkout-step ${checkoutStep >= 2 ? 'active' : ''}`}>2. العنوان</div>
-        <div className={`checkout-step ${checkoutStep >= 3 ? 'active' : ''}`}>3. الدفع</div>
-        <div className={`checkout-step ${checkoutStep >= 4 ? 'active' : ''}`}>4. تأكيد الطلب</div>
+        <div className={`checkout-step ${checkoutStep >= 1 ? 'active' : ''}`}>1. ط§ظ„ط¹ظ…ظٹظ„</div>
+        <div className={`checkout-step ${checkoutStep >= 2 ? 'active' : ''}`}>2. ط§ظ„ط¹ظ†ظˆط§ظ†</div>
+        <div className={`checkout-step ${checkoutStep >= 3 ? 'active' : ''}`}>3. ط§ظ„ط¯ظپط¹</div>
+        <div className={`checkout-step ${checkoutStep >= 4 ? 'active' : ''}`}>4. طھط£ظƒظٹط¯ ط§ظ„ط·ظ„ط¨</div>
       </div>
 
       {/* Auth Prompt for Guests */}
       {!isAuthenticated && (
         <div className="checkout-auth-prompt">
           <div className="checkout-auth-info">
-            <h3>هل لديك حساب؟</h3>
-            <p>سجل دخولك للاستفادة من عناوينك المحفوظة وتتبع طلباتك بسهولة</p>
+            <h3>ظ‡ظ„ ظ„ط¯ظٹظƒ ط­ط³ط§ط¨طں</h3>
+            <p>ط³ط¬ظ„ ط¯ط®ظˆظ„ظƒ ظ„ظ„ط§ط³طھظپط§ط¯ط© ظ…ظ† ط¹ظ†ط§ظˆظٹظ†ظƒ ط§ظ„ظ…ط­ظپظˆط¸ط© ظˆطھطھط¨ط¹ ط·ظ„ط¨ط§طھظƒ ط¨ط³ظ‡ظˆظ„ط©</p>
           </div>
           <div className="checkout-auth-actions">
             <button className="button-primary" onClick={() => setShowAuthModal(true)}>
-              تسجيل الدخول
+              طھط³ط¬ظٹظ„ ط§ظ„ط¯ط®ظˆظ„
             </button>
-            <span className="muted">أو اشتري كضيف</span>
+            <span className="muted">ط£ظˆ ط§ط´طھط±ظٹ ظƒط¶ظٹظپ</span>
           </div>
         </div>
       )}
 
       {isAuthenticated && (
         <div className="checkout-logged-in">
-          <p>مرحباً <strong>{customer?.fullName}</strong>! تم تسجيل الدخول</p>
+          <p>ظ…ط±ط­ط¨ط§ظ‹ <strong>{customer?.fullName}</strong>! طھظ… طھط³ط¬ظٹظ„ ط§ظ„ط¯ط®ظˆظ„</p>
         </div>
       )}
 
@@ -309,11 +324,11 @@ export function CheckoutPageClient() {
 
       <div className="checkout-grid">
         <form className="panel stack-md" onSubmit={onSubmit}>
-          <h2>بيانات العميل</h2>
+          <h2>ط¨ظٹط§ظ†ط§طھ ط§ظ„ط¹ظ…ظٹظ„</h2>
           <input
             className="input"
             aria-label="Customer full name"
-            placeholder="الاسم الكامل"
+            placeholder="ط§ظ„ط§ط³ظ… ط§ظ„ظƒط§ظ…ظ„"
             value={form.customerName}
             onChange={(event) => setForm((prev) => ({ ...prev, customerName: event.target.value }))}
             required
@@ -322,7 +337,7 @@ export function CheckoutPageClient() {
           <input
             className="input"
             aria-label="Customer phone"
-            placeholder="رقم الهاتف"
+            placeholder="ط±ظ‚ظ… ط§ظ„ظ‡ط§طھظپ"
             value={form.customerPhone}
             onChange={(event) =>
               setForm((prev) => ({ ...prev, customerPhone: event.target.value }))
@@ -333,7 +348,7 @@ export function CheckoutPageClient() {
           <input
             className="input"
             aria-label="Customer email"
-            placeholder="البريد الإلكتروني (اختياري)"
+            placeholder="ط§ظ„ط¨ط±ظٹط¯ ط§ظ„ط¥ظ„ظƒطھط±ظˆظ†ظٹ (ط§ط®طھظٹط§ط±ظٹ)"
             value={form.customerEmail}
             onChange={(event) =>
               setForm((prev) => ({ ...prev, customerEmail: event.target.value }))
@@ -344,7 +359,7 @@ export function CheckoutPageClient() {
           {/* Saved Addresses */}
           {isAuthenticated && addresses.length > 0 && (
             <div className="saved-addresses">
-              <h3>عناوينك المحفوظة</h3>
+              <h3>ط¹ظ†ط§ظˆظٹظ†ظƒ ط§ظ„ظ…ط­ظپظˆط¸ط©</h3>
               <div className="address-options">
                 {addresses.map((addr) => (
                   <label key={addr.id} className={`address-option ${selectedAddressId === addr.id ? 'selected' : ''}`}>
@@ -357,7 +372,7 @@ export function CheckoutPageClient() {
                     <div>
                       <strong>{addr.addressLine}</strong>
                       {addr.city && <p className="muted">{addr.city}{addr.area && ` - ${addr.area}`}</p>}
-                      {addr.isDefault && <span className="default-badge">افتراضي</span>}
+                      {addr.isDefault && <span className="default-badge">ط§ظپطھط±ط§ط¶ظٹ</span>}
                     </div>
                   </label>
                 ))}
@@ -369,16 +384,16 @@ export function CheckoutPageClient() {
                   checked={selectedAddressId === ''}
                   onChange={() => setSelectedAddressId('')}
                 />
-                <span>إدخال عنوان جديد</span>
+                <span>ط¥ط¯ط®ط§ظ„ ط¹ظ†ظˆط§ظ† ط¬ط¯ظٹط¯</span>
               </label>
             </div>
           )}
 
-          <h2>عنوان التوصيل</h2>
+          <h2>ط¹ظ†ظˆط§ظ† ط§ظ„طھظˆطµظٹظ„</h2>
           <input
             className="input"
             aria-label="Address line"
-            placeholder="العنوان"
+            placeholder="ط§ظ„ط¹ظ†ظˆط§ظ†"
             value={form.addressLine}
             onChange={(event) => setForm((prev) => ({ ...prev, addressLine: event.target.value }))}
             required
@@ -387,14 +402,14 @@ export function CheckoutPageClient() {
           <input
             className="input"
             aria-label="City"
-            placeholder="المدينة"
+            placeholder="ط§ظ„ظ…ط¯ظٹظ†ط©"
             value={form.city}
             onChange={(event) => setForm((prev) => ({ ...prev, city: event.target.value }))}
           />
           <input
             className="input"
             aria-label="Area"
-            placeholder="المنطقة"
+            placeholder="ط§ظ„ظ…ظ†ط·ظ‚ط©"
             value={form.area}
             onChange={(event) => setForm((prev) => ({ ...prev, area: event.target.value }))}
           />
@@ -404,10 +419,14 @@ export function CheckoutPageClient() {
             aria-label="Shipping zone"
             value={form.shippingZoneId}
             onChange={(event) =>
-              setForm((prev) => ({ ...prev, shippingZoneId: event.target.value }))
+              setForm((prev) => ({
+                ...prev,
+                shippingZoneId: event.target.value,
+                shippingMethodId: '',
+              }))
             }
           >
-            <option value="">اختر منطقة الشحن</option>
+            <option value="">ط§ط®طھط± ظ…ظ†ط·ظ‚ط© ط§ظ„ط´ط­ظ†</option>
             {zones.map((zone) => (
               <option key={zone.id} value={zone.id}>
                 {zone.name} ({zone.fee.toFixed(2)})
@@ -416,7 +435,33 @@ export function CheckoutPageClient() {
           </select>
           {fieldErrors.shippingZoneId ? <p className="error-message">{fieldErrors.shippingZoneId}</p> : null}
 
-          <h2>طريقة الدفع</h2>
+          {form.shippingZoneId && availableShippingMethods.length > 0 ? (
+            <>
+              <select
+                className="input"
+                aria-label="Shipping method"
+                value={form.shippingMethodId}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, shippingMethodId: event.target.value }))
+                }
+              >
+                <option value="">ط§ط®طھط± ط·ط±ظٹظ‚ط© ط§ظ„ط´ط­ظ†</option>
+                {availableShippingMethods.map((method: ShippingMethodQuote) => (
+                  <option key={method.id} value={method.id}>
+                    {method.displayName} ({method.cost.toFixed(2)})
+                  </option>
+                ))}
+              </select>
+              {selectedShippingMethod?.description ? (
+                <p className="muted">{selectedShippingMethod.description}</p>
+              ) : null}
+              {fieldErrors.shippingMethodId ? (
+                <p className="error-message">{fieldErrors.shippingMethodId}</p>
+              ) : null}
+            </>
+          ) : null}
+
+          <h2>ط·ط±ظٹظ‚ط© ط§ظ„ط¯ظپط¹</h2>
           <select
             className="input"
             aria-label="Payment method"
@@ -428,14 +473,14 @@ export function CheckoutPageClient() {
               }))
             }
           >
-            <option value="cod">الدفع عند الاستلام</option>
-            <option value="transfer">تحويل بنكي</option>
+            <option value="cod">ط§ظ„ط¯ظپط¹ ط¹ظ†ط¯ ط§ظ„ط§ط³طھظ„ط§ظ…</option>
+            <option value="transfer">طھط­ظˆظٹظ„ ط¨ظ†ظƒظٹ</option>
           </select>
 
           <input
             className="input"
             aria-label="Coupon code"
-            placeholder="كود الخصم (إن وجد)"
+            placeholder="ظƒظˆط¯ ط§ظ„ط®طµظ… (ط¥ظ† ظˆط¬ط¯)"
             value={form.couponCode}
             onChange={(event) => setForm((prev) => ({ ...prev, couponCode: event.target.value }))}
             disabled={Number(form.pointsToRedeem || 0) > 0}
@@ -446,7 +491,7 @@ export function CheckoutPageClient() {
             min={0}
             step={1}
             aria-label="Points to redeem"
-            placeholder="النقاط المراد صرفها"
+            placeholder="ط§ظ„ظ†ظ‚ط§ط· ط§ظ„ظ…ط±ط§ط¯ طµط±ظپظ‡ط§"
             value={form.pointsToRedeem}
             onChange={(event) =>
               setForm((prev) => ({ ...prev, pointsToRedeem: event.target.value }))
@@ -454,22 +499,22 @@ export function CheckoutPageClient() {
             disabled={Boolean(form.couponCode.trim())}
           />
           {fieldErrors.pointsToRedeem ? <p className="error-message">{fieldErrors.pointsToRedeem}</p> : null}
-          <p className="muted">لا يمكن الجمع بين الكوبون والنقاط في نفس الطلب.</p>
+          <p className="muted">ظ„ط§ ظٹظ…ظƒظ† ط§ظ„ط¬ظ…ط¹ ط¨ظٹظ† ط§ظ„ظƒظˆط¨ظˆظ† ظˆط§ظ„ظ†ظ‚ط§ط· ظپظٹ ظ†ظپط³ ط§ظ„ط·ظ„ط¨.</p>
           <textarea
             className="input"
             aria-label="Order note"
-            placeholder="ملاحظات على الطلب"
+            placeholder="ظ…ظ„ط§ط­ط¸ط§طھ ط¹ظ„ظ‰ ط§ظ„ط·ظ„ط¨"
             value={form.note}
             onChange={(event) => setForm((prev) => ({ ...prev, note: event.target.value }))}
           />
 
           <button className="button-primary" type="submit" disabled={submitting}>
-            {submitting ? 'جاري إتمام الطلب...' : 'تأكيد الطلب'}
+            {submitting ? 'ط¬ط§ط±ظٹ ط¥طھظ…ط§ظ… ط§ظ„ط·ظ„ط¨...' : 'طھط£ظƒظٹط¯ ط§ظ„ط·ظ„ط¨'}
           </button>
         </form>
 
         <aside className="panel stack-md checkout-summary-panel">
-          <h2>ملخص الطلب</h2>
+          <h2>ظ…ظ„ط®طµ ط§ظ„ط·ظ„ط¨</h2>
           {cart.items.map((item) => (
             <div key={item.variantId} className="summary-row">
               <span>
@@ -479,41 +524,41 @@ export function CheckoutPageClient() {
             </div>
           ))}
           <div className="summary-row">
-            <span>المجموع الفرعي</span>
+            <span>ط§ظ„ظ…ط¬ظ…ظˆط¹ ط§ظ„ظپط±ط¹ظٹ</span>
             <strong>{cart.subtotal.toFixed(2)}</strong>
           </div>
           <div className="summary-row">
-            <span>الشحن</span>
+            <span>ط§ظ„ط´ط­ظ†</span>
             <strong>{shippingFee.toFixed(2)}</strong>
           </div>
           {quote && quote.pointsDiscount > 0 ? (
             <div className="summary-row">
-              <span>خصم النقاط</span>
+              <span>ط®طµظ… ط§ظ„ظ†ظ‚ط§ط·</span>
               <strong>-{quote.pointsDiscount.toFixed(2)}</strong>
             </div>
           ) : null}
           <div className="summary-row total-row">
-            <span>الإجمالي التقديري</span>
+            <span>ط§ظ„ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„طھظ‚ط¯ظٹط±ظٹ</span>
             <strong>
               {estimatedTotal.toFixed(2)} {cart.currencyCode}
             </strong>
           </div>
           {quote ? (
-            <p className="muted">النقاط المتوقعة بعد الإكمال: {quote.potentialEarnPoints}</p>
+            <p className="muted">ط§ظ„ظ†ظ‚ط§ط· ط§ظ„ظ…طھظˆظ‚ط¹ط© ط¨ط¹ط¯ ط§ظ„ط¥ظƒظ…ط§ظ„: {quote.potentialEarnPoints}</p>
           ) : null}
 
           <div className="checkout-trust-grid">
             <div className="checkout-trust-item">
-              <strong>دفع آمن</strong>
-              <span className="muted">جميع البيانات محمية ومشفرة</span>
+              <strong>ط¯ظپط¹ ط¢ظ…ظ†</strong>
+              <span className="muted">ط¬ظ…ظٹط¹ ط§ظ„ط¨ظٹط§ظ†ط§طھ ظ…ط­ظ…ظٹط© ظˆظ…ط´ظپط±ط©</span>
             </div>
             <div className="checkout-trust-item">
-              <strong>تأكيد سريع</strong>
-              <span className="muted">يتم تأكيد الطلب فور المراجعة</span>
+              <strong>طھط£ظƒظٹط¯ ط³ط±ظٹط¹</strong>
+              <span className="muted">ظٹطھظ… طھط£ظƒظٹط¯ ط§ظ„ط·ظ„ط¨ ظپظˆط± ط§ظ„ظ…ط±ط§ط¬ط¹ط©</span>
             </div>
             <div className="checkout-trust-item">
-              <strong>تتبع مباشر</strong>
-              <span className="muted">استعرض حالة الطلب من صفحة التتبع</span>
+              <strong>طھطھط¨ط¹ ظ…ط¨ط§ط´ط±</strong>
+              <span className="muted">ط§ط³طھط¹ط±ط¶ ط­ط§ظ„ط© ط§ظ„ط·ظ„ط¨ ظ…ظ† طµظپط­ط© ط§ظ„طھطھط¨ط¹</span>
             </div>
           </div>
         </aside>
@@ -534,6 +579,7 @@ function buildCheckoutPayload(
     city: string;
     area: string;
     shippingZoneId: string;
+    shippingMethodId: string;
     couponCode: string;
     pointsToRedeem: string;
     note: string;
@@ -549,6 +595,7 @@ function buildCheckoutPayload(
   city?: string;
   area?: string;
   shippingZoneId?: string;
+  shippingMethodId?: string;
   couponCode?: string;
   note?: string;
   paymentMethod: 'cod' | 'transfer';
@@ -566,6 +613,7 @@ function buildCheckoutPayload(
     city?: string;
     area?: string;
     shippingZoneId?: string;
+    shippingMethodId?: string;
     couponCode?: string;
     note?: string;
     paymentMethod: 'cod' | 'transfer';
@@ -591,6 +639,9 @@ function buildCheckoutPayload(
   }
   if (form.shippingZoneId) {
     payload.shippingZoneId = form.shippingZoneId;
+  }
+  if (form.shippingMethodId) {
+    payload.shippingMethodId = form.shippingMethodId;
   }
   if (form.couponCode) {
     payload.couponCode = form.couponCode;
@@ -621,6 +672,7 @@ function validateCheckoutForm(
     city: string;
     area: string;
     shippingZoneId: string;
+    shippingMethodId: string;
     couponCode: string;
     pointsToRedeem: string;
     note: string;
@@ -631,28 +683,32 @@ function validateCheckoutForm(
   const errors: Record<string, string> = {};
 
   if (form.customerName.trim().length < 2) {
-    errors.customerName = 'يرجى إدخال الاسم الكامل بشكل صحيح.';
+    errors.customerName = 'ظٹط±ط¬ظ‰ ط¥ط¯ط®ط§ظ„ ط§ظ„ط§ط³ظ… ط§ظ„ظƒط§ظ…ظ„ ط¨ط´ظƒظ„ طµط­ظٹط­.';
   }
 
   if (form.customerPhone.trim().length < 8) {
-    errors.customerPhone = 'يرجى إدخال رقم هاتف صالح.';
+    errors.customerPhone = 'ظٹط±ط¬ظ‰ ط¥ط¯ط®ط§ظ„ ط±ظ‚ظ… ظ‡ط§طھظپ طµط§ظ„ط­.';
   }
 
   if (form.addressLine.trim().length < 5) {
-    errors.addressLine = 'يرجى إدخال عنوان واضح للتوصيل.';
+    errors.addressLine = 'ظٹط±ط¬ظ‰ ط¥ط¯ط®ط§ظ„ ط¹ظ†ظˆط§ظ† ظˆط§ط¶ط­ ظ„ظ„طھظˆطµظٹظ„.';
   }
 
   if (shippingZoneRequired && !form.shippingZoneId) {
-    errors.shippingZoneId = 'يرجى اختيار منطقة الشحن.';
+    errors.shippingZoneId = 'ظٹط±ط¬ظ‰ ط§ط®طھظٹط§ط± ظ…ظ†ط·ظ‚ط© ط§ظ„ط´ط­ظ†.';
+  }
+
+  if (shippingZoneRequired && form.shippingZoneId && !form.shippingMethodId) {
+    errors.shippingMethodId = 'يرجى اختيار طريقة الشحن.';
   }
 
   if (form.customerEmail && !/^\S+@\S+\.\S+$/.test(form.customerEmail.trim())) {
-    errors.customerEmail = 'صيغة البريد الإلكتروني غير صحيحة.';
+    errors.customerEmail = 'طµظٹط؛ط© ط§ظ„ط¨ط±ظٹط¯ ط§ظ„ط¥ظ„ظƒطھط±ظˆظ†ظٹ ط؛ظٹط± طµط­ظٹط­ط©.';
   }
   if (form.pointsToRedeem.trim()) {
     const points = Number(form.pointsToRedeem);
     if (!Number.isFinite(points) || points < 0 || !Number.isInteger(points)) {
-      errors.pointsToRedeem = 'يرجى إدخال عدد صحيح صالح للنقاط.';
+      errors.pointsToRedeem = 'ظٹط±ط¬ظ‰ ط¥ط¯ط®ط§ظ„ ط¹ط¯ط¯ طµط­ظٹط­ طµط§ظ„ط­ ظ„ظ„ظ†ظ‚ط§ط·.';
     }
   }
 
@@ -668,6 +724,7 @@ function resolveCheckoutStep(
     city: string;
     area: string;
     shippingZoneId: string;
+    shippingMethodId: string;
     couponCode: string;
     pointsToRedeem: string;
     note: string;
@@ -679,7 +736,10 @@ function resolveCheckoutStep(
     return 1;
   }
 
-  if (!form.addressLine.trim() || (shippingZoneRequired && !form.shippingZoneId)) {
+  if (
+    !form.addressLine.trim() ||
+    (shippingZoneRequired && (!form.shippingZoneId || !form.shippingMethodId))
+  ) {
     return 2;
   }
 

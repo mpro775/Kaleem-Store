@@ -29,10 +29,16 @@ import { getRequestContext } from '../common/utils/request-context.util';
 import { RequirePermissions } from '../rbac/decorators/permissions.decorator';
 import { PermissionsGuard } from '../rbac/guards/permissions.guard';
 import { TenantGuard } from '../tenancy/guards/tenant.guard';
+import { CreateShippingMethodDto } from './dto/create-shipping-method.dto';
 import { CreateShippingZoneDto } from './dto/create-shipping-zone.dto';
 import { ListShippingZonesQueryDto } from './dto/list-shipping-zones-query.dto';
+import { UpdateShippingMethodDto } from './dto/update-shipping-method.dto';
 import { UpdateShippingZoneDto } from './dto/update-shipping-zone.dto';
-import { ShippingService, type ShippingZoneResponse } from './shipping.service';
+import {
+  ShippingService,
+  type ShippingMethodResponse,
+  type ShippingZoneResponse,
+} from './shipping.service';
 
 @ApiTags('shipping')
 @ApiBearerAuth()
@@ -84,5 +90,64 @@ export class ShippingController {
     @Req() request: Request,
   ): Promise<void> {
     await this.shippingService.remove(currentUser, zoneId, getRequestContext(request));
+  }
+
+  @Get(':zoneId/methods')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'List shipping methods for zone' })
+  async listMethods(
+    @CurrentUser() currentUser: AuthUser,
+    @Param('zoneId', ParseUUIDPipe) zoneId: string,
+  ): Promise<ShippingMethodResponse[]> {
+    return this.shippingService.listMethods(currentUser, zoneId);
+  }
+
+  @Post(':zoneId/methods')
+  @RequirePermissions(PERMISSIONS.storeWrite)
+  @ApiCreatedResponse({ description: 'Create shipping method' })
+  async createMethod(
+    @CurrentUser() currentUser: AuthUser,
+    @Param('zoneId', ParseUUIDPipe) zoneId: string,
+    @Body() body: CreateShippingMethodDto,
+    @Req() request: Request,
+  ): Promise<ShippingMethodResponse> {
+    return this.shippingService.createMethod(currentUser, zoneId, body, getRequestContext(request));
+  }
+
+  @Put(':zoneId/methods/:methodId')
+  @RequirePermissions(PERMISSIONS.storeWrite)
+  @ApiOkResponse({ description: 'Update shipping method' })
+  async updateMethod(
+    @CurrentUser() currentUser: AuthUser,
+    @Param('zoneId', ParseUUIDPipe) zoneId: string,
+    @Param('methodId', ParseUUIDPipe) methodId: string,
+    @Body() body: UpdateShippingMethodDto,
+    @Req() request: Request,
+  ): Promise<ShippingMethodResponse> {
+    return this.shippingService.updateMethod(
+      currentUser,
+      zoneId,
+      methodId,
+      body,
+      getRequestContext(request),
+    );
+  }
+
+  @Delete(':zoneId/methods/:methodId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @RequirePermissions(PERMISSIONS.storeWrite)
+  @ApiNoContentResponse({ description: 'Delete shipping method' })
+  async removeMethod(
+    @CurrentUser() currentUser: AuthUser,
+    @Param('zoneId', ParseUUIDPipe) zoneId: string,
+    @Param('methodId', ParseUUIDPipe) methodId: string,
+    @Req() request: Request,
+  ): Promise<void> {
+    await this.shippingService.removeMethod(
+      currentUser,
+      zoneId,
+      methodId,
+      getRequestContext(request),
+    );
   }
 }

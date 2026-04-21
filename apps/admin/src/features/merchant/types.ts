@@ -947,6 +947,7 @@ export interface ShippingZone {
   name: string;
   city: string | null;
   area: string | null;
+  description: string | null;
   fee: number;
   isActive: boolean;
   nameAr: string | null;
@@ -957,6 +958,37 @@ export interface ShippingZone {
   areaEn: string | null;
 }
 
+export type ShippingMethodType =
+  | 'flat_rate'
+  | 'by_weight'
+  | 'by_item'
+  | 'weight_tier'
+  | 'order_value_tier'
+  | 'free_shipping'
+  | 'store_pickup';
+
+export interface ShippingMethodRange {
+  min: number;
+  max: number | null;
+  cost: number;
+  sortOrder: number;
+}
+
+export interface ShippingMethod {
+  id: string;
+  storeId: string;
+  shippingZoneId: string;
+  type: ShippingMethodType;
+  displayName: string;
+  description: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  minDeliveryDays: number;
+  maxDeliveryDays: number;
+  config: Record<string, unknown>;
+  ranges: ShippingMethodRange[];
+}
+
 export type DiscountType = 'percent' | 'fixed';
 export type OfferTargetType = 'product' | 'category' | 'cart';
 
@@ -964,6 +996,7 @@ export interface Coupon {
   id: string;
   storeId: string;
   code: string;
+  isFreeShipping: boolean;
   discountType: DiscountType;
   discountValue: number;
   minOrderAmount: number;

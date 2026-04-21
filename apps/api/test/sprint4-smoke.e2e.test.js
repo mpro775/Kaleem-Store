@@ -26,6 +26,7 @@ const { FiltersService } = require('../dist/filters/filters.service');
 const { ProductsRepository } = require('../dist/products/products.repository');
 const { LoyaltyService } = require('../dist/loyalty/loyalty.service');
 const { ShippingController } = require('../dist/shipping/shipping.controller');
+const { ShippingCalculatorService } = require('../dist/shipping/shipping-calculator.service');
 const { ShippingRepository } = require('../dist/shipping/shipping.repository');
 const { ShippingService } = require('../dist/shipping/shipping.service');
 const { StoreResolverService } = require('../dist/storefront/store-resolver.service');
@@ -95,6 +96,7 @@ const shippingRepositoryMock = {
       name: input.name,
       city: input.city,
       area: input.area,
+      description: input.description ?? null,
       fee: input.fee.toFixed(2),
       is_active: input.isActive,
     };
@@ -139,11 +141,15 @@ const shippingRepositoryMock = {
       name: input.name,
       city: input.city,
       area: input.area,
+      description: input.description ?? existing.description ?? null,
       fee: input.fee.toFixed(2),
       is_active: input.isActive,
     };
     state.shippingZones.set(input.zoneId, updated);
     return updated;
+  },
+  async listMethodsByZone() {
+    return [];
   },
   async delete(storeId, zoneId) {
     const existing = state.shippingZones.get(zoneId);
@@ -169,6 +175,7 @@ const promotionsRepositoryMock = {
       max_uses: input.maxUses,
       used_count: 0,
       is_active: true,
+      is_free_shipping: input.isFreeShipping ?? false,
     };
     state.coupons.set(coupon.code, coupon);
     return coupon;
@@ -211,6 +218,7 @@ const promotionsRepositoryMock = {
       ends_at: input.endsAt,
       max_uses: input.maxUses,
       is_active: input.isActive,
+      is_free_shipping: input.isFreeShipping ?? existing.is_free_shipping ?? false,
     };
     state.coupons.set(updated.code, updated);
     return updated;
@@ -521,6 +529,7 @@ describe('Sprint 4 API smoke e2e', () => {
       controllers: [ShippingController, PromotionsController, StorefrontController],
       providers: [
         ShippingService,
+        ShippingCalculatorService,
         PromotionsService,
         StorefrontService,
         { provide: ShippingRepository, useValue: shippingRepositoryMock },

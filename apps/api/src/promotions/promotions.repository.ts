@@ -17,6 +17,7 @@ export interface CouponRecord {
   store_id: string;
   code: string;
   affiliate_id: string | null;
+  is_free_shipping: boolean;
   discount_type: DiscountType;
   discount_value: string;
   min_order_amount: string;
@@ -55,6 +56,7 @@ export class PromotionsRepository {
     storeId: string;
     code: string;
     affiliateId: string | null;
+    isFreeShipping: boolean;
     discountType: DiscountType;
     discountValue: number;
     minOrderAmount: number;
@@ -69,6 +71,7 @@ export class PromotionsRepository {
           store_id,
           code,
           affiliate_id,
+          is_free_shipping,
           discount_type,
           discount_value,
           min_order_amount,
@@ -76,14 +79,15 @@ export class PromotionsRepository {
           ends_at,
           max_uses,
           is_active
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE)
-        RETURNING id, store_id, code, affiliate_id, discount_type, discount_value, min_order_amount, starts_at, ends_at, max_uses, used_count, is_active
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, TRUE)
+        RETURNING id, store_id, code, affiliate_id, is_free_shipping, discount_type, discount_value, min_order_amount, starts_at, ends_at, max_uses, used_count, is_active
       `,
       [
         uuidv4(),
         input.storeId,
         input.code,
         input.affiliateId,
+        input.isFreeShipping,
         input.discountType,
         input.discountValue,
         input.minOrderAmount,
@@ -99,7 +103,7 @@ export class PromotionsRepository {
     const result = await this.databaseService.db.query<CouponRecord>(
       `
         SELECT id, store_id, code, discount_type, discount_value, min_order_amount, starts_at, ends_at, max_uses, used_count, is_active
-        , affiliate_id
+        , affiliate_id, is_free_shipping
         FROM coupons
         WHERE store_id = $1
           AND ($2::text IS NULL OR code ILIKE '%' || $2 || '%')
@@ -114,7 +118,7 @@ export class PromotionsRepository {
     const result = await this.databaseService.db.query<CouponRecord>(
       `
         SELECT id, store_id, code, discount_type, discount_value, min_order_amount, starts_at, ends_at, max_uses, used_count, is_active
-        , affiliate_id
+        , affiliate_id, is_free_shipping
         FROM coupons
         WHERE store_id = $1
           AND id = $2
@@ -129,7 +133,7 @@ export class PromotionsRepository {
     const result = await this.databaseService.db.query<CouponRecord>(
       `
         SELECT id, store_id, code, discount_type, discount_value, min_order_amount, starts_at, ends_at, max_uses, used_count, is_active
-        , affiliate_id
+        , affiliate_id, is_free_shipping
         FROM coupons
         WHERE store_id = $1
           AND LOWER(code) = LOWER($2)
@@ -145,6 +149,7 @@ export class PromotionsRepository {
     couponId: string;
     code: string;
     affiliateId: string | null;
+    isFreeShipping: boolean;
     discountType: DiscountType;
     discountValue: number;
     minOrderAmount: number;
@@ -158,23 +163,25 @@ export class PromotionsRepository {
         UPDATE coupons
         SET code = $3,
             affiliate_id = $4,
-            discount_type = $5,
-            discount_value = $6,
-            min_order_amount = $7,
-            starts_at = $8,
-            ends_at = $9,
-            max_uses = $10,
-            is_active = $11,
+            is_free_shipping = $5,
+            discount_type = $6,
+            discount_value = $7,
+            min_order_amount = $8,
+            starts_at = $9,
+            ends_at = $10,
+            max_uses = $11,
+            is_active = $12,
             updated_at = NOW()
         WHERE store_id = $1
           AND id = $2
-        RETURNING id, store_id, code, affiliate_id, discount_type, discount_value, min_order_amount, starts_at, ends_at, max_uses, used_count, is_active
+        RETURNING id, store_id, code, affiliate_id, is_free_shipping, discount_type, discount_value, min_order_amount, starts_at, ends_at, max_uses, used_count, is_active
       `,
       [
         input.storeId,
         input.couponId,
         input.code,
         input.affiliateId,
+        input.isFreeShipping,
         input.discountType,
         input.discountValue,
         input.minOrderAmount,
