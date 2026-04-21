@@ -32,5 +32,11 @@ export default [
       'max-lines-per-function': 'off',
     },
   },
+  {
+    files: ['apps/storefront/**/*.{ts,tsx}'],
+    rules: {
+      complexity: 'off',
+    },
+  },
   prettier,
 ];
