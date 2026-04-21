@@ -20,6 +20,8 @@ export const PERMISSIONS = {
   ordersWrite: 'orders:write',
   customersRead: 'customers:read',
   customersWrite: 'customers:write',
+  affiliatesRead: 'affiliates:read',
+  affiliatesWrite: 'affiliates:write',
   loyaltyRead: 'loyalty:read',
   loyaltyWrite: 'loyalty:write',
   loyaltyAdjust: 'loyalty:adjust',

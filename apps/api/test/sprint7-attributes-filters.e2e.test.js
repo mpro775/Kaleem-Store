@@ -18,6 +18,7 @@ const { CustomersService } = require('../dist/customers/customers.service');
 const { FiltersService } = require('../dist/filters/filters.service');
 const { InventoryService } = require('../dist/inventory/inventory.service');
 const { IdempotencyService } = require('../dist/idempotency/idempotency.service');
+const { LoyaltyService } = require('../dist/loyalty/loyalty.service');
 const { OutboxService } = require('../dist/messaging/outbox.service');
 const { OrdersRepository } = require('../dist/orders/orders.repository');
 const { PermissionsGuard } = require('../dist/rbac/guards/permissions.guard');
@@ -33,6 +34,7 @@ const { StoresRepository } = require('../dist/stores/stores.repository');
 const { TenantGuard } = require('../dist/tenancy/guards/tenant.guard');
 const { ThemesService } = require('../dist/themes/themes.service');
 const { WebhooksService } = require('../dist/webhooks/webhooks.service');
+const { AffiliatesService } = require('../dist/affiliates/affiliates.service');
 
 const STORE_ID = '11111111-1111-4111-8111-111111111111';
 const CATEGORY_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -472,6 +474,8 @@ describe('Sprint 7 attributes and filters e2e', () => {
         { provide: CustomerEngagementService, useValue: {} },
         { provide: AbandonedCartsService, useValue: {} },
         { provide: StorefrontTrackingService, useValue: {} },
+        { provide: LoyaltyService, useValue: {} },
+        { provide: AffiliatesService, useValue: {} },
       ],
     })
       .overrideGuard(AccessTokenGuard)

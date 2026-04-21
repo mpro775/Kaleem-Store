@@ -967,6 +967,94 @@ export class AnalyticsRepository {
     return result.rows;
   }
 
+  async getAffiliatePerformance(input: {
+    storeId: string;
+    startAt: Date;
+    endAt: Date;
+    limit: number;
+  }): Promise<
+    Array<{
+      affiliate_id: string;
+      affiliate_name: string;
+      clicks: number;
+      attributed_orders: number;
+      approved_commissions: string;
+      paid_commissions: string;
+      pending_commissions: string;
+      conversion_rate: number;
+    }>
+  > {
+    const result = await this.databaseService.db.query<{
+      affiliate_id: string;
+      affiliate_name: string;
+      clicks: number;
+      attributed_orders: number;
+      approved_commissions: string;
+      paid_commissions: string;
+      pending_commissions: string;
+      conversion_rate: number;
+    }>(
+      `
+        WITH clicks AS (
+          SELECT affiliate_id, COUNT(*)::int AS clicks
+          FROM affiliate_clicks
+          WHERE store_id = $1
+            AND clicked_at >= $2
+            AND clicked_at < $3
+          GROUP BY affiliate_id
+        ),
+        attributed AS (
+          SELECT affiliate_id, COUNT(*)::int AS attributed_orders
+          FROM order_affiliate_attributions
+          WHERE store_id = $1
+            AND created_at >= $2
+            AND created_at < $3
+          GROUP BY affiliate_id
+        ),
+        commissions AS (
+          SELECT
+            affiliate_id,
+            COALESCE(SUM(net_amount) FILTER (WHERE status = 'approved'), 0)::text AS approved_commissions,
+            COALESCE(SUM(net_amount) FILTER (WHERE status = 'paid'), 0)::text AS paid_commissions,
+            COALESCE(SUM(net_amount) FILTER (WHERE status = 'pending'), 0)::text AS pending_commissions
+          FROM affiliate_commissions
+          WHERE store_id = $1
+            AND created_at >= $2
+            AND created_at < $3
+          GROUP BY affiliate_id
+        )
+        SELECT
+          a.id AS affiliate_id,
+          a.name AS affiliate_name,
+          COALESCE(c.clicks, 0) AS clicks,
+          COALESCE(at.attributed_orders, 0) AS attributed_orders,
+          COALESCE(cm.approved_commissions, '0') AS approved_commissions,
+          COALESCE(cm.paid_commissions, '0') AS paid_commissions,
+          COALESCE(cm.pending_commissions, '0') AS pending_commissions,
+          CASE
+            WHEN COALESCE(c.clicks, 0) = 0 THEN 0
+            ELSE ROUND((COALESCE(at.attributed_orders, 0)::numeric / c.clicks::numeric) * 100, 2)::float8
+          END AS conversion_rate
+        FROM affiliates a
+        LEFT JOIN clicks c ON c.affiliate_id = a.id
+        LEFT JOIN attributed at ON at.affiliate_id = a.id
+        LEFT JOIN commissions cm ON cm.affiliate_id = a.id
+        WHERE a.store_id = $1
+          AND (
+            COALESCE(c.clicks, 0) > 0
+            OR COALESCE(at.attributed_orders, 0) > 0
+            OR COALESCE(cm.approved_commissions, '0')::numeric > 0
+            OR COALESCE(cm.pending_commissions, '0')::numeric > 0
+          )
+        ORDER BY COALESCE(cm.approved_commissions, '0')::numeric DESC, COALESCE(at.attributed_orders, 0) DESC
+        LIMIT $4
+      `,
+      [input.storeId, input.startAt, input.endAt, input.limit],
+    );
+
+    return result.rows;
+  }
+
   async getDataQualitySnapshot(input: {
     storeId: string;
     startAt: Date;

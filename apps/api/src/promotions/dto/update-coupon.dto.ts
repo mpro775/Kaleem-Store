@@ -6,6 +6,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -47,4 +48,8 @@ export class UpdateCouponDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsUUID('4')
+  affiliateId?: string | null;
 }

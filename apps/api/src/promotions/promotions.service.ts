@@ -24,6 +24,7 @@ export interface CouponResponse {
   id: string;
   storeId: string;
   code: string;
+  affiliateId: string | null;
   discountType: DiscountType;
   discountValue: number;
   minOrderAmount: number;
@@ -88,6 +89,7 @@ export class PromotionsService {
     this.validateDiscountType(input.discountType);
     this.validateDiscountValue(input.discountType, input.discountValue);
     this.validateDateWindow(input.startsAt, input.endsAt);
+    await this.assertValidAffiliateId(currentUser.storeId, input.affiliateId ?? null);
 
     const exists = await this.promotionsRepository.findCouponByCode(
       currentUser.storeId,
@@ -100,6 +102,7 @@ export class PromotionsService {
     const coupon = await this.promotionsRepository.createCoupon({
       storeId: currentUser.storeId,
       code: input.code,
+      affiliateId: input.affiliateId ?? null,
       discountType: input.discountType,
       discountValue: input.discountValue,
       minOrderAmount: input.minOrderAmount ?? 0,
@@ -411,11 +414,12 @@ export class PromotionsService {
     code: string;
     discountType: DiscountType;
     discountValue: number;
-    minOrderAmount: number;
-    startsAt: Date | null;
-    endsAt: Date | null;
-    maxUses: number | null;
-    isActive: boolean;
+      minOrderAmount: number;
+      startsAt: Date | null;
+      endsAt: Date | null;
+      maxUses: number | null;
+      isActive: boolean;
+      affiliateId: string | null;
   }> {
     const code = this.resolveCouponCode(input.code, existing.code);
     await this.assertCouponCodeAvailable(storeId, couponId, code, existing.code);
@@ -427,6 +431,8 @@ export class PromotionsService {
     const startsAt = this.resolveDate(input.startsAt, existing.starts_at);
     const endsAt = this.resolveDate(input.endsAt, existing.ends_at);
     this.validateDateWindow(startsAt?.toISOString(), endsAt?.toISOString());
+    const affiliateId = input.affiliateId === undefined ? existing.affiliate_id : input.affiliateId;
+    await this.assertValidAffiliateId(storeId, affiliateId);
 
     return {
       code,
@@ -437,7 +443,19 @@ export class PromotionsService {
       endsAt,
       maxUses: input.maxUses ?? existing.max_uses,
       isActive: input.isActive ?? existing.is_active,
+      affiliateId,
     };
+  }
+
+  private async assertValidAffiliateId(storeId: string, affiliateId: string | null): Promise<void> {
+    if (!affiliateId) {
+      return;
+    }
+
+    const exists = await this.promotionsRepository.affiliateExistsForStore(storeId, affiliateId);
+    if (!exists) {
+      throw new BadRequestException('Affiliate not found or inactive');
+    }
   }
 
   private buildOfferUpdatePayload(
@@ -567,6 +585,7 @@ export class PromotionsService {
       id: row.id,
       storeId: row.store_id,
       code: row.code,
+      affiliateId: row.affiliate_id,
       discountType: row.discount_type,
       discountValue: Number(row.discount_value),
       minOrderAmount: Number(row.min_order_amount),

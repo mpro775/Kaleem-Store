@@ -10,6 +10,7 @@ import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import PaymentsIcon from '@mui/icons-material/Payments';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
+import CampaignIcon from '@mui/icons-material/Campaign';
 import PaletteIcon from '@mui/icons-material/Palette';
 import LanguageIcon from '@mui/icons-material/Language';
 import WebhookIcon from '@mui/icons-material/Webhook';
@@ -42,6 +43,7 @@ export const MERCHANT_NAV_ITEMS: MerchantNavItem[] = [
   { key: 'payments', label: 'المدفوعات', icon: <PaymentsIcon /> },
   { key: 'shipping', label: 'الشحن', icon: <LocalShippingIcon /> },
   { key: 'promotions', label: 'العروض التسويقية', icon: <LocalOfferIcon /> },
+  { key: 'affiliates', label: 'التسويق بالعمولة', icon: <CampaignIcon /> },
   { key: 'loyalty', label: 'برنامج الولاء', icon: <StarsIcon /> },
   { key: 'themes', label: 'واجهة المتجر', icon: <PaletteIcon /> },
   { key: 'domains', label: 'النطاقات (الدومين)', icon: <LanguageIcon /> },

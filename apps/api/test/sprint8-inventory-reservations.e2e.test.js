@@ -19,17 +19,24 @@ const { OrdersService } = require('../dist/orders/orders.service');
 const { PermissionsGuard } = require('../dist/rbac/guards/permissions.guard');
 const { AttributesService } = require('../dist/attributes/attributes.service');
 const { CategoriesRepository } = require('../dist/categories/categories.repository');
+const { AbandonedCartsService } = require('../dist/customers/abandoned-carts.service');
+const { CustomerEngagementService } = require('../dist/customers/customer-engagement.service');
+const { CustomersService } = require('../dist/customers/customers.service');
+const { FiltersService } = require('../dist/filters/filters.service');
+const { LoyaltyService } = require('../dist/loyalty/loyalty.service');
 const { ProductsRepository } = require('../dist/products/products.repository');
 const { PromotionsService } = require('../dist/promotions/promotions.service');
 const { SaasService } = require('../dist/saas/saas.service');
 const { ShippingRepository } = require('../dist/shipping/shipping.repository');
 const { StoreResolverService } = require('../dist/storefront/store-resolver.service');
 const { StorefrontController } = require('../dist/storefront/storefront.controller');
+const { StorefrontTrackingService } = require('../dist/storefront/storefront-tracking.service');
 const { StorefrontService } = require('../dist/storefront/storefront.service');
 const { StoresRepository } = require('../dist/stores/stores.repository');
 const { TenantGuard } = require('../dist/tenancy/guards/tenant.guard');
 const { ThemesService } = require('../dist/themes/themes.service');
 const { WebhooksService } = require('../dist/webhooks/webhooks.service');
+const { AffiliatesService } = require('../dist/affiliates/affiliates.service');
 
 const STORE_ID = '11111111-1111-4111-8111-111111111111';
 const PRODUCT_ID = '22222222-2222-4222-8222-222222222222';
@@ -355,6 +362,45 @@ const inventoryRepositoryMock = {
     }
     return rows;
   },
+
+  async listReservedVariantsForOrder(_db, storeId, orderId) {
+    const rows = [];
+    const now = Date.now();
+    for (const reservation of state.reservationsByKey.values()) {
+      if (
+        reservation.store_id !== storeId ||
+        reservation.order_id !== orderId ||
+        reservation.status !== 'reserved' ||
+        reservation.expires_at.getTime() <= now
+      ) {
+        continue;
+      }
+      const variant = state.variants.get(reservation.variant_id);
+      if (!variant) {
+        continue;
+      }
+      rows.push({
+        variant_id: reservation.variant_id,
+        quantity: reservation.quantity,
+        sku: variant.sku,
+      });
+    }
+    return rows;
+  },
+
+  async countOrderReservations(_db, storeId, orderId) {
+    let count = 0;
+    for (const reservation of state.reservationsByKey.values()) {
+      if (reservation.store_id === storeId && reservation.order_id === orderId) {
+        count += 1;
+      }
+    }
+    return count;
+  },
+
+  async listVariantWarehouseStocksForUpdate() {
+    return [];
+  },
 };
 
 const ordersRepositoryMock = {
@@ -480,6 +526,10 @@ const ordersRepositoryMock = {
     return null;
   },
 
+  async findOrderListRowById() {
+    return null;
+  },
+
   async updateOrderStatus(_db, input) {
     const order = state.orders.get(input.orderId);
     if (!order || order.store_id !== input.storeId) {
@@ -530,6 +580,94 @@ const noopServices = {
   },
   async computeCheckoutDiscount() {
     return { totalDiscount: 0, couponId: null, couponCode: null };
+  },
+};
+
+const filtersServiceMock = {
+  async listStorefrontFilters() {
+    return [];
+  },
+};
+
+const customersServiceMock = {
+  async verifyAccessToken() {
+    throw new Error('invalid token');
+  },
+};
+
+const customerEngagementServiceMock = {
+  async attachRestockConversion() {
+    return false;
+  },
+  async trackRestockClickAndBuildRedirect() {
+    throw new Error('not implemented');
+  },
+};
+
+const abandonedCartsServiceMock = {
+  async resolveRecoveryRedirect() {
+    throw new Error('invalid token');
+  },
+  async trackRecoveryEmailOpen() {
+    return;
+  },
+  async attachRecoveredCheckout() {
+    return false;
+  },
+};
+
+const storefrontTrackingServiceMock = {
+  async trackEvent() {
+    return;
+  },
+  resolveSessionIdForRequest() {
+    return ACTIVE_USER.sessionId;
+  },
+};
+
+const loyaltyServiceMock = {
+  async getWalletForCurrentCustomer() {
+    return { availablePoints: 0 };
+  },
+  async getSettingsByStoreId() {
+    return {
+      isEnabled: false,
+      redeemRatePoints: 100,
+      redeemRateAmount: 1,
+      minRedeemPoints: 100,
+      redeemStepPoints: 10,
+      maxDiscountPercent: 100,
+    };
+  },
+  computeRedeemEstimate() {
+    return { pointsRedeemed: 0, discountAmount: 0 };
+  },
+  async getRulesByStoreId() {
+    return [];
+  },
+  async applyRedemptionToOrderInTransaction() {
+    return;
+  },
+  async handleOrderCompletedInTransaction() {
+    return;
+  },
+  async handleOrderCancelledOrReturnedInTransaction() {
+    return;
+  },
+  async publishWalletUpdated() {
+    return;
+  },
+};
+
+const affiliatesServiceMock = {
+  async resolveCheckoutAttribution() {
+    return null;
+  },
+  async createPendingCommissionInTransaction() {
+    return;
+  },
+  async handleOrderStatusChangedInTransaction() {
+    return;
   },
 };
 
@@ -586,6 +724,7 @@ describe('Sprint 8 inventory reservations e2e', () => {
           provide: CategoriesRepository,
           useValue: { listActive: async () => [], findBySlug: async () => null },
         },
+        { provide: FiltersService, useValue: filtersServiceMock },
         {
           provide: AttributesService,
           useValue: { listStorefrontFilterAttributes: async () => [] },
@@ -606,6 +745,12 @@ describe('Sprint 8 inventory reservations e2e', () => {
         { provide: PromotionsService, useValue: noopServices },
         { provide: SaasService, useValue: noopServices },
         { provide: WebhooksService, useValue: webhooksServiceMock },
+        { provide: CustomersService, useValue: customersServiceMock },
+        { provide: CustomerEngagementService, useValue: customerEngagementServiceMock },
+        { provide: AbandonedCartsService, useValue: abandonedCartsServiceMock },
+        { provide: StorefrontTrackingService, useValue: storefrontTrackingServiceMock },
+        { provide: LoyaltyService, useValue: loyaltyServiceMock },
+        { provide: AffiliatesService, useValue: affiliatesServiceMock },
         {
           provide: ThemesService,
           useValue: {

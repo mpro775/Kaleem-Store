@@ -15,6 +15,7 @@ import { OutboxService } from '../messaging/outbox.service';
 import { PromotionsService } from '../promotions/promotions.service';
 import { ShippingRepository } from '../shipping/shipping.repository';
 import { WebhooksService } from '../webhooks/webhooks.service';
+import { AffiliatesService } from '../affiliates/affiliates.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
 import { canTransitionOrderStatus, ORDER_STATUSES, type OrderStatus } from './constants/order-status.constants';
 import type { PaymentMethod } from './constants/payment.constants';
@@ -125,6 +126,7 @@ export class OrdersService {
     private readonly outboxService: OutboxService,
     private readonly webhooksService: WebhooksService,
     private readonly loyaltyService: LoyaltyService,
+    private readonly affiliatesService: AffiliatesService,
   ) {}
 
   async list(currentUser: AuthUser, query: ListOrdersQueryDto) {
@@ -597,6 +599,11 @@ export class OrdersService {
           createdByStoreUserId: currentUser.id,
         });
       }
+      await this.affiliatesService.handleOrderStatusChangedInTransaction(db, {
+        storeId: currentUser.storeId,
+        orderId,
+        nextStatus: input.status,
+      });
 
       const refreshedOrder = await this.ordersRepository.findOrderById(currentUser.storeId, orderId);
       loyaltyCustomerId = refreshedOrder?.customer_id ?? null;

@@ -5,6 +5,7 @@ import { SecurityModule } from '../security/security.module';
 import { ShippingModule } from '../shipping/shipping.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
 import { LoyaltyModule } from '../loyalty/loyalty.module';
+import { AffiliatesModule } from '../affiliates/affiliates.module';
 import { OrdersController } from './orders.controller';
 import { OrdersRepository } from './orders.repository';
 import { OrdersService } from './orders.service';
@@ -17,6 +18,7 @@ import { OrdersService } from './orders.service';
     ShippingModule,
     WebhooksModule,
     LoyaltyModule,
+    AffiliatesModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService, OrdersRepository],

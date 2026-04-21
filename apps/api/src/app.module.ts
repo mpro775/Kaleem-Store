@@ -35,6 +35,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { WarehousesModule } from './warehouses/warehouses.module';
 import { FiltersModule } from './filters/filters.module';
 import { LoyaltyModule } from './loyalty/loyalty.module';
+import { AffiliatesModule } from './affiliates/affiliates.module';
 
 @Module({
   imports: [
@@ -80,6 +81,7 @@ import { LoyaltyModule } from './loyalty/loyalty.module';
     AnalyticsModule,
     WarehousesModule,
     LoyaltyModule,
+    AffiliatesModule,
   ],
   providers: [
     {

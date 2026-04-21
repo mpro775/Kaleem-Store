@@ -6,6 +6,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -41,4 +42,8 @@ export class CreateCouponDto {
   @IsInt()
   @Min(1)
   maxUses?: number;
+
+  @IsOptional()
+  @IsUUID('4')
+  affiliateId?: string;
 }

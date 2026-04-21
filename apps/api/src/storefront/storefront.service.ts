@@ -37,6 +37,10 @@ import { ShippingRepository, type ShippingZoneRecord } from '../shipping/shippin
 import { ThemesService } from '../themes/themes.service';
 import { StoresRepository } from '../stores/stores.repository';
 import { WebhooksService } from '../webhooks/webhooks.service';
+import {
+  AffiliatesService,
+  type CheckoutAttributionResolution,
+} from '../affiliates/affiliates.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
 import { StoreResolverService } from './store-resolver.service';
 import { StorefrontTrackingService } from './storefront-tracking.service';
@@ -204,6 +208,7 @@ interface CheckoutData {
   pointsRedeemed: number;
   customerIdForLoyalty: string | null;
   potentialEarnPoints: number;
+  affiliateAttribution: CheckoutAttributionResolution | null;
   total: number;
 }
 
@@ -243,6 +248,7 @@ export class StorefrontService {
     private readonly abandonedCartsService: AbandonedCartsService,
     private readonly storefrontTrackingService: StorefrontTrackingService,
     private readonly loyaltyService: LoyaltyService,
+    private readonly affiliatesService: AffiliatesService,
   ) {}
 
   async getStore(request: Request) {
@@ -571,7 +577,7 @@ export class StorefrontService {
 
   async quoteCheckout(request: Request, input: CheckoutQuoteDto): Promise<CheckoutQuoteResponse> {
     const store = await this.storeResolverService.resolve(request);
-    const checkoutData = await this.prepareCheckoutData(store.id, input);
+    const checkoutData = await this.prepareCheckoutData(store.id, input, request);
 
     return {
       subtotal: checkoutData.subtotal,
@@ -625,7 +631,7 @@ export class StorefrontService {
 
     await this.saasService.assertMetricCanGrow(store.id, 'orders.monthly', 1);
 
-    const checkoutData = await this.prepareCheckoutData(store.id, input);
+    const checkoutData = await this.prepareCheckoutData(store.id, input, request);
     const orderId = uuidv4();
     const orderCode = this.generateOrderCode();
 
@@ -1264,6 +1270,7 @@ export class StorefrontService {
       CheckoutDto,
       'cartId' | 'shippingZoneId' | 'couponCode' | 'customerAccessToken' | 'pointsToRedeem'
     >,
+    request: Request,
   ): Promise<CheckoutData> {
     const cart = await this.ordersRepository.findOpenCartById(storeId, input.cartId);
     if (!cart) {
@@ -1345,6 +1352,11 @@ export class StorefrontService {
 
     const loyaltyRuleList = await this.loyaltyService.getRulesByStoreId(storeId);
     const potentialEarnPoints = this.computePotentialEarnPoints(subtotal, loyaltyRuleList);
+    const affiliateAttribution = await this.affiliatesService.resolveCheckoutAttribution({
+      storeId,
+      sessionId: this.storefrontTrackingService.resolveSessionIdForRequest(request),
+      couponCode: promotion.couponCode,
+    });
     const total = this.calculateTotal(
       subtotal + shippingFee,
       0,
@@ -1363,6 +1375,7 @@ export class StorefrontService {
       pointsRedeemed,
       customerIdForLoyalty,
       potentialEarnPoints,
+      affiliateAttribution,
       total,
     };
   }
@@ -1501,6 +1514,13 @@ export class StorefrontService {
         createdByStoreUserId: null,
       });
     }
+    await this.affiliatesService.createPendingCommissionInTransaction(db, {
+      storeId,
+      orderId,
+      attribution: checkoutData.affiliateAttribution,
+      subtotal: checkoutData.subtotal,
+      discountTotal: checkoutData.promotion.totalDiscount + checkoutData.pointsDiscountAmount,
+    });
     await this.ordersRepository.insertOrderStatusHistory(db, {
       storeId,
       orderId,

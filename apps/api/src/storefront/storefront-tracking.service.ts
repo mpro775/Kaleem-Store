@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import type { StorefrontEventType } from './constants/storefront-event.constants';
 import { DatabaseService } from '../database/database.service';
 import { StorefrontTrackingRepository } from './storefront-tracking.repository';
+import { AffiliatesService } from '../affiliates/affiliates.service';
 
 @Injectable()
 export class StorefrontTrackingService {
@@ -12,6 +13,7 @@ export class StorefrontTrackingService {
   constructor(
     private readonly trackingRepository: StorefrontTrackingRepository,
     private readonly databaseService: DatabaseService,
+    private readonly affiliatesService: AffiliatesService,
   ) {}
 
   async trackEvent(
@@ -28,6 +30,10 @@ export class StorefrontTrackingService {
     },
   ): Promise<void> {
     const sessionId = this.resolveSessionId(request);
+    await this.affiliatesService.trackAffiliateClickFromRequest(request, {
+      storeId: input.storeId,
+      sessionId,
+    });
     const canTrack = await this.shouldTrackEvent(input.storeId, sessionId);
     if (!canTrack) {
       return;
@@ -164,6 +170,10 @@ export class StorefrontTrackingService {
     const ip = request.ip ?? 'unknown-ip';
     const userAgent = this.readStringHeader(request, 'user-agent') ?? 'unknown-ua';
     return `anon-${createHash('sha1').update(`${ip}|${userAgent}`).digest('hex').slice(0, 24)}`;
+  }
+
+  resolveSessionIdForRequest(request: Request): string {
+    return this.resolveSessionId(request);
   }
 
   private extractAttribution(request: Request): {

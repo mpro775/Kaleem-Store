@@ -16,6 +16,7 @@ export interface CouponRecord {
   id: string;
   store_id: string;
   code: string;
+  affiliate_id: string | null;
   discount_type: DiscountType;
   discount_value: string;
   min_order_amount: string;
@@ -53,6 +54,7 @@ export class PromotionsRepository {
   async createCoupon(input: {
     storeId: string;
     code: string;
+    affiliateId: string | null;
     discountType: DiscountType;
     discountValue: number;
     minOrderAmount: number;
@@ -66,6 +68,7 @@ export class PromotionsRepository {
           id,
           store_id,
           code,
+          affiliate_id,
           discount_type,
           discount_value,
           min_order_amount,
@@ -73,13 +76,14 @@ export class PromotionsRepository {
           ends_at,
           max_uses,
           is_active
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE)
-        RETURNING id, store_id, code, discount_type, discount_value, min_order_amount, starts_at, ends_at, max_uses, used_count, is_active
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE)
+        RETURNING id, store_id, code, affiliate_id, discount_type, discount_value, min_order_amount, starts_at, ends_at, max_uses, used_count, is_active
       `,
       [
         uuidv4(),
         input.storeId,
         input.code,
+        input.affiliateId,
         input.discountType,
         input.discountValue,
         input.minOrderAmount,
@@ -95,6 +99,7 @@ export class PromotionsRepository {
     const result = await this.databaseService.db.query<CouponRecord>(
       `
         SELECT id, store_id, code, discount_type, discount_value, min_order_amount, starts_at, ends_at, max_uses, used_count, is_active
+        , affiliate_id
         FROM coupons
         WHERE store_id = $1
           AND ($2::text IS NULL OR code ILIKE '%' || $2 || '%')
@@ -109,6 +114,7 @@ export class PromotionsRepository {
     const result = await this.databaseService.db.query<CouponRecord>(
       `
         SELECT id, store_id, code, discount_type, discount_value, min_order_amount, starts_at, ends_at, max_uses, used_count, is_active
+        , affiliate_id
         FROM coupons
         WHERE store_id = $1
           AND id = $2
@@ -123,6 +129,7 @@ export class PromotionsRepository {
     const result = await this.databaseService.db.query<CouponRecord>(
       `
         SELECT id, store_id, code, discount_type, discount_value, min_order_amount, starts_at, ends_at, max_uses, used_count, is_active
+        , affiliate_id
         FROM coupons
         WHERE store_id = $1
           AND LOWER(code) = LOWER($2)
@@ -137,6 +144,7 @@ export class PromotionsRepository {
     storeId: string;
     couponId: string;
     code: string;
+    affiliateId: string | null;
     discountType: DiscountType;
     discountValue: number;
     minOrderAmount: number;
@@ -149,22 +157,24 @@ export class PromotionsRepository {
       `
         UPDATE coupons
         SET code = $3,
-            discount_type = $4,
-            discount_value = $5,
-            min_order_amount = $6,
-            starts_at = $7,
-            ends_at = $8,
-            max_uses = $9,
-            is_active = $10,
+            affiliate_id = $4,
+            discount_type = $5,
+            discount_value = $6,
+            min_order_amount = $7,
+            starts_at = $8,
+            ends_at = $9,
+            max_uses = $10,
+            is_active = $11,
             updated_at = NOW()
         WHERE store_id = $1
           AND id = $2
-        RETURNING id, store_id, code, discount_type, discount_value, min_order_amount, starts_at, ends_at, max_uses, used_count, is_active
+        RETURNING id, store_id, code, affiliate_id, discount_type, discount_value, min_order_amount, starts_at, ends_at, max_uses, used_count, is_active
       `,
       [
         input.storeId,
         input.couponId,
         input.code,
+        input.affiliateId,
         input.discountType,
         input.discountValue,
         input.minOrderAmount,
@@ -191,6 +201,21 @@ export class PromotionsRepository {
       [couponId, storeId],
     );
     return (result.rowCount ?? 0) > 0;
+  }
+
+  async affiliateExistsForStore(storeId: string, affiliateId: string): Promise<boolean> {
+    const result = await this.databaseService.db.query<{ id: string }>(
+      `
+        SELECT id
+        FROM affiliates
+        WHERE store_id = $1
+          AND id = $2
+          AND status = 'active'
+        LIMIT 1
+      `,
+      [storeId, affiliateId],
+    );
+    return Boolean(result.rows[0]?.id);
   }
 
   async createOffer(input: {

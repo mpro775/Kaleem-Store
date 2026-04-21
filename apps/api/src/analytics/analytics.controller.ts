@@ -25,6 +25,7 @@ import {
   type PaymentsPerformanceResponse,
   type PromotionsEfficiencyResponse,
   type SourceAttributionResponse,
+  type AffiliatePerformanceResponse,
   type StockoutRiskResponse,
   type TopSellingProductsResponse,
 } from './analytics.service';
@@ -162,6 +163,19 @@ export class AnalyticsController {
     @Query() query: AnalyticsWindowQueryDto,
   ): Promise<SourceAttributionResponse> {
     return this.analyticsService.getSourceAttribution(currentUser, {
+      windowDays: query.window ?? 30,
+      limit: query.limit ?? 10,
+    });
+  }
+
+  @Get('affiliates/performance')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get affiliate performance and commission KPIs' })
+  async getAffiliatePerformance(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<AffiliatePerformanceResponse> {
+    return this.analyticsService.getAffiliatePerformance(currentUser, {
       windowDays: query.window ?? 30,
       limit: query.limit ?? 10,
     });

@@ -214,6 +214,7 @@ describe('Sprint 9 release readiness checks', () => {
       },
       { async log() {} },
       { async enqueue() {} },
+      { async handlePaymentStatusChanged() {} },
     );
 
     const uploaded = await paymentsService.uploadReceipt(

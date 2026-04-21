@@ -13,6 +13,7 @@ import { OrdersPanel } from './panels/orders-panel';
 import { PaymentsPanel } from './panels/payments-panel';
 import { ProductsPanel } from './panels/products-panel';
 import { PromotionsPanel } from './panels/promotions-panel';
+import { AffiliatesPanel } from './panels/affiliates-panel';
 import { LoyaltyPanel } from './panels/loyalty-panel';
 import { RestockAlertsPanel } from './panels/restock-alerts-panel';
 import { ShippingPanel } from './panels/shipping-panel';
@@ -43,6 +44,7 @@ const panelRenderers: Record<MerchantTabKey, (props: MerchantPanelProps) => Reac
   payments: (props) => <PaymentsPanel request={props.request} />,
   shipping: (props) => <ShippingPanel request={props.request} />,
   promotions: (props) => <PromotionsPanel request={props.request} />,
+  affiliates: (props) => <AffiliatesPanel request={props.request} />,
   loyalty: (props) => <LoyaltyPanel request={props.request} />,
   themes: (props) => <ThemesPanel request={props.request} apiBaseUrl={props.session.apiBaseUrl} />,
   domains: (props) => <DomainsPanel request={props.request} />,

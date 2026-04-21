@@ -20,8 +20,11 @@ const { PromotionsRepository } = require('../dist/promotions/promotions.reposito
 const { PromotionsService } = require('../dist/promotions/promotions.service');
 const { CategoriesRepository } = require('../dist/categories/categories.repository');
 const { AbandonedCartsService } = require('../dist/customers/abandoned-carts.service');
+const { CustomerEngagementService } = require('../dist/customers/customer-engagement.service');
 const { CustomersService } = require('../dist/customers/customers.service');
+const { FiltersService } = require('../dist/filters/filters.service');
 const { ProductsRepository } = require('../dist/products/products.repository');
+const { LoyaltyService } = require('../dist/loyalty/loyalty.service');
 const { ShippingController } = require('../dist/shipping/shipping.controller');
 const { ShippingRepository } = require('../dist/shipping/shipping.repository');
 const { ShippingService } = require('../dist/shipping/shipping.service');
@@ -34,6 +37,7 @@ const { TenantGuard } = require('../dist/tenancy/guards/tenant.guard');
 const { SaasService } = require('../dist/saas/saas.service');
 const { ThemesService } = require('../dist/themes/themes.service');
 const { WebhooksService } = require('../dist/webhooks/webhooks.service');
+const { AffiliatesService } = require('../dist/affiliates/affiliates.service');
 
 const STORE_ID = '11111111-1111-4111-8111-111111111111';
 const OPEN_CART_ID = '0b2cc32f-b97f-4d84-8b53-0a162f17c0fc';
@@ -226,6 +230,9 @@ const promotionsRepositoryMock = {
   async listActiveOffers() {
     return [];
   },
+  async listActiveInlineProductOffers() {
+    return [];
+  },
   calculateBestOfferDiscount() {
     return { offerId: null, discount: 0 };
   },
@@ -404,9 +411,27 @@ const customersServiceMock = {
   },
 };
 
+const filtersServiceMock = {
+  async listStorefrontFilters() {
+    return [];
+  },
+};
+
+const customerEngagementServiceMock = {
+  async attachRestockConversion() {
+    return false;
+  },
+  async trackRestockClickAndBuildRedirect() {
+    throw new NotFoundException('Restock token is invalid');
+  },
+};
+
 const storefrontTrackingServiceMock = {
   async trackEvent() {
     return;
+  },
+  resolveSessionIdForRequest() {
+    return ACTIVE_USER.sessionId;
   },
 };
 
@@ -447,6 +472,40 @@ const advancedOffersServiceMock = {
   },
 };
 
+const affiliatesServiceMock = {
+  async resolveCheckoutAttribution() {
+    return null;
+  },
+  async createPendingCommissionInTransaction() {
+    return;
+  },
+};
+
+const loyaltyServiceMock = {
+  async getWalletForCurrentCustomer() {
+    return { availablePoints: 0 };
+  },
+  async getSettingsByStoreId() {
+    return {
+      isEnabled: false,
+      redeemRatePoints: 100,
+      redeemRateAmount: 1,
+      minRedeemPoints: 100,
+      redeemStepPoints: 10,
+      maxDiscountPercent: 100,
+    };
+  },
+  computeRedeemEstimate() {
+    return { pointsRedeemed: 0, discountAmount: 0 };
+  },
+  async getRulesByStoreId() {
+    return [];
+  },
+  async applyRedemptionToOrderInTransaction() {
+    return;
+  },
+};
+
 const auditServiceMock = {
   async log() {
     return;
@@ -468,6 +527,7 @@ describe('Sprint 4 API smoke e2e', () => {
         { provide: PromotionsRepository, useValue: promotionsRepositoryMock },
         { provide: OrdersRepository, useValue: ordersRepositoryMock },
         { provide: CategoriesRepository, useValue: categoriesRepositoryMock },
+        { provide: FiltersService, useValue: filtersServiceMock },
         { provide: AttributesService, useValue: attributesServiceMock },
         { provide: InventoryService, useValue: inventoryServiceMock },
         { provide: ProductsRepository, useValue: {} },
@@ -496,9 +556,12 @@ describe('Sprint 4 API smoke e2e', () => {
         { provide: ThemesService, useValue: themesServiceMock },
         { provide: WebhooksService, useValue: webhooksServiceMock },
         { provide: CustomersService, useValue: customersServiceMock },
+        { provide: CustomerEngagementService, useValue: customerEngagementServiceMock },
         { provide: AbandonedCartsService, useValue: abandonedCartsServiceMock },
         { provide: StorefrontTrackingService, useValue: storefrontTrackingServiceMock },
+        { provide: LoyaltyService, useValue: loyaltyServiceMock },
         { provide: AdvancedOffersService, useValue: advancedOffersServiceMock },
+        { provide: AffiliatesService, useValue: affiliatesServiceMock },
         { provide: OutboxService, useValue: outboxServiceMock },
         { provide: AuditService, useValue: auditServiceMock },
       ],

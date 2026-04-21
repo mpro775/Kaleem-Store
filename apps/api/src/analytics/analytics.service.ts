@@ -218,6 +218,24 @@ export interface SourceAttributionResponse {
   }>;
 }
 
+export interface AffiliatePerformanceResponse {
+  windowDays: number;
+  timezone: string;
+  currencyCode: string;
+  startAt: Date;
+  endAt: Date;
+  items: Array<{
+    affiliateId: string;
+    affiliateName: string;
+    clicks: number;
+    attributedOrders: number;
+    conversionRate: number;
+    approvedCommissions: number;
+    paidCommissions: number;
+    pendingCommissions: number;
+  }>;
+}
+
 export interface AbandonedCartMetricsResponse {
   windowDays: number;
   timezone: string;
@@ -821,6 +839,42 @@ export class AnalyticsService {
         checkoutStarts: row.checkout_starts,
         checkouts: row.checkouts,
         visitToCheckoutRate: row.visits > 0 ? round2((row.checkouts / row.visits) * 100) : 0,
+      })),
+    };
+  }
+
+  async getAffiliatePerformance(
+    currentUser: AuthUser,
+    input: { windowDays: number; limit: number },
+  ): Promise<AffiliatePerformanceResponse> {
+    const store = await this.storesRepository.findById(currentUser.storeId);
+    if (!store) {
+      throw new NotFoundException('Store not found');
+    }
+    const timezone = this.resolveStoreTimezone(store.timezone);
+    const bounds = await this.analyticsRepository.resolveWindowBounds(timezone, input.windowDays);
+    const rows = await this.analyticsRepository.getAffiliatePerformance({
+      storeId: currentUser.storeId,
+      startAt: bounds.start_at,
+      endAt: bounds.end_at,
+      limit: input.limit,
+    });
+
+    return {
+      windowDays: input.windowDays,
+      timezone,
+      currencyCode: store.currency_code,
+      startAt: bounds.start_at,
+      endAt: bounds.end_at,
+      items: rows.map((row) => ({
+        affiliateId: row.affiliate_id,
+        affiliateName: row.affiliate_name,
+        clicks: row.clicks,
+        attributedOrders: row.attributed_orders,
+        conversionRate: round2(row.conversion_rate),
+        approvedCommissions: Number(row.approved_commissions),
+        paidCommissions: Number(row.paid_commissions),
+        pendingCommissions: Number(row.pending_commissions),
       })),
     };
   }

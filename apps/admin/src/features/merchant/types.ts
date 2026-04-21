@@ -834,6 +834,24 @@ export interface AnalyticsSourceAttribution {
   }>;
 }
 
+export interface AnalyticsAffiliatePerformance {
+  windowDays: number;
+  timezone: string;
+  currencyCode: string;
+  startAt: string;
+  endAt: string;
+  items: Array<{
+    affiliateId: string;
+    affiliateName: string;
+    clicks: number;
+    attributedOrders: number;
+    conversionRate: number;
+    approvedCommissions: number;
+    paidCommissions: number;
+    pendingCommissions: number;
+  }>;
+}
+
 export interface AnalyticsAbandonedCartMetrics {
   windowDays: number;
   timezone: string;
@@ -989,6 +1007,70 @@ export interface AdvancedOffer {
   nameEn: string | null;
   descriptionAr: string | null;
   descriptionEn: string | null;
+}
+
+export interface AffiliateSettings {
+  enabled: boolean;
+  defaultRatePercent: number;
+  attributionWindowDays: number;
+  minPayoutAmount: number;
+}
+
+export interface AffiliateProfile {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  status: 'active' | 'inactive';
+  commissionRatePercent: number;
+  payoutMethod: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AffiliateLink {
+  id: string;
+  affiliateId: string;
+  code: string;
+  targetPath: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface AffiliateCommission {
+  id: string;
+  orderId: string;
+  orderCode: string;
+  affiliateId: string;
+  affiliateName: string;
+  status: 'pending' | 'approved' | 'reversed' | 'paid';
+  commissionBase: number;
+  commissionAmount: number;
+  reversedAmount: number;
+  netAmount: number;
+  approvedAt: string | null;
+  paidAt: string | null;
+  reversedAt: string | null;
+  createdAt: string;
+}
+
+export interface AffiliateCommissionsResponse {
+  items: AffiliateCommission[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface AffiliatePayoutBatch {
+  id: string;
+  status: 'draft' | 'finalized' | 'paid';
+  currencyCode: string;
+  totalAmount: number;
+  itemsCount: number;
+  note: string | null;
+  paidAt: string | null;
+  createdAt: string;
 }
 
 export interface ThemeState {

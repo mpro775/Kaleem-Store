@@ -19,6 +19,7 @@ import {
   type PaymentRecord,
   type PaymentWithOrder,
 } from './payments.repository';
+import { AffiliatesService } from '../affiliates/affiliates.service';
 
 export interface PaymentResponse {
   id: string;
@@ -50,6 +51,7 @@ export class PaymentsService {
     private readonly mediaRepository: MediaRepository,
     private readonly auditService: AuditService,
     private readonly outboxService: OutboxService,
+    private readonly affiliatesService: AffiliatesService,
   ) {}
 
   async list(
@@ -210,6 +212,12 @@ export class PaymentsService {
         to: input.status,
       },
       headers: context.requestId ? { requestId: context.requestId } : {},
+    });
+
+    await this.affiliatesService.handlePaymentStatusChanged({
+      storeId: currentUser.storeId,
+      orderId: payment.order_id,
+      nextStatus: input.status,
     });
 
     return this.toResponse(updated);
