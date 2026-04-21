@@ -623,9 +623,15 @@ function parseRangeFilterKey(key: string): { slug: string; boundary: 'min' | 'ma
     return null;
   }
 
+  const slug = match[1];
+  const boundary = match[2]?.toLowerCase();
+  if (!slug || (boundary !== 'min' && boundary !== 'max')) {
+    return null;
+  }
+
   return {
-    slug: match[1].toLowerCase(),
-    boundary: match[2].toLowerCase() as 'min' | 'max',
+    slug: slug.toLowerCase(),
+    boundary,
   };
 }
 
