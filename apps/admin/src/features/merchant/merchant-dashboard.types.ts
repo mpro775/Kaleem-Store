@@ -21,6 +21,8 @@ export type MerchantTabKey =
   | 'payments'
   | 'shipping'
   | 'promotions'
+  | 'advancedPromotions'
+  | 'coupons'
   | 'affiliates'
   | 'loyalty'
   | 'themes'
@@ -40,7 +42,8 @@ export interface MerchantPanelProps {
 }
 
 export interface MerchantNavItem {
-  key: MerchantTabKey;
+  key: MerchantTabKey | string;
   label: string;
-  icon: ReactElement;
+  icon?: ReactElement;
+  children?: { key: MerchantTabKey; label: string; icon?: ReactElement }[];
 }

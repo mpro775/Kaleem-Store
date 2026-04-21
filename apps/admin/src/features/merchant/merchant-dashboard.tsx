@@ -12,7 +12,7 @@ import { MerchantSidebar } from './components/navigation/merchant-sidebar';
 import { MerchantTopBar } from './components/navigation/merchant-top-bar';
 import { useMerchantTabState } from './hooks/use-merchant-tab-state';
 import { renderMerchantPanel } from './panel-registry';
-import type { MerchantRequester, MerchantTabKey } from './merchant-dashboard.types';
+import type { MerchantRequester, MerchantTabKey, MerchantNavItem } from './merchant-dashboard.types';
 import type { MerchantSession } from './types';
 
 export type {
@@ -63,15 +63,29 @@ export function MerchantDashboard({
     }
   }, [isDesktop]);
 
-  const activeLabel = useMemo(
-    () => MERCHANT_NAV_ITEMS.find((item) => item.key === activeTab)?.label ?? 'لوحة التحكم',
-    [activeTab],
-  );
+  const activeLabel = useMemo(() => {
+    for (const group of MERCHANT_NAV_ITEMS) {
+      if (group.children) {
+        const found = group.children.find((child) => child.key === activeTab);
+        if (found) return found.label;
+      } else if (group.key === activeTab) {
+        return group.label;
+      }
+    }
+    return 'لوحة التحكم';
+  }, [activeTab]);
 
-  const primaryMobileItems = useMemo(
-    () => MERCHANT_NAV_ITEMS.filter((item) => MERCHANT_PRIMARY_MOBILE_TABS.includes(item.key)),
-    [],
-  );
+  const primaryMobileItems = useMemo<MerchantNavItem[]>(() => {
+    const allItems: MerchantNavItem[] = [];
+    MERCHANT_NAV_ITEMS.forEach(group => {
+      if (group.children) {
+        allItems.push(...(group.children as MerchantNavItem[]));
+      } else {
+        allItems.push(group as MerchantNavItem);
+      }
+    });
+    return allItems.filter(item => MERCHANT_PRIMARY_MOBILE_TABS.includes(item.key as MerchantTabKey));
+  }, []);
 
   const handleOpenNavigation = useCallback(() => {
     setMobileSidebarOpen(true);

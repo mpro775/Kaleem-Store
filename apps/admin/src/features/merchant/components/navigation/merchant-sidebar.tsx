@@ -1,6 +1,9 @@
-import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Paper, Typography } from '@mui/material';
+import { useState } from 'react';
+import { Box, Collapse, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Paper, Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ExpandLess from '@mui/icons-material/ExpandLess';
+import ExpandMore from '@mui/icons-material/ExpandMore';
 import type { MerchantNavItem, MerchantTabKey } from '../../merchant-dashboard.types';
 
 interface MerchantSidebarProps {
@@ -23,6 +26,25 @@ export function MerchantSidebar({
   onSelectTab,
 }: MerchantSidebarProps) {
   const theme = useTheme();
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    // Find group containing active tab to open it by default
+    const initialOpenGroups: Record<string, boolean> = {
+      group_dashboard: true, // Keep dashboard open by default
+      group_products_inventory: true, // Keep products open by default
+      group_sales_orders: true, // Keep orders open by default
+    };
+    
+    for (const group of navItems) {
+      if (group.children?.some(child => child.key === activeTab)) {
+        initialOpenGroups[group.key] = true;
+      }
+    }
+    return initialOpenGroups;
+  });
+
+  const handleToggleGroup = (groupKey: string) => {
+    setOpenGroups((prev) => ({ ...prev, [groupKey]: !prev[groupKey] }));
+  };
 
   const content = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -59,44 +81,107 @@ export function MerchantSidebar({
       </Box>
 
       <List sx={{ flex: 1, px: 1.5, py: 2, overflowY: 'auto' }}>
-        {navItems.map((item) => {
-          const isActive = activeTab === item.key;
-          return (
-            <ListItem key={item.key} disablePadding sx={{ mb: 0.5 }}>
-              <ListItemButton
-                onClick={() => onSelectTab(item.key)}
-                sx={{
-                  borderRadius: 2,
-                  minHeight: 44,
-                  py: 0.75,
-                  bgcolor: isActive ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
-                  color: isActive ? 'primary.main' : 'text.secondary',
-                  '&:hover': {
-                    bgcolor: isActive
-                      ? alpha(theme.palette.primary.main, 0.15)
-                      : alpha(theme.palette.text.primary, 0.04),
-                    color: isActive ? 'primary.dark' : 'text.primary',
-                  },
-                }}
-              >
-                <ListItemIcon
+        {navItems.map((group) => {
+          const isGroupOpen = openGroups[group.key];
+          const hasActiveChild = group.children?.some(child => child.key === activeTab);
+
+          if (!group.children || group.children.length === 0) {
+            // Handle as flat item just in case
+            const isActive = activeTab === group.key;
+            return (
+              <ListItem key={group.key} disablePadding sx={{ mb: 0.5 }}>
+                <ListItemButton
+                  onClick={() => onSelectTab(group.key as MerchantTabKey)}
                   sx={{
-                    minWidth: 40,
-                    color: isActive ? 'primary.main' : 'inherit',
+                    borderRadius: 2,
+                    minHeight: 44,
+                    py: 0.75,
+                    bgcolor: isActive ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
+                    color: isActive ? 'primary.main' : 'text.secondary',
+                    '&:hover': {
+                      bgcolor: isActive
+                        ? alpha(theme.palette.primary.main, 0.15)
+                        : alpha(theme.palette.text.primary, 0.04),
+                      color: isActive ? 'primary.dark' : 'text.primary',
+                    },
                   }}
                 >
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText
-                  primary={item.label}
-                  sx={{ textAlign: 'start' }}
-                  primaryTypographyProps={{
-                    fontWeight: isActive ? 700 : 500,
-                    fontSize: '0.95rem',
+                  <ListItemIcon sx={{ minWidth: 40, color: isActive ? 'primary.main' : 'inherit' }}>
+                    {group.icon}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={group.label}
+                    sx={{ textAlign: 'start' }}
+                    primaryTypographyProps={{ fontWeight: isActive ? 700 : 500, fontSize: '0.95rem' }}
+                  />
+                </ListItemButton>
+              </ListItem>
+            );
+          }
+
+          return (
+            <Box key={group.key} sx={{ mb: 1 }}>
+              <ListItem disablePadding>
+                <ListItemButton
+                  onClick={() => handleToggleGroup(group.key)}
+                  sx={{
+                    borderRadius: 2,
+                    minHeight: 44,
+                    py: 0.75,
+                    color: hasActiveChild && !isGroupOpen ? 'primary.main' : 'text.primary',
+                    '&:hover': { bgcolor: alpha(theme.palette.text.primary, 0.04) },
                   }}
-                />
-              </ListItemButton>
-            </ListItem>
+                >
+                  <ListItemIcon sx={{ minWidth: 40, color: hasActiveChild && !isGroupOpen ? 'primary.main' : 'inherit' }}>
+                    {group.icon}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={group.label}
+                    sx={{ textAlign: 'start' }}
+                    primaryTypographyProps={{ fontWeight: 600, fontSize: '0.95rem' }}
+                  />
+                  {isGroupOpen ? <ExpandLess sx={{ opacity: 0.7 }} /> : <ExpandMore sx={{ opacity: 0.7 }} />}
+                </ListItemButton>
+              </ListItem>
+              <Collapse in={isGroupOpen} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding sx={{ mt: 0.5, mb: 1 }}>
+                  {group.children.map((child) => {
+                    const isChildActive = activeTab === child.key;
+                    return (
+                      <ListItemButton
+                        key={child.key}
+                        onClick={() => onSelectTab(child.key as MerchantTabKey)}
+                        sx={{
+                          borderRadius: 2,
+                          minHeight: 38,
+                          py: 0.5,
+                          pl: 6.5,
+                          pr: 2,
+                          mb: 0.5,
+                          bgcolor: isChildActive ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
+                          color: isChildActive ? 'primary.main' : 'text.secondary',
+                          '&:hover': {
+                            bgcolor: isChildActive
+                              ? alpha(theme.palette.primary.main, 0.15)
+                              : alpha(theme.palette.text.primary, 0.04),
+                            color: isChildActive ? 'primary.dark' : 'text.primary',
+                          },
+                        }}
+                      >
+                        <ListItemText
+                          primary={child.label}
+                          sx={{ textAlign: 'start', m: 0 }}
+                          primaryTypographyProps={{
+                            fontWeight: isChildActive ? 700 : 500,
+                            fontSize: '0.9rem',
+                          }}
+                        />
+                      </ListItemButton>
+                    );
+                  })}
+                </List>
+              </Collapse>
+            </Box>
           );
         })}
       </List>
