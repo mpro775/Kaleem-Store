@@ -6,13 +6,11 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import {
-  AttributesService,
-  type StorefrontFilterAttributeResponse,
-} from '../attributes/attributes.service';
 import { CategoriesRepository } from '../categories/categories.repository';
 import { CustomerEngagementService } from '../customers/customer-engagement.service';
 import { CustomersService } from '../customers/customers.service';
+import { AbandonedCartsService } from '../customers/abandoned-carts.service';
+import { FiltersService, type FilterResponse } from '../filters/filters.service';
 import { IdempotencyService } from '../idempotency/idempotency.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { OutboxService } from '../messaging/outbox.service';
@@ -127,6 +125,7 @@ export interface PublicStoreResolveResponse {
   storeSettings: {
     name: string;
     logoUrl: string | null;
+    faviconUrl: string | null;
     currencyCode: string;
   };
   publishedThemeSummary: {
@@ -194,7 +193,8 @@ interface ParsedProductsQuery extends StorefrontCategoryFilterInput {
   page: number;
   limit: number;
   q?: string;
-  attrs?: Record<string, string[]>;
+  filters?: Record<string, string[]>;
+  ranges?: Record<string, { min?: number; max?: number }>;
   isFeatured?: boolean;
 }
 
@@ -203,7 +203,7 @@ export class StorefrontService {
   constructor(
     private readonly storeResolverService: StoreResolverService,
     private readonly categoriesRepository: CategoriesRepository,
-    private readonly attributesService: AttributesService,
+    private readonly filtersService: FiltersService,
     private readonly idempotencyService: IdempotencyService,
     private readonly inventoryService: InventoryService,
     private readonly productsRepository: ProductsRepository,
@@ -217,6 +217,7 @@ export class StorefrontService {
     private readonly webhooksService: WebhooksService,
     private readonly customersService: CustomersService,
     private readonly customerEngagementService: CustomerEngagementService,
+    private readonly abandonedCartsService: AbandonedCartsService,
     private readonly storefrontTrackingService: StorefrontTrackingService,
   ) {}
 
@@ -232,6 +233,7 @@ export class StorefrontService {
       name: store.name,
       slug: store.slug,
       logoUrl: store.logo_url,
+      faviconUrl: store.favicon_url,
       currencyCode: store.currency_code,
     };
   }
@@ -246,6 +248,7 @@ export class StorefrontService {
       storeSettings: {
         name: store.name,
         logoUrl: store.logo_url,
+        faviconUrl: store.favicon_url,
         currencyCode: store.currency_code,
       },
       publishedThemeSummary: {
@@ -298,10 +301,9 @@ export class StorefrontService {
   async listFilters(
     request: Request,
     query: ListStorefrontFiltersQueryDto,
-  ): Promise<StorefrontFilterAttributeResponse[]> {
+  ): Promise<FilterResponse[]> {
     const store = await this.storeResolverService.resolve(request);
-    const categoryId = await this.resolveStorefrontCategoryId(store.id, query);
-    return this.attributesService.listStorefrontFilterAttributes(store.id, categoryId);
+    return this.filtersService.listStorefrontFilters(store.id, true);
   }
 
   async listProducts(request: Request) {
@@ -310,7 +312,8 @@ export class StorefrontService {
     const page = query.page;
     const limit = query.limit;
     const categoryId = await this.resolveStorefrontCategoryId(store.id, query);
-    const attributeFilters = this.resolveAttributeFilters(query.attrs);
+    const filterValueFilters = this.resolveFilterValueFilters(query.filters);
+    const filterRangeFilters = this.resolveFilterRangeFilters(query.ranges);
 
     const result = await this.productsRepository.list({
       storeId: store.id,
@@ -319,7 +322,8 @@ export class StorefrontService {
       status: 'active',
       isVisible: true,
       isFeatured: query.isFeatured,
-      attributeFilters,
+      filterValueFilters,
+      filterRangeFilters,
       limit,
       offset: (page - 1) * limit,
     });
@@ -531,6 +535,15 @@ export class StorefrontService {
     return this.getCart(request, cart.id);
   }
 
+  async resolveAbandonedCartRecovery(token: string): Promise<string> {
+    const resolved = await this.abandonedCartsService.resolveRecoveryRedirect(token);
+    return resolved.redirectUrl;
+  }
+
+  async trackAbandonedCartRecoveryOpen(token: string): Promise<void> {
+    await this.abandonedCartsService.trackRecoveryEmailOpen(token);
+  }
+
   async checkout(
     request: Request,
     input: CheckoutDto,
@@ -574,6 +587,12 @@ export class StorefrontService {
       orderId,
       orderCode,
     );
+
+    await this.abandonedCartsService.attachRecoveredCheckout({
+      storeId: store.id,
+      cartId: input.cartId,
+      orderId: order.id,
+    });
 
     const restockToken = input.restockToken?.trim();
     if (restockToken && order.customer_id) {
@@ -829,10 +848,8 @@ export class StorefrontService {
       isFeatured = false;
     }
 
-    const attrs = this.mergeAttributeFilterSources(
-      this.extractNestedAttributeFilters(request),
-      this.extractBracketAttributeFilters(request),
-    );
+    const filters = this.extractFilterValueParams(request);
+    const ranges = this.extractRangeFilterParams(request);
 
     return {
       page,
@@ -841,7 +858,8 @@ export class StorefrontService {
       ...(categoryId ? { categoryId } : {}),
       ...(categorySlug ? { categorySlug } : {}),
       ...(isFeatured !== undefined ? { isFeatured } : {}),
-      ...(attrs ? { attrs } : {}),
+      ...(filters ? { filters } : {}),
+      ...(ranges ? { ranges } : {}),
     };
   }
 
@@ -874,50 +892,10 @@ export class StorefrontService {
     return parsed;
   }
 
-  private extractNestedAttributeFilters(request: Request): Record<string, string[]> | undefined {
-    const attrs = request.query.attrs;
-    if (!this.isRecord(attrs)) {
-      return undefined;
-    }
-
+  private extractFilterValueParams(request: Request): Record<string, string[]> | undefined {
     const filters: Record<string, string[]> = {};
-    for (const [attributeSlug, rawValue] of Object.entries(attrs)) {
-      const values = this.normalizeRawQueryValue(rawValue);
-      if (values.length === 0) {
-        continue;
-      }
-
-      filters[attributeSlug.toLowerCase()] = [...new Set(values)];
-    }
-
-    return Object.keys(filters).length > 0 ? filters : undefined;
-  }
-
-  private resolveAttributeFilters(attrs: Record<string, string[]> | undefined) {
-    if (!attrs) {
-      return undefined;
-    }
-
-    const filters = Object.entries(attrs)
-      .map(([attributeSlug, valueSlugs]) => ({
-        attributeSlug: attributeSlug.trim().toLowerCase(),
-        valueSlugs: valueSlugs.map((value) => value.trim().toLowerCase()).filter(Boolean),
-      }))
-      .filter((filter) => filter.attributeSlug.length > 0 && filter.valueSlugs.length > 0)
-      .map((filter) => ({
-        attributeSlug: filter.attributeSlug,
-        valueSlugs: [...new Set(filter.valueSlugs)],
-      }));
-
-    this.assertValidAttributeFilters(filters);
-    return filters.length > 0 ? filters : undefined;
-  }
-
-  private extractBracketAttributeFilters(request: Request): Record<string, string[]> | undefined {
-    const filters: Record<string, string[]> = {};
-
     for (const [key, rawValue] of Object.entries(request.query)) {
-      const match = /^attrs\[([a-z0-9]+(?:-[a-z0-9]+)*)\]$/i.exec(key);
+      const match = /^filters\[([a-z0-9]+(?:-[a-z0-9]+)*)\]$/i.exec(key);
       if (!match) {
         continue;
       }
@@ -933,6 +911,36 @@ export class StorefrontService {
     return Object.keys(filters).length > 0 ? filters : undefined;
   }
 
+  private extractRangeFilterParams(
+    request: Request,
+  ): Record<string, { min?: number; max?: number }> | undefined {
+    const ranges: Record<string, { min?: number; max?: number }> = {};
+    for (const [key, rawValue] of Object.entries(request.query)) {
+      const match = /^ranges\[([a-z0-9]+(?:-[a-z0-9]+)*)\]\[(min|max)\]$/i.exec(key);
+      if (!match) {
+        continue;
+      }
+
+      const value = this.readRangeBoundary(rawValue, match[2] as 'min' | 'max');
+      if (value === undefined) {
+        continue;
+      }
+
+      const slug = match[1]!.toLowerCase();
+      const current = ranges[slug] ?? {};
+      current[match[2]!.toLowerCase() as 'min' | 'max'] = value;
+      ranges[slug] = current;
+    }
+
+    for (const [slug, range] of Object.entries(ranges)) {
+      if (range.min !== undefined && range.max !== undefined && range.min > range.max) {
+        throw new BadRequestException(`Invalid range for ${slug}: min must be <= max`);
+      }
+    }
+
+    return Object.keys(ranges).length > 0 ? ranges : undefined;
+  }
+
   private normalizeRawQueryValue(value: unknown): string[] {
     const values = Array.isArray(value) ? value : [value];
     return values
@@ -940,40 +948,77 @@ export class StorefrontService {
       .filter((entry) => entry.length > 0);
   }
 
-  private mergeAttributeFilterSources(
-    sourceA: Record<string, string[]> | undefined,
-    sourceB: Record<string, string[]> | undefined,
-  ): Record<string, string[]> | undefined {
-    const merged: Record<string, string[]> = {};
-
-    for (const source of [sourceA, sourceB]) {
-      if (!source) {
-        continue;
-      }
-
-      for (const [attributeSlug, values] of Object.entries(source)) {
-        const existing = merged[attributeSlug] ?? [];
-        merged[attributeSlug] = [...new Set([...existing, ...values])];
-      }
+  private resolveFilterValueFilters(filters: Record<string, string[]> | undefined) {
+    if (!filters) {
+      return undefined;
     }
 
-    return Object.keys(merged).length > 0 ? merged : undefined;
-  }
+    const resolved = Object.entries(filters)
+      .map(([filterSlug, valueSlugs]) => ({
+        filterSlug: filterSlug.trim().toLowerCase(),
+        valueSlugs: valueSlugs.map((value) => value.trim().toLowerCase()).filter(Boolean),
+      }))
+      .filter((filter) => filter.filterSlug.length > 0 && filter.valueSlugs.length > 0)
+      .map((filter) => ({ ...filter, valueSlugs: [...new Set(filter.valueSlugs)] }));
 
-  private assertValidAttributeFilters(
-    filters: Array<{ attributeSlug: string; valueSlugs: string[] }>,
-  ): void {
-    for (const filter of filters) {
-      if (!this.isSlug(filter.attributeSlug)) {
-        throw new BadRequestException('Invalid attribute filter slug');
+    for (const filter of resolved) {
+      if (!this.isSlug(filter.filterSlug)) {
+        throw new BadRequestException('Invalid filter slug');
       }
-
       for (const valueSlug of filter.valueSlugs) {
         if (!this.isSlug(valueSlug)) {
-          throw new BadRequestException('Invalid attribute filter value');
+          throw new BadRequestException('Invalid filter value slug');
         }
       }
     }
+
+    return resolved.length > 0 ? resolved : undefined;
+  }
+
+  private resolveFilterRangeFilters(
+    ranges: Record<string, { min?: number; max?: number }> | undefined,
+  ) {
+    if (!ranges) {
+      return undefined;
+    }
+
+    const resolved = Object.entries(ranges)
+      .map(([filterSlug, range]) => ({
+        filterSlug: filterSlug.trim().toLowerCase(),
+        ...(range.min !== undefined ? { min: range.min } : {}),
+        ...(range.max !== undefined ? { max: range.max } : {}),
+      }))
+      .filter((item) => item.filterSlug.length > 0 && (item.min !== undefined || item.max !== undefined));
+
+    for (const range of resolved) {
+      if (!this.isSlug(range.filterSlug)) {
+        throw new BadRequestException('Invalid range filter slug');
+      }
+      if (range.min !== undefined && range.min < 0) {
+        throw new BadRequestException('Range min must be >= 0');
+      }
+      if (range.max !== undefined && range.max < 0) {
+        throw new BadRequestException('Range max must be >= 0');
+      }
+      if (range.min !== undefined && range.max !== undefined && range.min > range.max) {
+        throw new BadRequestException('Range min must be <= max');
+      }
+    }
+
+    return resolved.length > 0 ? resolved : undefined;
+  }
+
+  private readRangeBoundary(value: unknown, boundary: 'min' | 'max'): number | undefined {
+    const raw = Array.isArray(value) ? value[0] : value;
+    if (raw === null || raw === undefined || String(raw).trim().length === 0) {
+      return undefined;
+    }
+
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) {
+      throw new BadRequestException(`Range ${boundary} must be a valid number`);
+    }
+    return parsed;
   }
 
   private async getProductListingMeta(

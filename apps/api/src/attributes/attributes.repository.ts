@@ -15,6 +15,10 @@ export interface AttributeRecord {
   name: string;
   name_ar: string | null;
   name_en: string | null;
+  type: 'dropdown' | 'color';
+  description_ar: string | null;
+  description_en: string | null;
+  is_active: boolean;
   slug: string;
 }
 
@@ -25,6 +29,8 @@ export interface AttributeValueRecord {
   value: string;
   value_ar: string | null;
   value_en: string | null;
+  color_hex: string | null;
+  is_active: boolean;
   slug: string;
 }
 
@@ -32,6 +38,8 @@ export interface AttributeValueWithAttributeRecord extends AttributeValueRecord 
   attribute_name: string;
   attribute_name_ar: string | null;
   attribute_name_en: string | null;
+  attribute_type: 'dropdown' | 'color';
+  attribute_is_active: boolean;
   attribute_slug: string;
 }
 
@@ -43,29 +51,40 @@ export interface VariantAttributeSelectionRecord {
   value_slug: string;
 }
 
-const ATTRIBUTE_COLUMNS = 'id, store_id, name, name_ar, name_en, slug';
-const ATTRIBUTE_VALUE_COLUMNS = 'id, store_id, attribute_id, value, value_ar, value_en, slug';
+const ATTRIBUTE_COLUMNS =
+  'id, store_id, name, name_ar, name_en, type, description_ar, description_en, is_active, slug';
+const ATTRIBUTE_VALUE_COLUMNS =
+  'id, store_id, attribute_id, value, value_ar, value_en, color_hex, is_active, slug';
 
 @Injectable()
 export class AttributesRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  async listAttributes(storeId: string, q?: string): Promise<AttributeRecord[]> {
+  async listAttributes(
+    storeId: string,
+    q?: string,
+    onlyActive = false,
+  ): Promise<AttributeRecord[]> {
     const result = await this.databaseService.db.query<AttributeRecord>(
       `
         SELECT ${ATTRIBUTE_COLUMNS}
         FROM attributes
         WHERE store_id = $1
           AND ($2::text IS NULL OR name ILIKE '%' || $2 || '%' OR name_ar ILIKE '%' || $2 || '%' OR name_en ILIKE '%' || $2 || '%' OR slug ILIKE '%' || $2 || '%')
+          AND ($3::boolean = FALSE OR is_active = TRUE)
         ORDER BY name ASC
       `,
-      [storeId, q ?? null],
+      [storeId, q ?? null, onlyActive],
     );
 
     return result.rows;
   }
 
-  async listAttributesByIds(storeId: string, attributeIds: string[]): Promise<AttributeRecord[]> {
+  async listAttributesByIds(
+    storeId: string,
+    attributeIds: string[],
+    onlyActive = false,
+  ): Promise<AttributeRecord[]> {
     if (attributeIds.length === 0) {
       return [];
     }
@@ -76,9 +95,10 @@ export class AttributesRepository {
         FROM attributes
         WHERE store_id = $1
           AND id = ANY($2::uuid[])
+          AND ($3::boolean = FALSE OR is_active = TRUE)
         ORDER BY name ASC
       `,
-      [storeId, attributeIds],
+      [storeId, attributeIds, onlyActive],
     );
 
     return result.rows;
@@ -119,15 +139,41 @@ export class AttributesRepository {
     name: string;
     nameAr: string | null;
     nameEn: string | null;
+    type: 'dropdown' | 'color';
+    descriptionAr: string | null;
+    descriptionEn: string | null;
+    isActive: boolean;
     slug: string;
   }): Promise<AttributeRecord> {
     const result = await this.databaseService.db.query<AttributeRecord>(
       `
-        INSERT INTO attributes (id, store_id, name, name_ar, name_en, slug)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO attributes (
+          id,
+          store_id,
+          name,
+          name_ar,
+          name_en,
+          type,
+          description_ar,
+          description_en,
+          is_active,
+          slug
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING ${ATTRIBUTE_COLUMNS}
       `,
-      [uuidv4(), input.storeId, input.name, input.nameAr, input.nameEn, input.slug],
+      [
+        uuidv4(),
+        input.storeId,
+        input.name,
+        input.nameAr,
+        input.nameEn,
+        input.type,
+        input.descriptionAr,
+        input.descriptionEn,
+        input.isActive,
+        input.slug,
+      ],
     );
 
     return result.rows[0] as AttributeRecord;
@@ -139,6 +185,10 @@ export class AttributesRepository {
     name: string;
     nameAr: string | null;
     nameEn: string | null;
+    type: 'dropdown' | 'color';
+    descriptionAr: string | null;
+    descriptionEn: string | null;
+    isActive: boolean;
     slug: string;
   }): Promise<AttributeRecord | null> {
     const result = await this.databaseService.db.query<AttributeRecord>(
@@ -147,13 +197,28 @@ export class AttributesRepository {
         SET name = $3,
             name_ar = $4,
             name_en = $5,
-            slug = $6,
+            type = $6,
+            description_ar = $7,
+            description_en = $8,
+            is_active = $9,
+            slug = $10,
             updated_at = NOW()
         WHERE store_id = $1
           AND id = $2
         RETURNING ${ATTRIBUTE_COLUMNS}
       `,
-      [input.storeId, input.attributeId, input.name, input.nameAr, input.nameEn, input.slug],
+      [
+        input.storeId,
+        input.attributeId,
+        input.name,
+        input.nameAr,
+        input.nameEn,
+        input.type,
+        input.descriptionAr,
+        input.descriptionEn,
+        input.isActive,
+        input.slug,
+      ],
     );
 
     return result.rows[0] ?? null;
@@ -176,6 +241,7 @@ export class AttributesRepository {
     storeId: string,
     attributeId: string,
     q?: string,
+    onlyActive = false,
   ): Promise<AttributeValueRecord[]> {
     const result = await this.databaseService.db.query<AttributeValueRecord>(
       `
@@ -184,9 +250,10 @@ export class AttributesRepository {
         WHERE store_id = $1
           AND attribute_id = $2
           AND ($3::text IS NULL OR value ILIKE '%' || $3 || '%' OR value_ar ILIKE '%' || $3 || '%' OR value_en ILIKE '%' || $3 || '%' OR slug ILIKE '%' || $3 || '%')
+          AND ($4::boolean = FALSE OR is_active = TRUE)
         ORDER BY value ASC
       `,
-      [storeId, attributeId, q ?? null],
+      [storeId, attributeId, q ?? null, onlyActive],
     );
 
     return result.rows;
@@ -195,6 +262,7 @@ export class AttributesRepository {
   async listAttributeValuesByAttributeIds(
     storeId: string,
     attributeIds: string[],
+    onlyActive = false,
   ): Promise<AttributeValueRecord[]> {
     if (attributeIds.length === 0) {
       return [];
@@ -206,9 +274,10 @@ export class AttributesRepository {
         FROM attribute_values
         WHERE store_id = $1
           AND attribute_id = ANY($2::uuid[])
+          AND ($3::boolean = FALSE OR is_active = TRUE)
         ORDER BY value ASC
       `,
-      [storeId, attributeIds],
+      [storeId, attributeIds, onlyActive],
     );
 
     return result.rows;
@@ -258,15 +327,37 @@ export class AttributesRepository {
     value: string;
     valueAr: string | null;
     valueEn: string | null;
+    colorHex: string | null;
+    isActive: boolean;
     slug: string;
   }): Promise<AttributeValueRecord> {
     const result = await this.databaseService.db.query<AttributeValueRecord>(
       `
-        INSERT INTO attribute_values (id, store_id, attribute_id, value, value_ar, value_en, slug)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO attribute_values (
+          id,
+          store_id,
+          attribute_id,
+          value,
+          value_ar,
+          value_en,
+          color_hex,
+          is_active,
+          slug
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING ${ATTRIBUTE_VALUE_COLUMNS}
       `,
-      [uuidv4(), input.storeId, input.attributeId, input.value, input.valueAr, input.valueEn, input.slug],
+      [
+        uuidv4(),
+        input.storeId,
+        input.attributeId,
+        input.value,
+        input.valueAr,
+        input.valueEn,
+        input.colorHex,
+        input.isActive,
+        input.slug,
+      ],
     );
 
     return result.rows[0] as AttributeValueRecord;
@@ -278,6 +369,8 @@ export class AttributesRepository {
     value: string;
     valueAr: string | null;
     valueEn: string | null;
+    colorHex: string | null;
+    isActive: boolean;
     slug: string;
   }): Promise<AttributeValueRecord | null> {
     const result = await this.databaseService.db.query<AttributeValueRecord>(
@@ -286,13 +379,24 @@ export class AttributesRepository {
         SET value = $3,
             value_ar = $4,
             value_en = $5,
-            slug = $6,
+            color_hex = $6,
+            is_active = $7,
+            slug = $8,
             updated_at = NOW()
         WHERE store_id = $1
           AND id = $2
         RETURNING ${ATTRIBUTE_VALUE_COLUMNS}
       `,
-      [input.storeId, input.valueId, input.value, input.valueAr, input.valueEn, input.slug],
+      [
+        input.storeId,
+        input.valueId,
+        input.value,
+        input.valueAr,
+        input.valueEn,
+        input.colorHex,
+        input.isActive,
+        input.slug,
+      ],
     );
 
     return result.rows[0] ?? null;
@@ -370,10 +474,14 @@ export class AttributesRepository {
           av.value,
           av.value_ar,
           av.value_en,
+          av.color_hex,
+          av.is_active,
           av.slug,
           a.name AS attribute_name,
           a.name_ar AS attribute_name_ar,
           a.name_en AS attribute_name_en,
+          a.type AS attribute_type,
+          a.is_active AS attribute_is_active,
           a.slug AS attribute_slug
         FROM attribute_values av
         INNER JOIN attributes a

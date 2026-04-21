@@ -32,6 +32,7 @@ export interface ProductRecord {
   detailed_description_en: string | null;
   status: ProductStatus;
   brand: string | null;
+  brand_id: string | null;
   weight: string | null;
   weight_unit: string | null;
   dimensions: { length?: number; width?: number; height?: number } | null;
@@ -120,11 +121,22 @@ export interface MediaAssetRecord {
   file_size_bytes: number;
 }
 
-const PRODUCT_COLUMNS = `id, store_id, category_id, product_type, is_visible, stock_unlimited, questions_enabled, title, title_ar, title_en, slug, description, description_ar, description_en, short_description_ar, short_description_en, detailed_description_ar, detailed_description_en, status, brand, weight, weight_unit, dimensions, cost_price, product_label, youtube_url, seo_title, seo_description, seo_title_ar, seo_title_en, seo_description_ar, seo_description_en, custom_fields, inline_discount_type, inline_discount_value, inline_discount_starts_at, inline_discount_ends_at, inline_discount_active, digital_download_attempts_limit, digital_download_expires_at, tags, is_featured, is_taxable, tax_rate, min_order_quantity, max_order_quantity, published_at, rating_avg, rating_count`;
+const PRODUCT_COLUMNS = `id, store_id, category_id, product_type, is_visible, stock_unlimited, questions_enabled, title, title_ar, title_en, slug, description, description_ar, description_en, short_description_ar, short_description_en, detailed_description_ar, detailed_description_en, status, brand, brand_id, weight, weight_unit, dimensions, cost_price, product_label, youtube_url, seo_title, seo_description, seo_title_ar, seo_title_en, seo_description_ar, seo_description_en, custom_fields, inline_discount_type, inline_discount_value, inline_discount_starts_at, inline_discount_ends_at, inline_discount_active, digital_download_attempts_limit, digital_download_expires_at, tags, is_featured, is_taxable, tax_rate, min_order_quantity, max_order_quantity, published_at, rating_avg, rating_count`;
 
 export interface ProductListAttributeFilter {
   attributeSlug: string;
   valueSlugs: string[];
+}
+
+export interface ProductListFilterValueFilter {
+  filterSlug: string;
+  valueSlugs: string[];
+}
+
+export interface ProductListFilterRangeFilter {
+  filterSlug: string;
+  min?: number;
+  max?: number;
 }
 
 @Injectable()
@@ -195,6 +207,7 @@ export class ProductsRepository {
     detailedDescriptionEn: string | null;
     status: ProductStatus;
     brand: string | null;
+    brandId: string | null;
     weight: number | null;
     weightUnit: string | null;
     dimensions: { length?: number; width?: number; height?: number } | null;
@@ -270,14 +283,15 @@ export class ProductsRepository {
           tax_rate,
           min_order_quantity,
           max_order_quantity,
-          questions_enabled
+          questions_enabled,
+          brand_id
         )
         VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
           $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
           $21, $22::jsonb, $23, $24, $25, $26, $27, $28, $29, $30,
           $31, $32::jsonb, $33, $34, $35, $36, $37, $38, $39, $40,
-          $41, $42, $43, $44, $45, $46
+          $41, $42, $43, $44, $45, $46, $47
         )
         RETURNING ${PRODUCT_COLUMNS}
       `,
@@ -328,6 +342,7 @@ export class ProductsRepository {
         input.minOrderQuantity,
         input.maxOrderQuantity,
         input.questionsEnabled,
+        input.brandId,
       ],
     );
     return result.rows[0] as ProductRecord;
@@ -343,6 +358,8 @@ export class ProductsRepository {
     isFeatured?: boolean | undefined;
     brand?: string | undefined;
     attributeFilters?: ProductListAttributeFilter[] | undefined;
+    filterValueFilters?: ProductListFilterValueFilter[] | undefined;
+    filterRangeFilters?: ProductListFilterRangeFilter[] | undefined;
     limit: number;
     offset: number;
   }): Promise<{ rows: ProductRecord[]; total: number }> {
@@ -415,6 +432,7 @@ export class ProductsRepository {
     detailedDescriptionEn: string | null;
     status: ProductStatus;
     brand: string | null;
+    brandId: string | null;
     weight: number | null;
     weightUnit: string | null;
     dimensions: { length?: number; width?: number; height?: number } | null;
@@ -489,6 +507,7 @@ export class ProductsRepository {
             min_order_quantity = $44,
             max_order_quantity = $45,
             questions_enabled = $46,
+            brand_id = $47,
             updated_at = NOW()
         WHERE store_id = $1
           AND id = $2
@@ -541,6 +560,7 @@ export class ProductsRepository {
         input.minOrderQuantity,
         input.maxOrderQuantity,
         input.questionsEnabled,
+        input.brandId,
       ],
     );
 
@@ -1037,6 +1057,8 @@ export class ProductsRepository {
     isFeatured?: boolean | undefined;
     brand?: string | undefined;
     attributeFilters?: ProductListAttributeFilter[] | undefined;
+    filterValueFilters?: ProductListFilterValueFilter[] | undefined;
+    filterRangeFilters?: ProductListFilterRangeFilter[] | undefined;
   }): { whereClause: string; values: unknown[]; nextParam: number } {
     const conditions: string[] = ['p.store_id = $1'];
     const values: unknown[] = [input.storeId];
@@ -1093,6 +1115,20 @@ export class ProductsRepository {
       nextParam += 2;
     }
 
+    const filterValueFilters = input.filterValueFilters ?? [];
+    for (const filter of filterValueFilters) {
+      conditions.push(this.buildFilterValueFilterClause(nextParam, nextParam + 1));
+      values.push(filter.filterSlug, filter.valueSlugs);
+      nextParam += 2;
+    }
+
+    const filterRangeFilters = input.filterRangeFilters ?? [];
+    for (const filter of filterRangeFilters) {
+      conditions.push(this.buildFilterRangeFilterClause(nextParam, nextParam + 1, nextParam + 2));
+      values.push(filter.filterSlug, filter.min ?? null, filter.max ?? null);
+      nextParam += 3;
+    }
+
     return {
       whereClause: conditions.join(' AND '),
       values,
@@ -1117,6 +1153,42 @@ export class ProductsRepository {
         AND pv.product_id = p.id
         AND a.slug = $${attributeSlugParam}
         AND av.slug = ANY($${valueSlugsParam}::text[])
+    )`;
+  }
+
+  private buildFilterValueFilterClause(filterSlugParam: number, valueSlugsParam: number): string {
+    return `EXISTS (
+      SELECT 1
+      FROM product_filter_values pfv
+      INNER JOIN filter_values fv
+        ON fv.id = pfv.filter_value_id
+       AND fv.store_id = pfv.store_id
+      INNER JOIN filters f
+        ON f.id = fv.filter_id
+       AND f.store_id = fv.store_id
+      WHERE pfv.store_id = p.store_id
+        AND pfv.product_id = p.id
+        AND f.slug = $${filterSlugParam}
+        AND fv.slug = ANY($${valueSlugsParam}::text[])
+    )`;
+  }
+
+  private buildFilterRangeFilterClause(
+    filterSlugParam: number,
+    minParam: number,
+    maxParam: number,
+  ): string {
+    return `EXISTS (
+      SELECT 1
+      FROM product_filter_ranges pfr
+      INNER JOIN filters f
+        ON f.id = pfr.filter_id
+       AND f.store_id = pfr.store_id
+      WHERE pfr.store_id = p.store_id
+        AND pfr.product_id = p.id
+        AND f.slug = $${filterSlugParam}
+        AND ($${minParam}::numeric IS NULL OR pfr.numeric_value >= $${minParam}::numeric)
+        AND ($${maxParam}::numeric IS NULL OR pfr.numeric_value <= $${maxParam}::numeric)
     )`;
   }
 

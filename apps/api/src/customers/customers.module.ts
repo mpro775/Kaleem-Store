@@ -9,6 +9,8 @@ import { CustomersEngagementController } from './customers-engagement.controller
 import { CustomersEngagementManagementController } from './customers-engagement-management.controller';
 import { CustomerEngagementService } from './customer-engagement.service';
 import { CustomerEngagementRepository } from './customer-engagement.repository';
+import { AbandonedCartsRepository } from './abandoned-carts.repository';
+import { AbandonedCartsService } from './abandoned-carts.service';
 
 @Module({
   imports: [forwardRef(() => StorefrontModule)],
@@ -24,6 +26,8 @@ import { CustomerEngagementRepository } from './customer-engagement.repository';
     CustomerAccessTokenGuard,
     CustomerEngagementService,
     CustomerEngagementRepository,
+    AbandonedCartsRepository,
+    AbandonedCartsService,
   ],
   exports: [
     CustomersService,
@@ -31,6 +35,8 @@ import { CustomerEngagementRepository } from './customer-engagement.repository';
     CustomerAccessTokenGuard,
     CustomerEngagementService,
     CustomerEngagementRepository,
+    AbandonedCartsRepository,
+    AbandonedCartsService,
   ],
 })
 export class CustomersModule {}

@@ -116,4 +116,9 @@ export const envValidationSchema = Joi.object({
     .default('http://localhost:3001'),
   RESTOCK_CONVERSION_WINDOW_DAYS: Joi.number().integer().min(1).max(30).default(7),
   RESTOCK_NOTIFICATION_COOLDOWN_HOURS: Joi.number().integer().min(1).max(168).default(6),
+  ABANDONED_CART_INACTIVITY_MINUTES: Joi.number().integer().min(15).max(7 * 24 * 60).default(60),
+  ABANDONED_CART_CAPTURE_BATCH_SIZE: Joi.number().integer().min(1).max(1000).default(200),
+  ABANDONED_CART_REMINDER_BATCH_SIZE: Joi.number().integer().min(1).max(1000).default(100),
+  ABANDONED_CART_REMINDER_COOLDOWN_HOURS: Joi.number().integer().min(1).max(14 * 24).default(24),
+  ABANDONED_CART_WORKER_INTERVAL_MS: Joi.number().integer().min(15_000).max(60 * 60 * 1000).default(60_000),
 });

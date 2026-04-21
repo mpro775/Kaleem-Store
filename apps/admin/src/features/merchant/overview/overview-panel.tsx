@@ -51,6 +51,7 @@ export function OverviewPanel({ session, request }: { session: MerchantSession; 
     customersRetention,
     funnelConversion,
     sourceAttribution,
+    abandonedCartMetrics,
     dataQuality,
     anomalyReport,
   } = data;
@@ -96,6 +97,14 @@ export function OverviewPanel({ session, request }: { session: MerchantSession; 
       color: '#ec4899',
       bg: '#fdf2f8',
     },
+    {
+      title: 'استرجاع السلات',
+      value: `${(abandonedCartMetrics?.kpis.recoveryRate ?? 0).toFixed(2)}%`,
+      subtitle: 'معدل الاسترجاع',
+      icon: <StorefrontIcon />,
+      color: '#0ea5e9',
+      bg: '#ecfeff',
+    },
   ];
 
   return (
@@ -108,7 +117,7 @@ export function OverviewPanel({ session, request }: { session: MerchantSession; 
       {error ? <Alert severity="error">{error}</Alert> : null}
 
       {/* Stat Cards Row */}
-      <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' } }}>
+      <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(5, 1fr)' } }}>
         {stats.map((stat) => (
           <Box key={stat.title}>
             <StatCard

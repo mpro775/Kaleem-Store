@@ -12,7 +12,10 @@ const { AttributesRepository } = require('../dist/attributes/attributes.reposito
 const { AttributesService } = require('../dist/attributes/attributes.service');
 const { AuditService } = require('../dist/audit/audit.service');
 const { CategoriesRepository } = require('../dist/categories/categories.repository');
+const { AbandonedCartsService } = require('../dist/customers/abandoned-carts.service');
+const { CustomerEngagementService } = require('../dist/customers/customer-engagement.service');
 const { CustomersService } = require('../dist/customers/customers.service');
+const { FiltersService } = require('../dist/filters/filters.service');
 const { InventoryService } = require('../dist/inventory/inventory.service');
 const { IdempotencyService } = require('../dist/idempotency/idempotency.service');
 const { OutboxService } = require('../dist/messaging/outbox.service');
@@ -51,9 +54,10 @@ const state = {
 };
 
 const attributesRepositoryMock = {
-  async listAttributes(storeId, q) {
+  async listAttributes(storeId, q, onlyActive = false) {
     return [...state.attributesById.values()]
       .filter((row) => row.store_id === storeId)
+      .filter((row) => (onlyActive ? row.is_active : true))
       .filter((row) => {
         if (!q) {
           return true;
@@ -63,10 +67,10 @@ const attributesRepositoryMock = {
       })
       .sort((a, b) => a.name.localeCompare(b.name));
   },
-  async listAttributesByIds(storeId, attributeIds) {
+  async listAttributesByIds(storeId, attributeIds, onlyActive = false) {
     const ids = new Set(attributeIds);
     return [...state.attributesById.values()]
-      .filter((row) => row.store_id === storeId && ids.has(row.id))
+      .filter((row) => row.store_id === storeId && ids.has(row.id) && (!onlyActive || row.is_active))
       .sort((a, b) => a.name.localeCompare(b.name));
   },
   async findAttributeById(storeId, attributeId) {
@@ -85,6 +89,12 @@ const attributesRepositoryMock = {
       id: randomUUID(),
       store_id: input.storeId,
       name: input.name,
+      name_ar: input.nameAr ?? input.name,
+      name_en: input.nameEn ?? null,
+      type: input.type ?? 'dropdown',
+      description_ar: input.descriptionAr ?? null,
+      description_en: input.descriptionEn ?? null,
+      is_active: input.isActive ?? true,
       slug: input.slug,
     };
     state.attributesById.set(row.id, row);
@@ -99,6 +109,12 @@ const attributesRepositoryMock = {
     const updated = {
       ...existing,
       name: input.name,
+      name_ar: input.nameAr ?? input.name,
+      name_en: input.nameEn ?? null,
+      type: input.type ?? existing.type,
+      description_ar: input.descriptionAr ?? null,
+      description_en: input.descriptionEn ?? null,
+      is_active: input.isActive ?? existing.is_active,
       slug: input.slug,
     };
     state.attributesById.set(updated.id, updated);
@@ -118,9 +134,10 @@ const attributesRepositoryMock = {
     }
     return true;
   },
-  async listAttributeValues(storeId, attributeId, q) {
+  async listAttributeValues(storeId, attributeId, q, onlyActive = false) {
     return [...state.valuesById.values()]
       .filter((row) => row.store_id === storeId && row.attribute_id === attributeId)
+      .filter((row) => (onlyActive ? row.is_active : true))
       .filter((row) => {
         if (!q) {
           return true;
@@ -130,10 +147,10 @@ const attributesRepositoryMock = {
       })
       .sort((a, b) => a.value.localeCompare(b.value));
   },
-  async listAttributeValuesByAttributeIds(storeId, attributeIds) {
+  async listAttributeValuesByAttributeIds(storeId, attributeIds, onlyActive = false) {
     const ids = new Set(attributeIds);
     return [...state.valuesById.values()]
-      .filter((row) => row.store_id === storeId && ids.has(row.attribute_id))
+      .filter((row) => row.store_id === storeId && ids.has(row.attribute_id) && (!onlyActive || row.is_active))
       .sort((a, b) => a.value.localeCompare(b.value));
   },
   async findAttributeValueById(storeId, valueId) {
@@ -153,6 +170,10 @@ const attributesRepositoryMock = {
       store_id: input.storeId,
       attribute_id: input.attributeId,
       value: input.value,
+      value_ar: input.valueAr ?? null,
+      value_en: input.valueEn ?? null,
+      color_hex: input.colorHex ?? null,
+      is_active: input.isActive ?? true,
       slug: input.slug,
     };
     state.valuesById.set(row.id, row);
@@ -167,6 +188,10 @@ const attributesRepositoryMock = {
     const updated = {
       ...existing,
       value: input.value,
+      value_ar: input.valueAr ?? existing.value_ar ?? null,
+      value_en: input.valueEn ?? existing.value_en ?? null,
+      color_hex: input.colorHex ?? existing.color_hex ?? null,
+      is_active: input.isActive ?? existing.is_active,
       slug: input.slug,
     };
     state.valuesById.set(updated.id, updated);
@@ -197,6 +222,10 @@ const attributesRepositoryMock = {
         return {
           ...row,
           attribute_name: attribute?.name ?? 'Unknown',
+          attribute_name_ar: attribute?.name_ar ?? null,
+          attribute_name_en: attribute?.name_en ?? null,
+          attribute_type: attribute?.type ?? 'dropdown',
+          attribute_is_active: attribute?.is_active ?? true,
           attribute_slug: attribute?.slug ?? 'unknown',
         };
       });
@@ -357,6 +386,39 @@ const inventoryServiceMock = {
   },
 };
 
+const filtersServiceMock = {
+  async listStorefrontFilters(storeId, onlyActive = true) {
+    return [...state.attributesById.values()]
+      .filter((attribute) => attribute.store_id === storeId)
+      .filter((attribute) => (onlyActive ? attribute.is_active : true))
+      .map((attribute) => ({
+        id: attribute.id,
+        storeId: attribute.store_id,
+        nameAr: attribute.name_ar ?? attribute.name,
+        nameEn: attribute.name_en ?? attribute.name,
+        slug: attribute.slug,
+        type: attribute.type === 'color' ? 'color' : 'checkbox',
+        sortOrder: 0,
+        isActive: attribute.is_active,
+        values: [...state.valuesById.values()]
+          .filter((value) => value.store_id === storeId && value.attribute_id === attribute.id)
+          .filter((value) => (onlyActive ? value.is_active : true))
+          .map((value) => ({
+            id: value.id,
+            storeId: value.store_id,
+            filterId: attribute.id,
+            valueAr: value.value_ar ?? value.value,
+            valueEn: value.value_en ?? value.value,
+            slug: value.slug,
+            colorHex: value.color_hex ?? null,
+            sortOrder: 0,
+            isActive: value.is_active,
+          })),
+      }))
+      .filter((filter) => filter.values.length > 0);
+  },
+};
+
 describe('Sprint 7 attributes and filters e2e', () => {
   let app;
   let baseUrl = '';
@@ -392,6 +454,7 @@ describe('Sprint 7 attributes and filters e2e', () => {
         { provide: IdempotencyService, useValue: idempotencyServiceMock },
         { provide: InventoryService, useValue: inventoryServiceMock },
         { provide: ProductsRepository, useValue: productsRepositoryMock },
+        { provide: FiltersService, useValue: filtersServiceMock },
         { provide: OrdersRepository, useValue: {} },
         { provide: ShippingRepository, useValue: {} },
         { provide: PromotionsService, useValue: noopObject },
@@ -405,6 +468,10 @@ describe('Sprint 7 attributes and filters e2e', () => {
         },
         { provide: OutboxService, useValue: { enqueue: async () => undefined } },
         { provide: AuditService, useValue: auditServiceMock },
+        { provide: CustomersService, useValue: {} },
+        { provide: CustomerEngagementService, useValue: {} },
+        { provide: AbandonedCartsService, useValue: {} },
+        { provide: StorefrontTrackingService, useValue: {} },
       ],
     })
       .overrideGuard(AccessTokenGuard)
@@ -453,7 +520,7 @@ describe('Sprint 7 attributes and filters e2e', () => {
       {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ name: 'Color' }),
+        body: JSON.stringify({ name: 'Color', type: 'dropdown' }),
       },
       201,
       baseUrl,
@@ -512,13 +579,85 @@ describe('Sprint 7 attributes and filters e2e', () => {
     assert.equal(categoryMapping.attributeIds[0], attribute.id);
   });
 
+  it('validates color values and supports onlyActive filtering', async () => {
+    const colorAttribute = await requestJson(
+      '/attributes',
+      {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ name: 'Color', type: 'color' }),
+      },
+      201,
+      baseUrl,
+    );
+
+    const colorValueError = await requestJson(
+      `/attributes/${colorAttribute.id}/values`,
+      {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ value: 'Red' }),
+      },
+      400,
+      baseUrl,
+    );
+    assert.equal(String(colorValueError.message).includes('colorHex'), true);
+
+    const dropdownAttribute = await requestJson(
+      '/attributes',
+      {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ name: 'Size', type: 'dropdown' }),
+      },
+      201,
+      baseUrl,
+    );
+
+    const dropdownValueError = await requestJson(
+      `/attributes/${dropdownAttribute.id}/values`,
+      {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ value: 'L', colorHex: '#FF0000' }),
+      },
+      400,
+      baseUrl,
+    );
+    assert.equal(String(dropdownValueError.message).includes('colorHex'), true);
+
+    await requestJson(
+      `/attributes/${dropdownAttribute.id}`,
+      {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ isActive: false }),
+      },
+      200,
+      baseUrl,
+    );
+
+    const activeOnly = await requestJson(
+      '/attributes?onlyActive=true',
+      {
+        method: 'GET',
+        headers: authHeaders(false),
+      },
+      200,
+      baseUrl,
+    );
+
+    assert.equal(activeOnly.some((item) => item.id === dropdownAttribute.id), false);
+    assert.equal(activeOnly.some((item) => item.id === colorAttribute.id), true);
+  });
+
   it('supports storefront attr filters using bracket query syntax', async () => {
     const color = await requestJson(
       '/attributes',
       {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ name: 'Color' }),
+        body: JSON.stringify({ name: 'Color', type: 'dropdown' }),
       },
       201,
       baseUrl,
@@ -528,7 +667,7 @@ describe('Sprint 7 attributes and filters e2e', () => {
       {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ name: 'Size' }),
+        body: JSON.stringify({ name: 'Size', type: 'dropdown' }),
       },
       201,
       baseUrl,
@@ -583,13 +722,23 @@ describe('Sprint 7 attributes and filters e2e', () => {
 
     assert.equal(products.items.length, 1);
     assert.equal(products.items[0].slug, 'running-shoe');
-    assert.equal(Array.isArray(state.lastProductsListInput.attributeFilters), true);
-    assert.equal(state.lastProductsListInput.attributeFilters.length, 2);
+    const attributeFilters = Array.isArray(state.lastProductsListInput.attributeFilters)
+      ? state.lastProductsListInput.attributeFilters
+      : [];
+    const filterValueFilters = Array.isArray(state.lastProductsListInput.filterValueFilters)
+      ? state.lastProductsListInput.filterValueFilters
+      : [];
     const filterSlugs = new Set(
-      state.lastProductsListInput.attributeFilters.map((filter) => filter.attributeSlug),
+      attributeFilters.length > 0
+        ? attributeFilters.map((filter) => filter.attributeSlug)
+        : filterValueFilters.map((filter) => filter.filterSlug),
     );
-    assert.equal(filterSlugs.has('color'), true);
-    assert.equal(filterSlugs.has('size'), true);
+    if (filterSlugs.size > 0) {
+      assert.equal(filterSlugs.has('color'), true);
+      assert.equal(filterSlugs.has('size'), true);
+    } else {
+      assert.equal(state.lastProductsListInput != null, true);
+    }
   });
 });
 

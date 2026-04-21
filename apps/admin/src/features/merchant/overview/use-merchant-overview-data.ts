@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type {
   AnalyticsAnomalyReport,
+  AnalyticsAbandonedCartMetrics,
   AnalyticsCustomersRetention,
   AnalyticsDataQuality,
   AnalyticsFunnelConversion,
@@ -24,6 +25,7 @@ interface MerchantOverviewState {
   customersRetention: AnalyticsCustomersRetention | null;
   funnelConversion: AnalyticsFunnelConversion | null;
   sourceAttribution: AnalyticsSourceAttribution | null;
+  abandonedCartMetrics: AnalyticsAbandonedCartMetrics | null;
   dataQuality: AnalyticsDataQuality | null;
   anomalyReport: AnalyticsAnomalyReport | null;
 }
@@ -50,6 +52,7 @@ const initialState: MerchantOverviewState = {
   customersRetention: null,
   funnelConversion: null,
   sourceAttribution: null,
+  abandonedCartMetrics: null,
   dataQuality: null,
   anomalyReport: null,
 };
@@ -116,7 +119,7 @@ export function useMerchantOverviewData(request: MerchantRequester) {
 
     async function loadCommerceGroup(): Promise<void> {
       try {
-        const [inventoryHealth, stockoutRisk, customersRetention, funnelConversion, sourceAttribution] =
+        const [inventoryHealth, stockoutRisk, customersRetention, funnelConversion, sourceAttribution, abandonedCartMetrics] =
           await Promise.all([
             request<AnalyticsInventoryHealth>('/analytics/inventory/health?window=30&limit=5', {
               method: 'GET',
@@ -129,6 +132,9 @@ export function useMerchantOverviewData(request: MerchantRequester) {
             }),
             request<AnalyticsFunnelConversion>('/analytics/funnel/conversion?window=30', { method: 'GET' }),
             request<AnalyticsSourceAttribution>('/analytics/funnel/source-attribution?window=30&limit=5', {
+              method: 'GET',
+            }),
+            request<AnalyticsAbandonedCartMetrics>('/analytics/funnel/abandoned-carts?window=30', {
               method: 'GET',
             }),
           ]);
@@ -144,6 +150,7 @@ export function useMerchantOverviewData(request: MerchantRequester) {
           customersRetention,
           funnelConversion,
           sourceAttribution,
+          abandonedCartMetrics,
         }));
       } catch (error) {
         if (!isMounted) {

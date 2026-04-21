@@ -8,6 +8,7 @@ export interface MerchantUser {
   role: StoreRole;
   permissions: string[];
   sessionId: string;
+  onboardingCompleted: boolean;
 }
 
 export interface MerchantSession {
@@ -27,15 +28,41 @@ export interface StoreSettings {
   id: string;
   name: string;
   slug: string;
+  logoMediaAssetId: string | null;
   logoUrl: string | null;
+  faviconMediaAssetId: string | null;
+  faviconUrl: string | null;
+  businessCategory: string | null;
+  onboardingCompleted: boolean;
   phone: string | null;
   address: string | null;
+  country: string;
+  city: string | null;
+  addressDetails: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  workingHours: Array<{
+    day: string;
+    isClosed: boolean;
+    slots: Array<{ open: string; close: string }>;
+  }>;
+  socialLinks: Record<string, string | null>;
   currencyCode: string;
   timezone: string;
   shippingPolicy: string | null;
   returnPolicy: string | null;
   privacyPolicy: string | null;
   termsAndConditions: string | null;
+}
+
+export interface StoreSettingsOptions {
+  defaultCountry: string;
+  currencies: string[];
+  timezones: string[];
+  governorates: string[];
+  workingDays: string[];
+  socialPlatforms: string[];
+  businessCategories: string[];
 }
 
 export interface Category {
@@ -61,6 +88,18 @@ export interface Category {
   seoTitleEn: string | null;
   seoDescriptionAr: string | null;
   seoDescriptionEn: string | null;
+}
+
+export interface Brand {
+  id: string;
+  storeId: string;
+  name: string;
+  nameAr: string;
+  nameEn: string | null;
+  mediaAssetId: string | null;
+  imageUrl: string | null;
+  isActive: boolean;
+  isPopular: boolean;
 }
 
 export type ProductStatus = 'draft' | 'active' | 'archived';
@@ -261,6 +300,7 @@ export interface Product {
   detailedDescriptionAr: string | null;
   detailedDescriptionEn: string | null;
   brand: string | null;
+  brandId: string | null;
   weight: number | null;
   weightUnit: string | null;
   dimensions: { length?: number; width?: number; height?: number } | null;
@@ -286,6 +326,8 @@ export interface Product {
   publishedAt: string | null;
   ratingAvg: number;
   ratingCount: number;
+  filterValueIds?: string[];
+  filterRanges?: Array<{ filterId: string; numericValue: number }>;
 }
 
 export interface ProductListResponse {
@@ -363,6 +405,13 @@ export interface Order {
   note: string | null;
   createdAt: string;
   updatedAt: string;
+  customer: {
+    id: string | null;
+    name: string | null;
+    phone: string | null;
+  };
+  paymentMethod: PaymentMethod | null;
+  paymentStatus: PaymentStatus | null;
 }
 
 export interface OrderDetail extends Order {
@@ -570,6 +619,32 @@ export interface RestockProductStatsListResponse {
   limit: number;
 }
 
+export type ManagedAbandonedCartStatus = 'ready' | 'sent' | 'recovered' | 'expired';
+
+export interface ManagedAbandonedCartListItem {
+  id: string;
+  cartId: string | null;
+  customerId: string | null;
+  customerName: string | null;
+  customerEmail: string | null;
+  customerPhone: string | null;
+  cartTotal: number;
+  itemsCount: number;
+  recoverySentAt: string | null;
+  recoveredAt: string | null;
+  recoveredOrderId: string | null;
+  expiresAt: string;
+  createdAt: string;
+  status: ManagedAbandonedCartStatus;
+}
+
+export interface ManagedAbandonedCartListResponse {
+  items: ManagedAbandonedCartListItem[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
 export interface AnalyticsOverview {
   windowDays: number;
   timezone: string;
@@ -758,6 +833,23 @@ export interface AnalyticsSourceAttribution {
   }>;
 }
 
+export interface AnalyticsAbandonedCartMetrics {
+  windowDays: number;
+  timezone: string;
+  currencyCode: string;
+  startAt: string;
+  endAt: string;
+  kpis: {
+    abandonedCartsCount: number;
+    recoveryEmailsSent: number;
+    recoveredCartsCount: number;
+    recoveredRevenue: number;
+    recoveryRate: number;
+    abandonmentRate: number;
+    averageRecoveryMinutes: number;
+  };
+}
+
 export interface AnalyticsEventTaxonomy {
   windowDays: number;
   timezone: string;
@@ -804,6 +896,27 @@ export interface AnalyticsAnomalyReport {
 
 export interface PaginatedOrders {
   items: Order[];
+  total: number;
+  page: number;
+  limit: number;
+  statusCounts: Record<OrderStatus, number>;
+}
+
+export interface ManualOrderProduct {
+  variantId: string;
+  productId: string;
+  productTitle: string;
+  variantTitle: string;
+  sku: string;
+  price: number;
+  stockUnlimited: boolean;
+  stockQuantity: number;
+  reservedQuantity: number;
+  availableQuantity: number;
+}
+
+export interface ManualOrderProductSearchResponse {
+  items: ManualOrderProduct[];
   total: number;
   page: number;
   limit: number;
@@ -945,7 +1058,11 @@ export interface AttributeValue {
   slug: string;
   valueAr: string | null;
   valueEn: string | null;
+  colorHex: string | null;
+  isActive: boolean;
 }
+
+export type AttributeType = 'dropdown' | 'color';
 
 export interface Attribute {
   id: string;
@@ -955,11 +1072,47 @@ export interface Attribute {
   values?: AttributeValue[];
   nameAr: string | null;
   nameEn: string | null;
+  type: AttributeType;
+  descriptionAr: string | null;
+  descriptionEn: string | null;
+  isActive: boolean;
 }
 
 export interface CategoryAttributes {
   categoryId: string;
   attributeIds: string[];
+}
+
+export type FilterType = 'checkbox' | 'radio' | 'color' | 'range';
+
+export interface FilterValue {
+  id: string;
+  storeId: string;
+  filterId: string;
+  valueAr: string;
+  valueEn: string;
+  slug: string;
+  colorHex: string | null;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface Filter {
+  id: string;
+  storeId: string;
+  nameAr: string;
+  nameEn: string;
+  slug: string;
+  type: FilterType;
+  sortOrder: number;
+  isActive: boolean;
+  values?: FilterValue[];
+}
+
+export interface ProductFilterSelection {
+  productId: string;
+  valueIds: string[];
+  ranges: Array<{ filterId: string; filterSlug: string; numericValue: number }>;
 }
 
 export interface WebhookEndpoint {

@@ -1,4 +1,5 @@
-import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { ATTRIBUTE_TYPES } from '../constants/attribute-type.constants';
 
 export class CreateAttributeDto {
   @IsString()
@@ -14,6 +15,23 @@ export class CreateAttributeDto {
   @IsString()
   @MaxLength(120)
   nameEn?: string;
+
+  @IsIn(ATTRIBUTE_TYPES)
+  type!: (typeof ATTRIBUTE_TYPES)[number];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  descriptionAr?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  descriptionEn?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 
   @IsOptional()
   @IsString()

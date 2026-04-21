@@ -218,6 +218,23 @@ export interface SourceAttributionResponse {
   }>;
 }
 
+export interface AbandonedCartMetricsResponse {
+  windowDays: number;
+  timezone: string;
+  currencyCode: string;
+  startAt: Date;
+  endAt: Date;
+  kpis: {
+    abandonedCartsCount: number;
+    recoveryEmailsSent: number;
+    recoveredCartsCount: number;
+    recoveredRevenue: number;
+    recoveryRate: number;
+    abandonmentRate: number;
+    averageRecoveryMinutes: number;
+  };
+}
+
 export interface EventTaxonomyResponse {
   windowDays: number;
   timezone: string;
@@ -805,6 +822,47 @@ export class AnalyticsService {
         checkouts: row.checkouts,
         visitToCheckoutRate: row.visits > 0 ? round2((row.checkouts / row.visits) * 100) : 0,
       })),
+    };
+  }
+
+  async getAbandonedCartMetrics(
+    currentUser: AuthUser,
+    windowDays: number,
+  ): Promise<AbandonedCartMetricsResponse> {
+    const store = await this.storesRepository.findById(currentUser.storeId);
+    if (!store) {
+      throw new NotFoundException('Store not found');
+    }
+    const timezone = this.resolveStoreTimezone(store.timezone);
+    const bounds = await this.analyticsRepository.resolveWindowBounds(timezone, windowDays);
+    const metrics = await this.analyticsRepository.getAbandonedCartMetrics({
+      storeId: currentUser.storeId,
+      startAt: bounds.start_at,
+      endAt: bounds.end_at,
+    });
+
+    const abandonedCartsCount = metrics.abandoned_carts_count;
+    const recoveryEmailsSent = metrics.recovery_emails_sent;
+    const recoveredCartsCount = metrics.recovered_carts_count;
+    const recoveredRevenue = Number(metrics.recovered_revenue);
+    const recoveryRate = recoveryEmailsSent > 0 ? round2((recoveredCartsCount / recoveryEmailsSent) * 100) : 0;
+    const abandonmentRate = metrics.checkout_starts > 0 ? round2((abandonedCartsCount / metrics.checkout_starts) * 100) : 0;
+
+    return {
+      windowDays,
+      timezone,
+      currencyCode: store.currency_code,
+      startAt: bounds.start_at,
+      endAt: bounds.end_at,
+      kpis: {
+        abandonedCartsCount,
+        recoveryEmailsSent,
+        recoveredCartsCount,
+        recoveredRevenue,
+        recoveryRate,
+        abandonmentRate,
+        averageRecoveryMinutes: round2(metrics.avg_recovery_minutes),
+      },
     };
   }
 

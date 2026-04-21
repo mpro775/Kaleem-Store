@@ -4,6 +4,8 @@ import { DatabaseService } from '../database/database.service';
 import type { OrderStatus } from './constants/order-status.constants';
 import type { PaymentMethod } from './constants/payment.constants';
 
+export type PaymentStatus = 'pending' | 'under_review' | 'approved' | 'rejected' | 'refunded';
+
 interface Queryable {
   query: <T = unknown>(
     queryText: string,
@@ -65,6 +67,57 @@ export interface OrderRecord {
   shipping_address: Record<string, unknown>;
   created_at: Date;
   updated_at: Date;
+}
+
+export interface OrderListRow extends OrderRecord {
+  customer_name: string | null;
+  customer_phone: string | null;
+  payment_method: PaymentMethod | null;
+  payment_status: PaymentStatus | null;
+}
+
+export interface OrderStatusCountRow {
+  status: OrderStatus;
+  count: string;
+}
+
+export interface ManualProductSearchRow {
+  variant_id: string;
+  product_id: string;
+  product_title: string;
+  variant_title: string;
+  sku: string;
+  price: string;
+  stock_unlimited: boolean;
+  stock_quantity: number;
+  reserved_quantity: number;
+  available_quantity: number;
+}
+
+export interface CustomerSummaryRow {
+  id: string;
+  full_name: string;
+  phone: string;
+}
+
+export interface CustomerAddressSummaryRow {
+  id: string;
+  customer_id: string;
+  address_line: string;
+  city: string | null;
+  area: string | null;
+  notes: string | null;
+  is_default: boolean;
+}
+
+interface OrdersListFilters {
+  storeId: string;
+  status?: OrderStatus;
+  q?: string;
+  paymentMethod?: PaymentMethod;
+  paymentStatus?: PaymentStatus;
+  dateFrom?: Date;
+  dateTo?: Date;
 }
 
 export interface OrderItemRecord {
@@ -185,7 +238,7 @@ export class OrdersRepository {
         FROM carts
         WHERE store_id = $1
           AND id = $2
-          AND status = 'open'
+          AND status IN ('open', 'abandoned')
         LIMIT 1
       `,
       [storeId, cartId],
@@ -557,35 +610,183 @@ export class OrdersRepository {
     return result.rows[0] ?? null;
   }
 
-  async listOrders(input: {
-    storeId: string;
-    status?: OrderStatus | undefined;
-    q?: string | undefined;
-    limit: number;
-    offset: number;
-  }): Promise<{ rows: OrderRecord[]; total: number }> {
-    const rowsResult = await this.databaseService.db.query<OrderRecord>(
+  async listOrders(input: OrdersListFilters & { limit: number; offset: number }): Promise<{
+    rows: OrderListRow[];
+    total: number;
+  }> {
+    const { whereClause, values } = this.buildListFilters(input);
+    const limitIndex = values.length + 1;
+    const offsetIndex = values.length + 2;
+
+    const rowsResult = await this.databaseService.db.query<OrderListRow>(
       `
-        SELECT id, store_id, customer_id, order_code, status, subtotal, total, shipping_zone_id, shipping_fee, discount_total, coupon_code, currency_code, note, shipping_address, created_at, updated_at
-        FROM orders
-        WHERE store_id = $1
-          AND ($2::text IS NULL OR status = $2)
-          AND ($3::text IS NULL OR order_code ILIKE '%' || $3 || '%')
-        ORDER BY created_at DESC
-        LIMIT $4 OFFSET $5
+        SELECT
+          o.id,
+          o.store_id,
+          o.customer_id,
+          o.order_code,
+          o.status,
+          o.subtotal,
+          o.total,
+          o.shipping_zone_id,
+          o.shipping_fee,
+          o.discount_total,
+          o.coupon_code,
+          o.currency_code,
+          o.note,
+          o.shipping_address,
+          o.created_at,
+          o.updated_at,
+          c.full_name AS customer_name,
+          c.phone AS customer_phone,
+          p.method AS payment_method,
+          p.status AS payment_status
+        FROM orders o
+        LEFT JOIN customers c ON c.id = o.customer_id
+        LEFT JOIN payments p ON p.order_id = o.id AND p.store_id = o.store_id
+        WHERE ${whereClause}
+        ORDER BY o.created_at DESC
+        LIMIT $${limitIndex} OFFSET $${offsetIndex}
       `,
-      [input.storeId, input.status ?? null, input.q ?? null, input.limit, input.offset],
+      [...values, input.limit, input.offset],
     );
 
     const countResult = await this.databaseService.db.query<{ total: string }>(
       `
         SELECT COUNT(*)::text AS total
-        FROM orders
-        WHERE store_id = $1
-          AND ($2::text IS NULL OR status = $2)
-          AND ($3::text IS NULL OR order_code ILIKE '%' || $3 || '%')
+        FROM orders o
+        LEFT JOIN customers c ON c.id = o.customer_id
+        LEFT JOIN payments p ON p.order_id = o.id AND p.store_id = o.store_id
+        WHERE ${whereClause}
       `,
-      [input.storeId, input.status ?? null, input.q ?? null],
+      values,
+    );
+
+    return {
+      rows: rowsResult.rows,
+      total: Number(countResult.rows[0]?.total ?? '0'),
+    };
+  }
+
+  async listOrderStatusCounts(input: Omit<OrdersListFilters, 'status'>): Promise<OrderStatusCountRow[]> {
+    const { whereClause, values } = this.buildListFilters(input);
+    const result = await this.databaseService.db.query<OrderStatusCountRow>(
+      `
+        SELECT o.status, COUNT(*)::text AS count
+        FROM orders o
+        LEFT JOIN customers c ON c.id = o.customer_id
+        LEFT JOIN payments p ON p.order_id = o.id AND p.store_id = o.store_id
+        WHERE ${whereClause}
+        GROUP BY o.status
+      `,
+      values,
+    );
+
+    return result.rows;
+  }
+
+  async listOrdersForExport(input: OrdersListFilters): Promise<OrderListRow[]> {
+    const { whereClause, values } = this.buildListFilters(input);
+    const result = await this.databaseService.db.query<OrderListRow>(
+      `
+        SELECT
+          o.id,
+          o.store_id,
+          o.customer_id,
+          o.order_code,
+          o.status,
+          o.subtotal,
+          o.total,
+          o.shipping_zone_id,
+          o.shipping_fee,
+          o.discount_total,
+          o.coupon_code,
+          o.currency_code,
+          o.note,
+          o.shipping_address,
+          o.created_at,
+          o.updated_at,
+          c.full_name AS customer_name,
+          c.phone AS customer_phone,
+          p.method AS payment_method,
+          p.status AS payment_status
+        FROM orders o
+        LEFT JOIN customers c ON c.id = o.customer_id
+        LEFT JOIN payments p ON p.order_id = o.id AND p.store_id = o.store_id
+        WHERE ${whereClause}
+        ORDER BY o.created_at DESC
+      `,
+      values,
+    );
+    return result.rows;
+  }
+
+  async searchManualProducts(input: {
+    storeId: string;
+    q?: string;
+    limit: number;
+    offset: number;
+  }): Promise<{ rows: ManualProductSearchRow[]; total: number }> {
+    const q = input.q?.trim() ? input.q.trim() : null;
+
+    const rowsResult = await this.databaseService.db.query<ManualProductSearchRow>(
+      `
+        SELECT
+          pv.id AS variant_id,
+          p.id AS product_id,
+          p.title AS product_title,
+          pv.title AS variant_title,
+          pv.sku,
+          pv.price,
+          p.stock_unlimited,
+          pv.stock_quantity,
+          COALESCE(ir.reserved_quantity, 0) AS reserved_quantity,
+          GREATEST(pv.stock_quantity - COALESCE(ir.reserved_quantity, 0), 0) AS available_quantity
+        FROM product_variants pv
+        INNER JOIN products p ON p.id = pv.product_id AND p.store_id = pv.store_id
+        LEFT JOIN (
+          SELECT
+            variant_id,
+            store_id,
+            SUM(quantity)::int AS reserved_quantity
+          FROM inventory_reservations
+          WHERE status = 'reserved'
+            AND expires_at > NOW()
+          GROUP BY variant_id, store_id
+        ) ir ON ir.variant_id = pv.id AND ir.store_id = pv.store_id
+        WHERE pv.store_id = $1
+          AND p.status = 'active'
+          AND p.is_visible = TRUE
+          AND p.product_type <> 'bundled'
+          AND (
+            $2::text IS NULL
+            OR p.title ILIKE '%' || $2 || '%'
+            OR pv.title ILIKE '%' || $2 || '%'
+            OR pv.sku ILIKE '%' || $2 || '%'
+          )
+        ORDER BY p.created_at DESC, pv.created_at DESC
+        LIMIT $3 OFFSET $4
+      `,
+      [input.storeId, q, input.limit, input.offset],
+    );
+
+    const countResult = await this.databaseService.db.query<{ total: string }>(
+      `
+        SELECT COUNT(*)::text AS total
+        FROM product_variants pv
+        INNER JOIN products p ON p.id = pv.product_id AND p.store_id = pv.store_id
+        WHERE pv.store_id = $1
+          AND p.status = 'active'
+          AND p.is_visible = TRUE
+          AND p.product_type <> 'bundled'
+          AND (
+            $2::text IS NULL
+            OR p.title ILIKE '%' || $2 || '%'
+            OR pv.title ILIKE '%' || $2 || '%'
+            OR pv.sku ILIKE '%' || $2 || '%'
+          )
+      `,
+      [input.storeId, q],
     );
 
     return {
@@ -603,6 +804,23 @@ export class OrdersRepository {
         ORDER BY created_at ASC
       `,
       [orderId],
+    );
+    return result.rows;
+  }
+
+  async listOrderItemsByOrderIds(orderIds: string[]): Promise<OrderItemRecord[]> {
+    if (orderIds.length === 0) {
+      return [];
+    }
+
+    const result = await this.databaseService.db.query<OrderItemRecord>(
+      `
+        SELECT id, order_id, product_id, variant_id, title, sku, unit_price, quantity, line_total, attributes
+        FROM order_items
+        WHERE order_id = ANY($1::uuid[])
+        ORDER BY created_at ASC
+      `,
+      [orderIds],
     );
     return result.rows;
   }
@@ -645,6 +863,173 @@ export class OrdersRepository {
     return result.rows[0] ?? null;
   }
 
+  async findCustomerById(storeId: string, customerId: string): Promise<CustomerSummaryRow | null> {
+    const result = await this.databaseService.db.query<CustomerSummaryRow>(
+      `
+        SELECT id, full_name, phone
+        FROM customers
+        WHERE store_id = $1
+          AND id = $2
+        LIMIT 1
+      `,
+      [storeId, customerId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async findOrderListRowById(storeId: string, orderId: string): Promise<OrderListRow | null> {
+    const result = await this.databaseService.db.query<OrderListRow>(
+      `
+        SELECT
+          o.id,
+          o.store_id,
+          o.customer_id,
+          o.order_code,
+          o.status,
+          o.subtotal,
+          o.total,
+          o.shipping_zone_id,
+          o.shipping_fee,
+          o.discount_total,
+          o.coupon_code,
+          o.currency_code,
+          o.note,
+          o.shipping_address,
+          o.created_at,
+          o.updated_at,
+          c.full_name AS customer_name,
+          c.phone AS customer_phone,
+          p.method AS payment_method,
+          p.status AS payment_status
+        FROM orders o
+        LEFT JOIN customers c ON c.id = o.customer_id
+        LEFT JOIN payments p ON p.order_id = o.id AND p.store_id = o.store_id
+        WHERE o.store_id = $1
+          AND o.id = $2
+        LIMIT 1
+      `,
+      [storeId, orderId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async listCustomerAddresses(
+    storeId: string,
+    customerId: string,
+  ): Promise<CustomerAddressSummaryRow[]> {
+    const result = await this.databaseService.db.query<CustomerAddressSummaryRow>(
+      `
+        SELECT id, customer_id, address_line, city, area, notes, is_default
+        FROM customer_addresses
+        WHERE store_id = $1
+          AND customer_id = $2
+        ORDER BY is_default DESC, created_at DESC
+      `,
+      [storeId, customerId],
+    );
+    return result.rows;
+  }
+
+  async findCustomerAddressById(
+    storeId: string,
+    customerId: string,
+    addressId: string,
+  ): Promise<CustomerAddressSummaryRow | null> {
+    const result = await this.databaseService.db.query<CustomerAddressSummaryRow>(
+      `
+        SELECT id, customer_id, address_line, city, area, notes, is_default
+        FROM customer_addresses
+        WHERE store_id = $1
+          AND customer_id = $2
+          AND id = $3
+        LIMIT 1
+      `,
+      [storeId, customerId, addressId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async updateOrderManual(
+    db: Queryable,
+    input: {
+      orderId: string;
+      storeId: string;
+      customerId: string;
+      subtotal: number;
+      total: number;
+      shippingZoneId: string | null;
+      shippingFee: number;
+      discountTotal: number;
+      couponCode: string | null;
+      note: string | null;
+      shippingAddress: Record<string, unknown>;
+    },
+  ): Promise<void> {
+    await db.query(
+      `
+        UPDATE orders
+        SET customer_id = $3,
+            subtotal = $4,
+            total = $5,
+            shipping_zone_id = $6,
+            shipping_fee = $7,
+            discount_total = $8,
+            coupon_code = $9,
+            note = $10,
+            shipping_address = $11::jsonb,
+            updated_at = NOW()
+        WHERE id = $1
+          AND store_id = $2
+      `,
+      [
+        input.orderId,
+        input.storeId,
+        input.customerId,
+        input.subtotal,
+        input.total,
+        input.shippingZoneId,
+        input.shippingFee,
+        input.discountTotal,
+        input.couponCode,
+        input.note,
+        JSON.stringify(input.shippingAddress),
+      ],
+    );
+  }
+
+  async deleteOrderItems(db: Queryable, input: { storeId: string; orderId: string }): Promise<void> {
+    await db.query(
+      `
+        DELETE FROM order_items
+        WHERE store_id = $1
+          AND order_id = $2
+      `,
+      [input.storeId, input.orderId],
+    );
+  }
+
+  async updateOrderPayment(
+    db: Queryable,
+    input: {
+      orderId: string;
+      storeId: string;
+      method: PaymentMethod;
+      amount: number;
+    },
+  ): Promise<void> {
+    await db.query(
+      `
+        UPDATE payments
+        SET method = $3,
+            amount = $4,
+            updated_at = NOW()
+        WHERE order_id = $1
+          AND store_id = $2
+      `,
+      [input.orderId, input.storeId, input.method, input.amount],
+    );
+  }
+
   async updateOrderStatus(
     db: Queryable,
     input: { orderId: string; storeId: string; nextStatus: OrderStatus },
@@ -681,11 +1066,59 @@ export class OrdersRepository {
     return (result.rowCount ?? 0) > 0;
   }
 
+  private buildListFilters(filters: OrdersListFilters): { whereClause: string; values: unknown[] } {
+    const values: unknown[] = [];
+    const conditions: string[] = [];
+
+    values.push(filters.storeId);
+    conditions.push(`o.store_id = $${values.length}`);
+
+    if (filters.status) {
+      values.push(filters.status);
+      conditions.push(`o.status = $${values.length}`);
+    }
+
+    const q = filters.q?.trim();
+    if (q) {
+      values.push(q);
+      const qIndex = values.length;
+      conditions.push(
+        `(o.order_code ILIKE '%' || $${qIndex} || '%' OR COALESCE(c.full_name, '') ILIKE '%' || $${qIndex} || '%' OR COALESCE(c.phone, '') ILIKE '%' || $${qIndex} || '%')`,
+      );
+    }
+
+    if (filters.paymentMethod) {
+      values.push(filters.paymentMethod);
+      conditions.push(`p.method = $${values.length}`);
+    }
+
+    if (filters.paymentStatus) {
+      values.push(filters.paymentStatus);
+      conditions.push(`p.status = $${values.length}`);
+    }
+
+    if (filters.dateFrom) {
+      values.push(filters.dateFrom);
+      conditions.push(`o.created_at >= $${values.length}`);
+    }
+
+    if (filters.dateTo) {
+      values.push(filters.dateTo);
+      conditions.push(`o.created_at <= $${values.length}`);
+    }
+
+    return {
+      whereClause: conditions.join(' AND '),
+      values,
+    };
+  }
+
   private async touchCart(cartId: string): Promise<void> {
     await this.databaseService.db.query(
       `
         UPDATE carts
         SET updated_at = NOW(),
+            status = 'open',
             expires_at = NOW() + INTERVAL '7 days'
         WHERE id = $1
       `,

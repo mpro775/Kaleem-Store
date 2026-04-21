@@ -16,6 +16,23 @@ interface BackInStockEmailInput {
   productUrl: string;
 }
 
+interface AbandonedCartRecoveryEmailInput {
+  to: string;
+  storeName: string;
+  recoveryUrl: string;
+  openTrackingUrl: string;
+  cartTotal: number;
+  currencyCode: string;
+  itemsCount: number;
+  expiresAt: Date;
+  items: Array<{
+    title: string;
+    sku: string | null;
+    quantity: number;
+    unitPrice: number;
+  }>;
+}
+
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
@@ -99,11 +116,78 @@ export class EmailService {
     );
   }
 
+  async sendAbandonedCartRecovery(input: AbandonedCartRecoveryEmailInput): Promise<void> {
+    const mode = this.configService.get<string>('EMAIL_DELIVERY_MODE', 'log');
+    const from = this.configService.get<string>('EMAIL_FROM', 'no-reply@kaleem.store');
+    const subject = `لا يزال هناك منتجات بانتظارك في ${input.storeName}`;
+    const text = [
+      'مرحباً،',
+      '',
+      `لقد لاحظنا أنك لم تكمل طلبك في ${input.storeName}.`,
+      `عدد المنتجات في السلة: ${input.itemsCount}`,
+      `إجمالي السلة: ${input.cartTotal.toFixed(2)} ${input.currencyCode}`,
+      `استعد سلتك الآن: ${input.recoveryUrl}`,
+      `صالح حتى: ${input.expiresAt.toISOString()}`,
+      '',
+      'إذا قمت بإتمام الشراء بالفعل، تجاهل هذه الرسالة.',
+    ].join('\n');
+
+    const itemsHtml =
+      input.items.length > 0
+        ? `<ul>${input.items
+            .map(
+              (item) =>
+                `<li>${this.escapeHtml(item.title)} x ${item.quantity} - ${item.unitPrice.toFixed(2)} ${this.escapeHtml(input.currencyCode)}${item.sku ? ` (${this.escapeHtml(item.sku)})` : ''}</li>`,
+            )
+            .join('')}</ul>`
+        : '';
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right; color: #111;">
+        <p>مرحباً،</p>
+        <p>لا تزال هناك منتجات بانتظارك في <strong>${this.escapeHtml(input.storeName)}</strong>.</p>
+        <p>عدد المنتجات: <strong>${input.itemsCount}</strong></p>
+        <p>إجمالي السلة: <strong>${input.cartTotal.toFixed(2)} ${this.escapeHtml(input.currencyCode)}</strong></p>
+        ${itemsHtml}
+        <p><a href="${this.escapeHtml(input.recoveryUrl)}">العودة إلى السلة وإكمال الطلب</a></p>
+        <p style="font-size:12px;color:#666;">ينتهي الرابط في: ${this.escapeHtml(input.expiresAt.toISOString())}</p>
+        <img src="${this.escapeHtml(input.openTrackingUrl)}" alt="" width="1" height="1" style="display:block;border:0;" />
+      </div>
+    `.trim();
+
+    if (mode === 'smtp') {
+      await this.sendWithSmtp({
+        to: input.to,
+        from,
+        subject,
+        text,
+        html,
+      });
+      return;
+    }
+
+    if (mode === 'resend') {
+      await this.sendWithResend({
+        to: input.to,
+        from,
+        subject,
+        text,
+        html,
+      });
+      return;
+    }
+
+    this.logger.log(
+      `Abandoned-cart recovery email (mode=log) to ${input.to}. Recovery URL: ${input.recoveryUrl}. Open pixel: ${input.openTrackingUrl}`,
+    );
+  }
+
   private async sendWithResend(input: {
     to: string;
     from: string;
     subject: string;
     text: string;
+    html?: string;
   }): Promise<void> {
     const apiKey = this.configService.get<string>('RESEND_API_KEY', '');
     const baseUrl = this.configService.get<string>('RESEND_API_BASE_URL', 'https://api.resend.com');
@@ -123,6 +207,7 @@ export class EmailService {
         to: [input.to],
         subject: input.subject,
         text: input.text,
+        ...(input.html ? { html: input.html } : {}),
       }),
     });
 
@@ -137,6 +222,7 @@ export class EmailService {
     from: string;
     subject: string;
     text: string;
+    html?: string;
   }): Promise<void> {
     const transporter = this.getSmtpTransporter();
 
@@ -145,6 +231,7 @@ export class EmailService {
       to: input.to,
       subject: input.subject,
       text: input.text,
+      ...(input.html ? { html: input.html } : {}),
     });
   }
 
@@ -174,5 +261,14 @@ export class EmailService {
     });
 
     return this.smtpTransporter;
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 }

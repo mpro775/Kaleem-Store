@@ -239,9 +239,17 @@ describe('Sprint 9 release readiness checks', () => {
           id: STORE_ID,
           name: 'Store',
           slug: 'store',
+          logo_media_asset_id: null,
           logo_url: null,
           phone: null,
           address: null,
+          country: 'اليمن',
+          city: null,
+          address_details: null,
+          latitude: null,
+          longitude: null,
+          working_hours: [],
+          social_links: {},
           currency_code: 'SAR',
           timezone: 'Asia/Riyadh',
           shipping_policy: null,
@@ -255,9 +263,17 @@ describe('Sprint 9 release readiness checks', () => {
           id: STORE_ID,
           name: input.name,
           slug: 'store',
+          logo_media_asset_id: input.logoMediaAssetId,
           logo_url: input.logoUrl,
           phone: input.phone,
           address: input.address,
+          country: input.country,
+          city: input.city,
+          address_details: input.addressDetails,
+          latitude: input.latitude,
+          longitude: input.longitude,
+          working_hours: input.workingHours,
+          social_links: input.socialLinks,
           currency_code: input.currencyCode,
           timezone: input.timezone,
           shipping_policy: input.shippingPolicy,
@@ -272,6 +288,14 @@ describe('Sprint 9 release readiness checks', () => {
     const updated = await storesService.updateSettings(
       CURRENT_USER,
       {
+        city: 'صنعاء',
+        addressDetails: 'شارع الزبيري',
+        latitude: 15.353115,
+        longitude: 44.207794,
+        socialLinks: {
+          instagram: 'https://instagram.com/kaleem',
+          website: 'https://kaleem.store',
+        },
         shippingPolicy: 'Ships in 2 business days',
         returnPolicy: 'Returns in 7 days',
         privacyPolicy: 'No sharing without consent',
@@ -284,6 +308,60 @@ describe('Sprint 9 release readiness checks', () => {
     assert.equal(updated.returnPolicy, 'Returns in 7 days');
     assert.equal(updated.privacyPolicy, 'No sharing without consent');
     assert.equal(updated.termsAndConditions, 'Usage terms');
+    assert.equal(typeof updated.address, 'string');
+    assert.equal(updated.address.includes('صنعاء'), true);
+    assert.equal(updated.address.includes('شارع الزبيري'), true);
+    assert.equal(updated.latitude, 15.353115);
+    assert.equal(updated.longitude, 44.207794);
+    assert.equal(updated.socialLinks.instagram, 'https://instagram.com/kaleem');
+  });
+
+  it('rejects invalid social links in store settings service', async () => {
+    const storesRepositoryMock = {
+      async findById() {
+        return {
+          id: STORE_ID,
+          name: 'Store',
+          slug: 'store',
+          logo_media_asset_id: null,
+          logo_url: null,
+          phone: null,
+          address: null,
+          country: 'اليمن',
+          city: null,
+          address_details: null,
+          latitude: null,
+          longitude: null,
+          working_hours: [],
+          social_links: {},
+          currency_code: 'SAR',
+          timezone: 'Asia/Riyadh',
+          shipping_policy: null,
+          return_policy: null,
+          privacy_policy: null,
+          terms_of_service: null,
+        };
+      },
+      async updateSettings() {
+        throw new Error('should not be called');
+      },
+    };
+
+    const storesService = new StoresService(storesRepositoryMock, { async log() {} });
+
+    await assert.rejects(
+      () =>
+        storesService.updateSettings(
+          CURRENT_USER,
+          {
+            socialLinks: {
+              instagram: 'not-a-url',
+            },
+          },
+          { ipAddress: null, userAgent: null, requestId: 'req-store-invalid-social' },
+        ),
+      /Invalid social link URL/,
+    );
   });
 
   it('syncs cloudflare ssl status for active domain', async () => {

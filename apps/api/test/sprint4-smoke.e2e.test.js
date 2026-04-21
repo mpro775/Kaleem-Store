@@ -3,7 +3,7 @@ require('reflect-metadata');
 const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
 const { after, before, beforeEach, describe, it } = require('node:test');
-const { ValidationPipe } = require('@nestjs/common');
+const { BadRequestException, NotFoundException, ValidationPipe } = require('@nestjs/common');
 const { Test } = require('@nestjs/testing');
 
 const { AccessTokenGuard } = require('../dist/auth/guards/access-token.guard');
@@ -19,6 +19,7 @@ const { PromotionsController } = require('../dist/promotions/promotions.controll
 const { PromotionsRepository } = require('../dist/promotions/promotions.repository');
 const { PromotionsService } = require('../dist/promotions/promotions.service');
 const { CategoriesRepository } = require('../dist/categories/categories.repository');
+const { AbandonedCartsService } = require('../dist/customers/abandoned-carts.service');
 const { CustomersService } = require('../dist/customers/customers.service');
 const { ProductsRepository } = require('../dist/products/products.repository');
 const { ShippingController } = require('../dist/shipping/shipping.controller');
@@ -51,6 +52,11 @@ const state = {
   coupons: new Map(),
   outboxEvents: [],
   cartItems: [],
+  checkedOutCartIds: new Set(),
+  recoveryTokens: new Map(),
+  openedRecoveryTokens: new Set(),
+  clickedRecoveryTokens: new Set(),
+  recoveredCheckouts: [],
 };
 
 const staticCart = {
@@ -246,6 +252,9 @@ const promotionsRepositoryMock = {
 
 const ordersRepositoryMock = {
   async findOpenCartById(storeId, cartId) {
+    if (state.checkedOutCartIds.has(cartId)) {
+      return null;
+    }
     if (storeId === STORE_ID && cartId === OPEN_CART_ID) {
       return staticCart;
     }
@@ -296,6 +305,7 @@ const ordersRepositoryMock = {
     return;
   },
   async markCartCheckedOut() {
+    state.checkedOutCartIds.add(OPEN_CART_ID);
     return;
   },
 };
@@ -400,6 +410,37 @@ const storefrontTrackingServiceMock = {
   },
 };
 
+const abandonedCartsServiceMock = {
+  async resolveRecoveryRedirect(token) {
+    const row = state.recoveryTokens.get(String(token));
+    if (!row) {
+      throw new NotFoundException('Recovery link is invalid');
+    }
+    if (row.expired) {
+      throw new BadRequestException('Recovery link has expired');
+    }
+    state.clickedRecoveryTokens.add(String(token));
+    return {
+      redirectUrl: row.redirectUrl,
+      cartId: row.cartId,
+    };
+  },
+  async trackRecoveryEmailOpen(token) {
+    const normalized = String(token);
+    if (state.recoveryTokens.has(normalized)) {
+      state.openedRecoveryTokens.add(normalized);
+    }
+  },
+  async attachRecoveredCheckout(input) {
+    state.recoveredCheckouts.push({
+      storeId: input.storeId,
+      cartId: input.cartId,
+      orderId: input.orderId,
+    });
+    return true;
+  },
+};
+
 const advancedOffersServiceMock = {
   async computeBestDiscount() {
     return { offerId: null, discount: 0 };
@@ -455,6 +496,7 @@ describe('Sprint 4 API smoke e2e', () => {
         { provide: ThemesService, useValue: themesServiceMock },
         { provide: WebhooksService, useValue: webhooksServiceMock },
         { provide: CustomersService, useValue: customersServiceMock },
+        { provide: AbandonedCartsService, useValue: abandonedCartsServiceMock },
         { provide: StorefrontTrackingService, useValue: storefrontTrackingServiceMock },
         { provide: AdvancedOffersService, useValue: advancedOffersServiceMock },
         { provide: OutboxService, useValue: outboxServiceMock },
@@ -495,6 +537,21 @@ describe('Sprint 4 API smoke e2e', () => {
     state.coupons.clear();
     state.outboxEvents.length = 0;
     state.cartItems = createDefaultCartItems();
+    state.checkedOutCartIds.clear();
+    state.recoveryTokens.clear();
+    state.openedRecoveryTokens.clear();
+    state.clickedRecoveryTokens.clear();
+    state.recoveredCheckouts.length = 0;
+    state.recoveryTokens.set('valid-recovery-token', {
+      cartId: OPEN_CART_ID,
+      expired: false,
+      redirectUrl: `http://localhost:3001/checkout?cartId=${OPEN_CART_ID}&recoveryToken=valid-recovery-token&store=demo`,
+    });
+    state.recoveryTokens.set('expired-recovery-token', {
+      cartId: OPEN_CART_ID,
+      expired: true,
+      redirectUrl: `http://localhost:3001/checkout?cartId=${OPEN_CART_ID}&recoveryToken=expired-recovery-token&store=demo`,
+    });
   });
 
   after(async () => {
@@ -793,6 +850,122 @@ describe('Sprint 4 API smoke e2e', () => {
       },
       400,
       'Shipping zone not found or inactive',
+      baseUrl,
+    );
+  });
+
+  it('tracks abandoned recovery email open via pixel endpoint', async () => {
+    const response = await fetch(`${baseUrl}/sf/recovery/valid-recovery-token/open`, {
+      method: 'GET',
+    });
+
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-type')?.includes('image/gif'), true);
+    assert.equal(state.openedRecoveryTokens.has('valid-recovery-token'), true);
+  });
+
+  it('redirects recovery link and tracks click', async () => {
+    const response = await fetch(`${baseUrl}/sf/recovery/valid-recovery-token`, {
+      method: 'GET',
+      redirect: 'manual',
+    });
+
+    assert.equal(response.status, 302);
+    assert.equal(
+      response.headers.get('location'),
+      `http://localhost:3001/checkout?cartId=${OPEN_CART_ID}&recoveryToken=valid-recovery-token&store=demo`,
+    );
+    assert.equal(state.clickedRecoveryTokens.has('valid-recovery-token'), true);
+  });
+
+  it('rejects expired recovery token', async () => {
+    await requestError(
+      '/sf/recovery/expired-recovery-token',
+      {
+        method: 'GET',
+        redirect: 'manual',
+      },
+      400,
+      'Recovery link has expired',
+      baseUrl,
+    );
+  });
+
+  it('attributes recovered checkout after token click and checkout completion', async () => {
+    const recoveryResponse = await fetch(`${baseUrl}/sf/recovery/valid-recovery-token`, {
+      method: 'GET',
+      redirect: 'manual',
+    });
+
+    assert.equal(recoveryResponse.status, 302);
+    assert.equal(state.clickedRecoveryTokens.has('valid-recovery-token'), true);
+
+    const checkout = await requestJson(
+      '/sf/checkout',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          cartId: OPEN_CART_ID,
+          customerName: 'Recovered Customer',
+          customerPhone: '+966500111111',
+          customerEmail: 'recover@example.com',
+          addressLine: 'Recovery street 1',
+          city: 'Riyadh',
+          area: 'North',
+          paymentMethod: 'cod',
+        }),
+      },
+      200,
+      baseUrl,
+    );
+
+    assert.equal(checkout.status, 'new');
+    assert.equal(state.recoveredCheckouts.length, 1);
+    assert.equal(state.recoveredCheckouts[0].storeId, STORE_ID);
+    assert.equal(state.recoveredCheckouts[0].cartId, OPEN_CART_ID);
+    assert.equal(typeof state.recoveredCheckouts[0].orderId, 'string');
+  });
+
+  it('rejects checkout when cart is already checked out', async () => {
+    await requestJson(
+      '/sf/checkout',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          cartId: OPEN_CART_ID,
+          customerName: 'Ahmed Saleh',
+          customerPhone: '+966500000000',
+          customerEmail: 'ahmed@example.com',
+          addressLine: 'Olaya Street 22',
+          city: 'Riyadh',
+          area: 'North',
+          paymentMethod: 'cod',
+        }),
+      },
+      200,
+      baseUrl,
+    );
+
+    await requestError(
+      '/sf/checkout',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          cartId: OPEN_CART_ID,
+          customerName: 'Ahmed Saleh',
+          customerPhone: '+966500000000',
+          customerEmail: 'ahmed@example.com',
+          addressLine: 'Olaya Street 22',
+          city: 'Riyadh',
+          area: 'North',
+          paymentMethod: 'cod',
+        }),
+      },
+      400,
+      'Cart not found or already checked out',
       baseUrl,
     );
   });

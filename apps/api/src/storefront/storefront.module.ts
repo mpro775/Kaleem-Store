@@ -2,6 +2,7 @@ import { forwardRef, Module } from '@nestjs/common';
 import { AttributesModule } from '../attributes/attributes.module';
 import { CategoriesModule } from '../categories/categories.module';
 import { CustomersModule } from '../customers/customers.module';
+import { FiltersModule } from '../filters/filters.module';
 import { IdempotencyModule } from '../idempotency/idempotency.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { OrdersModule } from '../orders/orders.module';
@@ -24,6 +25,7 @@ import { StorefrontService } from './storefront.service';
     StoresModule,
     CategoriesModule,
     AttributesModule,
+    FiltersModule,
     ProductsModule,
     OrdersModule,
     InventoryModule,

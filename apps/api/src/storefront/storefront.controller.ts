@@ -116,6 +116,26 @@ export class StorefrontController {
     return this.storefrontService.removeCartItem(request, cartId, variantId);
   }
 
+  @Get('recovery/:token')
+  @ApiOkResponse({ description: 'Resolve abandoned cart recovery link and redirect to checkout' })
+  async recoverAbandonedCart(@Param('token') token: string, @Res() response: Response) {
+    const redirectUrl = await this.storefrontService.resolveAbandonedCartRecovery(token);
+    return response.redirect(HttpStatus.FOUND, redirectUrl);
+  }
+
+  @Get('recovery/:token/open')
+  @ApiOkResponse({ description: 'Track abandoned cart recovery email open pixel' })
+  async trackAbandonedCartRecoveryOpen(@Param('token') token: string, @Res() response: Response) {
+    await this.storefrontService.trackAbandonedCartRecoveryOpen(token);
+    response.setHeader('content-type', 'image/gif');
+    response.setHeader('cache-control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.setHeader('pragma', 'no-cache');
+    response.setHeader('expires', '0');
+    return response.status(HttpStatus.OK).send(
+      Buffer.from('R0lGODlhAQABAIABAP///wAAACwAAAAAAQABAAACAkQBADs=', 'base64'),
+    );
+  }
+
   @Get('shipping-zones')
   @ApiOkResponse({ description: 'List active shipping zones for checkout' })
   async listShippingZones(@Req() request: Request) {

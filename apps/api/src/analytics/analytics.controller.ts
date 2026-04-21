@@ -13,6 +13,7 @@ import { AnalyticsWindowQueryDto } from './dto/analytics-window-query.dto';
 import {
   AnalyticsService,
   type AnalyticsAnomalyReportResponse,
+  type AbandonedCartMetricsResponse,
   type AnalyticsDataQualityResponse,
   type AnalyticsOverviewResponse,
   type CustomersRetentionResponse,
@@ -164,6 +165,16 @@ export class AnalyticsController {
       windowDays: query.window ?? 30,
       limit: query.limit ?? 10,
     });
+  }
+
+  @Get('funnel/abandoned-carts')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get abandoned cart and recovery KPI metrics' })
+  async getAbandonedCartsMetrics(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<AbandonedCartMetricsResponse> {
+    return this.analyticsService.getAbandonedCartMetrics(currentUser, query.window ?? 30);
   }
 
   @Get('funnel/event-taxonomy')

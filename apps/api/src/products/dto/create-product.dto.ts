@@ -96,6 +96,10 @@ export class CreateProductDto {
   brand?: string;
 
   @IsOptional()
+  @IsUUID('4')
+  brandId?: string | null;
+
+  @IsOptional()
   @IsString()
   @MaxLength(20)
   weightUnit?: string;

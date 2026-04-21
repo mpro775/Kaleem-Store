@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   ConflictException,
   Injectable,
@@ -30,6 +30,8 @@ import { SaasService } from '../saas/saas.service';
 import { EmailService } from '../email/email.service';
 import type { OwnerRegistrationChallengeResult } from './interfaces/owner-registration-challenge-result.interface';
 
+const DEFAULT_STORE_NAME = 'New Store';
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -43,7 +45,7 @@ export class AuthService {
 
   async registerOwner(_input: RegisterOwnerDto, _context: RequestContextData): Promise<AuthResult> {
     throw new BadRequestException(
-      'تم إيقاف التسجيل المباشر. استخدم /auth/register-owner/start ثم /auth/register-owner/verify',
+      'طھظ… ط¥ظٹظ‚ط§ظپ ط§ظ„طھط³ط¬ظٹظ„ ط§ظ„ظ…ط¨ط§ط´ط±. ط§ط³طھط®ط¯ظ… /auth/register-owner/start ط«ظ… /auth/register-owner/verify',
     );
   }
 
@@ -52,7 +54,7 @@ export class AuthService {
     context: RequestContextData,
   ): Promise<OwnerRegistrationChallengeResult> {
     const normalized = await this.normalizeOwnerRegistrationInput(input);
-    await this.ensureRegistrationAvailability(normalized.email, normalized.storeSlug);
+    await this.ensureEmailAvailability(normalized.email);
 
     const challengeId = uuidv4();
     const now = new Date();
@@ -60,10 +62,7 @@ export class AuthService {
     const otpHash = this.hashOtpCode(otpCode);
     const otpExpiresAt = this.getOtpExpiryDate(now);
 
-    await this.authRepository.deletePendingOwnerRegistrationChallengesByEmailOrSlug(
-      normalized.email,
-      normalized.storeSlug,
-    );
+    await this.authRepository.deletePendingOwnerRegistrationChallengesByEmail(normalized.email);
 
     await this.authRepository.createOwnerRegistrationChallenge({
       challengeId,
@@ -72,9 +71,9 @@ export class AuthService {
       emailNormalized: normalized.email,
       passwordHash: normalized.passwordHash,
       ownerPhone: normalized.ownerPhone,
-      storeName: normalized.storeName,
-      storeSlug: normalized.storeSlug,
-      storePhone: normalized.storePhone,
+      storeName: DEFAULT_STORE_NAME,
+      storeSlug: `pending-${challengeId.slice(0, 8)}`,
+      storePhone: null,
       otpHash,
       otpExpiresAt,
       lastSentAt: now,
@@ -85,7 +84,7 @@ export class AuthService {
       fullName: normalized.fullName,
       otpCode,
       expiresInMinutes: this.getOtpTtlMinutes(),
-      storeName: normalized.storeName,
+      storeName: DEFAULT_STORE_NAME,
     });
 
     await this.logAuthEvent('auth.register_owner_otp_sent', null, null, context);
@@ -102,20 +101,21 @@ export class AuthService {
     if (!this.verifyOtpCode(challenge.otp_hash, input.otpCode.trim())) {
       await this.authRepository.incrementOwnerRegistrationVerifyAttempts(challenge.id);
       await this.logAuthEvent('auth.register_owner_otp_failed', null, null, context);
-      throw new UnauthorizedException('رمز التحقق غير صحيح');
+      throw new UnauthorizedException('ط±ظ…ط² ط§ظ„طھط­ظ‚ظ‚ ط؛ظٹط± طµط­ظٹط­');
     }
 
-    await this.ensureRegistrationAvailability(challenge.email_normalized, challenge.store_slug);
+    await this.ensureEmailAvailability(challenge.email_normalized);
 
     const storeId = uuidv4();
     const userId = uuidv4();
+    const generatedStoreSlug = await this.generateDefaultStoreSlug();
 
     await this.authRepository.createStoreWithOwner({
       storeId,
       userId,
-      storeName: challenge.store_name,
-      storeSlug: challenge.store_slug,
-      storePhone: challenge.store_phone,
+      storeName: DEFAULT_STORE_NAME,
+      storeSlug: generatedStoreSlug,
+      storePhone: null,
       fullName: challenge.full_name,
       email: challenge.email_normalized,
       passwordHash: challenge.password_hash,
@@ -156,7 +156,7 @@ export class AuthService {
       fullName: challenge.full_name,
       otpCode,
       expiresInMinutes: this.getOtpTtlMinutes(),
-      storeName: challenge.store_name,
+      storeName: DEFAULT_STORE_NAME,
     });
 
     await this.logAuthEvent('auth.register_owner_otp_resent', null, null, context);
@@ -211,19 +211,24 @@ export class AuthService {
     };
   }
 
-  private async ensureRegistrationAvailability(email: string, storeSlug: string): Promise<void> {
-    const [emailUser, slugExists] = await Promise.all([
-      this.authRepository.findUserByEmail(email.trim().toLowerCase()),
-      this.authRepository.storeSlugExists(storeSlug.trim().toLowerCase()),
-    ]);
-
+  private async ensureEmailAvailability(email: string): Promise<void> {
+    const emailUser = await this.authRepository.findUserByEmail(email.trim().toLowerCase());
     if (emailUser) {
       throw new ConflictException('البريد الإلكتروني مستخدم بالفعل');
     }
+  }
 
-    if (slugExists) {
-      throw new ConflictException('رابط المتجر مستخدم بالفعل');
+  private async generateDefaultStoreSlug(): Promise<string> {
+    const maxAttempts = 10;
+    for (let index = 0; index < maxAttempts; index += 1) {
+      const candidate = `store-${Math.random().toString(36).slice(2, 8)}`;
+      const slugExists = await this.authRepository.storeSlugExists(candidate);
+      if (!slugExists) {
+        return candidate;
+      }
     }
+
+    throw new ConflictException('Unable to generate unique store slug');
   }
 
   private async normalizeOwnerRegistrationInput(input: RegisterOwnerStartDto): Promise<{
@@ -231,26 +236,17 @@ export class AuthService {
     email: string;
     passwordHash: string;
     ownerPhone: string;
-    storeName: string;
-    storeSlug: string;
-    storePhone: string | null;
   }> {
     const fullName = input.fullName.trim();
     const email = input.email.trim().toLowerCase();
     const passwordHash = await this.hashValue(input.password);
     const ownerPhone = input.ownerPhone.trim();
-    const storeName = input.storeName.trim();
-    const storeSlug = input.storeSlug.trim().toLowerCase();
-    const storePhone = input.storePhone?.trim() || null;
 
     return {
       fullName,
       email,
       passwordHash,
       ownerPhone,
-      storeName,
-      storeSlug,
-      storePhone,
     };
   }
 
@@ -259,15 +255,15 @@ export class AuthService {
   ): Promise<OwnerRegistrationChallengeRecord> {
     const challenge = await this.authRepository.findOwnerRegistrationChallengeById(challengeId);
     if (!challenge) {
-      throw new UnauthorizedException('جلسة التحقق غير موجودة');
+      throw new UnauthorizedException('ط¬ظ„ط³ط© ط§ظ„طھط­ظ‚ظ‚ ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©');
     }
 
     if (challenge.consumed_at) {
-      throw new BadRequestException('تم استخدام جلسة التحقق مسبقاً، ابدأ التسجيل من جديد');
+      throw new BadRequestException('طھظ… ط§ط³طھط®ط¯ط§ظ… ط¬ظ„ط³ط© ط§ظ„طھط­ظ‚ظ‚ ظ…ط³ط¨ظ‚ط§ظ‹طŒ ط§ط¨ط¯ط£ ط§ظ„طھط³ط¬ظٹظ„ ظ…ظ† ط¬ط¯ظٹط¯');
     }
 
     if (challenge.otp_expires_at.getTime() <= Date.now()) {
-      throw new BadRequestException('انتهت صلاحية رمز التحقق، أعد إرسال رمز جديد أو ابدأ التسجيل من جديد');
+      throw new BadRequestException('ط§ظ†طھظ‡طھ طµظ„ط§ط­ظٹط© ط±ظ…ط² ط§ظ„طھط­ظ‚ظ‚طŒ ط£ط¹ط¯ ط¥ط±ط³ط§ظ„ ط±ظ…ط² ط¬ط¯ظٹط¯ ط£ظˆ ط§ط¨ط¯ط£ ط§ظ„طھط³ط¬ظٹظ„ ظ…ظ† ط¬ط¯ظٹط¯');
     }
 
     return challenge;
@@ -276,20 +272,20 @@ export class AuthService {
   private ensureOtpAttemptsRemaining(challenge: OwnerRegistrationChallengeRecord): void {
     const maxAttempts = this.configService.get<number>('AUTH_OTP_MAX_VERIFY_ATTEMPTS', 5);
     if (challenge.verify_attempts >= maxAttempts) {
-      throw new BadRequestException('تم تجاوز الحد الأقصى لمحاولات التحقق، ابدأ التسجيل من جديد');
+      throw new BadRequestException('طھظ… طھط¬ط§ظˆط² ط§ظ„ط­ط¯ ط§ظ„ط£ظ‚طµظ‰ ظ„ظ…ط­ط§ظˆظ„ط§طھ ط§ظ„طھط­ظ‚ظ‚طŒ ط§ط¨ط¯ط£ ط§ظ„طھط³ط¬ظٹظ„ ظ…ظ† ط¬ط¯ظٹط¯');
     }
   }
 
   private ensureOtpResendAllowed(challenge: OwnerRegistrationChallengeRecord): void {
     const maxResendCount = this.configService.get<number>('AUTH_OTP_MAX_RESEND_COUNT', 5);
     if (challenge.resend_count >= maxResendCount) {
-      throw new BadRequestException('تم تجاوز الحد الأقصى لإعادة إرسال الرمز، ابدأ التسجيل من جديد');
+      throw new BadRequestException('طھظ… طھط¬ط§ظˆط² ط§ظ„ط­ط¯ ط§ظ„ط£ظ‚طµظ‰ ظ„ط¥ط¹ط§ط¯ط© ط¥ط±ط³ط§ظ„ ط§ظ„ط±ظ…ط²طŒ ط§ط¨ط¯ط£ ط§ظ„طھط³ط¬ظٹظ„ ظ…ظ† ط¬ط¯ظٹط¯');
     }
 
     const resendCooldownSeconds = this.configService.get<number>('AUTH_OTP_RESEND_COOLDOWN_SECONDS', 60);
     const nextAllowedAt = challenge.last_sent_at.getTime() + resendCooldownSeconds * 1000;
     if (nextAllowedAt > Date.now()) {
-      throw new BadRequestException('يرجى الانتظار قليلاً قبل طلب رمز جديد');
+      throw new BadRequestException('ظٹط±ط¬ظ‰ ط§ظ„ط§ظ†طھط¸ط§ط± ظ‚ظ„ظٹظ„ط§ظ‹ ظ‚ط¨ظ„ ط·ظ„ط¨ ط±ظ…ط² ط¬ط¯ظٹط¯');
     }
   }
 
@@ -426,6 +422,7 @@ export class AuthService {
       full_name: string;
       role: 'owner' | 'staff';
       permissions: string[];
+      store_onboarding_completed_at: Date | null;
     },
     sessionId: string,
   ): AuthUser {
@@ -437,6 +434,7 @@ export class AuthService {
       role: user.role,
       permissions: user.permissions,
       sessionId,
+      onboardingCompleted: Boolean(user.store_onboarding_completed_at),
     };
   }
 
@@ -474,3 +472,12 @@ export class AuthService {
     });
   }
 }
+
+
+
+
+
+
+
+
+

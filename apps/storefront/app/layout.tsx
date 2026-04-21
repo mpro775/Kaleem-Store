@@ -4,12 +4,20 @@ import './globals.css';
 import { CustomerAuthProvider } from '../lib/customer-auth-context';
 import { WishlistProvider } from '../lib/wishlist-context';
 import { HeaderAuth } from '../components/header-auth';
-import { getPublishedTheme } from '../lib/storefront-server';
+import { getPublishedTheme, resolveStore } from '../lib/storefront-server';
 import { resolveThemeStyleVars } from '../lib/theme-runtime';
 import { getSiteOrigin } from '../lib/seo';
 
 export async function generateMetadata(): Promise<Metadata> {
   const metadataBase = new URL(await getSiteOrigin());
+  let faviconUrl: string | null = null;
+
+  try {
+    const store = await resolveStore();
+    faviconUrl = store.storeSettings.faviconUrl ?? null;
+  } catch {
+    faviconUrl = null;
+  }
 
   return {
     metadataBase,
@@ -38,6 +46,14 @@ export async function generateMetadata(): Promise<Metadata> {
       index: true,
       follow: true,
     },
+    ...(faviconUrl
+      ? {
+          icons: {
+            icon: faviconUrl,
+            shortcut: faviconUrl,
+          },
+        }
+      : {}),
   };
 }
 

@@ -32,6 +32,33 @@ interface StaffPanelProps {
   request: MerchantRequester;
 }
 
+const ALL_PERMISSIONS = [
+  '*',
+  'store:read',
+  'store:write',
+  'users:read',
+  'users:write',
+  'categories:read',
+  'categories:write',
+  'brands:read',
+  'brands:write',
+  'products:read',
+  'products:write',
+  'inventory:read',
+  'inventory:write',
+  'attributes:read',
+  'attributes:write',
+  'media:write',
+  'orders:read',
+  'orders:write',
+  'customers:read',
+  'customers:write',
+  'themes:read',
+  'themes:write',
+  'domains:read',
+  'domains:write',
+] as const;
+
 export function StaffPanel({ request }: StaffPanelProps) {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [invites, setInvites] = useState<StaffInvite[]>([]);
@@ -43,11 +70,11 @@ export function StaffPanel({ request }: StaffPanelProps) {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteFullName, setInviteFullName] = useState('');
   const [inviteRole, setInviteRole] = useState<StoreRole>('staff');
-  const [invitePermissions, setInvitePermissions] = useState('');
+  const [invitePermissions, setInvitePermissions] = useState<string[]>([]);
 
   const [selectedUserId, setSelectedUserId] = useState('');
   const [editRole, setEditRole] = useState<StoreRole>('staff');
-  const [editPermissions, setEditPermissions] = useState('');
+  const [editPermissions, setEditPermissions] = useState<string[]>([]);
 
   useEffect(() => {
     loadAll().catch(() => undefined);
@@ -86,7 +113,7 @@ export function StaffPanel({ request }: StaffPanelProps) {
           email: inviteEmail,
           fullName: inviteFullName,
           role: inviteRole,
-          permissions: parsePermissions(invitePermissions),
+          permissions: normalizePermissions(invitePermissions),
         }),
       });
       if (result) {
@@ -98,7 +125,7 @@ export function StaffPanel({ request }: StaffPanelProps) {
       }
       setInviteEmail('');
       setInviteFullName('');
-      setInvitePermissions('');
+      setInvitePermissions([]);
       setShowInviteForm(false);
       await loadAll();
     } catch (err) {
@@ -118,7 +145,7 @@ export function StaffPanel({ request }: StaffPanelProps) {
         method: 'PATCH',
         body: JSON.stringify({
           role: editRole,
-          permissions: parsePermissions(editPermissions),
+          permissions: normalizePermissions(editPermissions),
         }),
       });
       await loadAll();
@@ -150,8 +177,24 @@ export function StaffPanel({ request }: StaffPanelProps) {
   function selectUser(user: UserProfile): void {
     setSelectedUserId(user.id);
     setEditRole(user.role);
-    setEditPermissions(user.permissions.join(', '));
+    setEditPermissions(user.permissions);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function getPermissionOptions(selectedPermissions: string[]): string[] {
+    const selected = selectedPermissions.filter((item) => item.trim().length > 0);
+    return Array.from(new Set([...ALL_PERMISSIONS, ...selected]));
+  }
+
+  function handleRoleChange(nextRole: StoreRole, mode: 'invite' | 'edit'): void {
+    if (mode === 'invite') {
+      setInviteRole(nextRole);
+      setInvitePermissions(nextRole === 'owner' ? ['*'] : []);
+      return;
+    }
+
+    setEditRole(nextRole);
+    setEditPermissions(nextRole === 'owner' ? ['*'] : []);
   }
 
   return (
@@ -215,13 +258,58 @@ export function StaffPanel({ request }: StaffPanelProps) {
 
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 2fr' }, gap: 3 }}>
               <Box>
-                <TextField select label="الدور (Role)" fullWidth value={selectedUserId ? editRole : inviteRole} onChange={(e) => selectedUserId ? setEditRole(e.target.value as StoreRole) : setInviteRole(e.target.value as StoreRole)} sx={{ bgcolor: 'background.paper' }}>
+                <TextField
+                  select
+                  label="الدور (Role)"
+                  fullWidth
+                  value={selectedUserId ? editRole : inviteRole}
+                  onChange={(e) => handleRoleChange(e.target.value as StoreRole, selectedUserId ? 'edit' : 'invite')}
+                  sx={{ bgcolor: 'background.paper' }}
+                >
                   <MenuItem value="staff">موظف (Staff)</MenuItem>
                   <MenuItem value="owner">مالك (Owner)</MenuItem>
                 </TextField>
               </Box>
               <Box>
-                <TextField label="الصلاحيات المخصصة (تفصل بفاصلة)" fullWidth value={selectedUserId ? editPermissions : invitePermissions} onChange={(e) => selectedUserId ? setEditPermissions(e.target.value) : setInvitePermissions(e.target.value)} placeholder="مثال: products:read, orders:write" helperText="اتركها فارغة أو ضع * للوصول الكامل" sx={{ bgcolor: 'background.paper' }} dir="ltr" />
+                <TextField
+                  select
+                  fullWidth
+                  label="الصلاحيات"
+                  value={selectedUserId ? editPermissions : invitePermissions}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const selected = Array.isArray(value)
+                      ? value
+                      : String(value)
+                        .split(',')
+                        .map((item) => item.trim())
+                        .filter((item) => item.length > 0);
+
+                    const normalized = selected.includes('*') ? ['*'] : selected.filter((item) => item !== '*');
+                    if (selectedUserId) {
+                      setEditPermissions(normalized);
+                      return;
+                    }
+                    setInvitePermissions(normalized);
+                  }}
+                  SelectProps={{
+                    multiple: true,
+                    renderValue: (selected) => {
+                      const values = Array.isArray(selected) ? selected : [];
+                      if (values.length === 0) return 'لا توجد صلاحيات محددة';
+                      return values.join(', ');
+                    },
+                  }}
+                  helperText="اختر الصلاحيات من القائمة. اختيار * يمنح وصولًا كاملًا."
+                  sx={{ bgcolor: 'background.paper' }}
+                  dir="ltr"
+                >
+                  {getPermissionOptions(selectedUserId ? editPermissions : invitePermissions).map((permission) => (
+                    <MenuItem key={permission} value={permission}>
+                      {permission}
+                    </MenuItem>
+                  ))}
+                </TextField>
               </Box>
             </Box>
 
@@ -339,9 +427,10 @@ export function StaffPanel({ request }: StaffPanelProps) {
   );
 }
 
-function parsePermissions(input: string): string[] {
-  return input
-    .split(',')
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0);
+function normalizePermissions(input: string[]): string[] {
+  if (input.includes('*')) {
+    return ['*'];
+  }
+
+  return Array.from(new Set(input.map((item) => item.trim()).filter((item) => item.length > 0)));
 }

@@ -4,6 +4,7 @@ export interface PublicStoreResolveResponse {
   storeSettings: {
     name: string;
     logoUrl: string | null;
+    faviconUrl: string | null;
     currencyCode: string;
   };
   publishedThemeSummary: {
@@ -41,16 +42,20 @@ export interface StorefrontCategory {
 
 export interface StorefrontFilterAttribute {
   id: string;
-  name: string;
+  nameAr: string;
+  nameEn: string;
   slug: string;
-  nameAr: string | null;
-  nameEn: string | null;
+  type: 'checkbox' | 'radio' | 'color' | 'range';
+  sortOrder: number;
+  isActive: boolean;
   values: Array<{
     id: string;
-    value: string;
+    valueAr: string;
+    valueEn: string;
     slug: string;
-    valueAr: string | null;
-    valueEn: string | null;
+    colorHex: string | null;
+    sortOrder: number;
+    isActive: boolean;
   }>;
 }
 

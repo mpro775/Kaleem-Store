@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { PERMISSIONS } from '../auth/constants/permission.constants';
@@ -9,8 +9,14 @@ import { getRequestContext } from '../common/utils/request-context.util';
 import { RequirePermissions } from '../rbac/decorators/permissions.decorator';
 import { PermissionsGuard } from '../rbac/guards/permissions.guard';
 import { TenantGuard } from '../tenancy/guards/tenant.guard';
+import { StoreSlugAvailabilityQueryDto } from './dto/store-slug-availability-query.dto';
 import { UpdateStoreSettingsDto } from './dto/update-store-settings.dto';
-import { StoresService, type StoreSettingsResponse } from './stores.service';
+import {
+  type StoreSlugAvailabilityResponse,
+  StoresService,
+  type StoreSettingsOptionsResponse,
+  type StoreSettingsResponse,
+} from './stores.service';
 
 @ApiTags('store')
 @ApiBearerAuth()
@@ -24,6 +30,23 @@ export class StoresController {
   @ApiOkResponse({ description: 'Get store settings' })
   async getSettings(@CurrentUser() user: AuthUser): Promise<StoreSettingsResponse> {
     return this.storesService.getSettings(user);
+  }
+
+  @Get('settings/options')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get store settings options' })
+  getSettingsOptions(): StoreSettingsOptionsResponse {
+    return this.storesService.getSettingsOptions();
+  }
+
+  @Get('slug-availability')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Check store slug format and availability' })
+  checkSlugAvailability(
+    @CurrentUser() user: AuthUser,
+    @Query() query: StoreSlugAvailabilityQueryDto,
+  ): Promise<StoreSlugAvailabilityResponse> {
+    return this.storesService.checkSlugAvailability(user, query.slug);
   }
 
   @Put('settings')

@@ -1,38 +1,70 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
   Button,
+  Chip,
+  CircularProgress,
+  Divider,
   MenuItem,
   Paper,
+  Radio,
   Stack,
-  TextField,
-  Typography,
+  Step,
+  StepLabel,
+  Stepper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Chip,
-  Divider,
-  IconButton,
-  InputAdornment,
-  CircularProgress
+  Tabs,
+  Tab,
+  TextField,
+  Typography,
 } from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import SearchIcon from '@mui/icons-material/Search';
-import FilterListIcon from '@mui/icons-material/FilterList';
-import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
-import LocalShippingIcon from '@mui/icons-material/LocalShipping';
-import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
-import EditNoteIcon from '@mui/icons-material/EditNote';
+import DownloadIcon from '@mui/icons-material/Download';
+import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import type { MerchantRequester } from '../merchant-dashboard.types';
-import type { Order, OrderDetail, OrderStatus } from '../types';
+import type {
+  CustomerAddressResponse,
+  ManagedCustomerDetails,
+  ManagedCustomersListResponse,
+  ManualOrderProduct,
+  ManualOrderProductSearchResponse,
+  Order,
+  OrderDetail,
+  OrderStatus,
+  PaginatedOrders,
+  PaymentMethod,
+  PaymentStatus,
+} from '../types';
 import { AppPage, DataTableWrapper, FilterBar, PageHeader } from '../components/ui';
 
 interface OrdersPanelProps {
   request: MerchantRequester;
+}
+
+type OrdersMode = 'list' | 'detail' | 'create-manual' | 'edit-manual';
+
+interface ManualLine {
+  variantId: string;
+  productId: string;
+  title: string;
+  sku: string;
+  unitPrice: number;
+  quantity: number;
+  lineDiscount: number;
+  availableQuantity: number;
+  stockUnlimited: boolean;
+}
+
+interface CustomerLite {
+  id: string;
+  fullName: string;
+  phone: string;
 }
 
 const statusOptions: OrderStatus[] = [
@@ -45,7 +77,38 @@ const statusOptions: OrderStatus[] = [
   'returned',
 ];
 
-const statusColors: Record<string, "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning"> = {
+const paymentMethodOptions: PaymentMethod[] = ['cod', 'transfer'];
+const paymentStatusOptions: PaymentStatus[] = [
+  'pending',
+  'under_review',
+  'approved',
+  'rejected',
+  'refunded',
+];
+
+const manualSteps = ['Products', 'Customer', 'Payment', 'Summary'];
+
+const initialStatusCounts: Record<OrderStatus, number> = {
+  new: 0,
+  confirmed: 0,
+  preparing: 0,
+  out_for_delivery: 0,
+  completed: 0,
+  cancelled: 0,
+  returned: 0,
+};
+
+const statusLabel: Record<OrderStatus, string> = {
+  new: 'New',
+  confirmed: 'Confirmed',
+  preparing: 'Preparing',
+  out_for_delivery: 'Out for delivery',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+  returned: 'Returned',
+};
+
+const statusColor: Record<OrderStatus, 'default' | 'info' | 'primary' | 'warning' | 'secondary' | 'success' | 'error'> = {
   new: 'info',
   confirmed: 'primary',
   preparing: 'warning',
@@ -55,347 +118,954 @@ const statusColors: Record<string, "default" | "primary" | "secondary" | "error"
   returned: 'error',
 };
 
-const statusLabels: Record<string, string> = {
-  new: 'جديد',
-  confirmed: 'مؤكد',
-  preparing: 'قيد التجهيز',
-  out_for_delivery: 'في الطريق',
-  completed: 'مكتمل',
-  cancelled: 'ملغى',
-  returned: 'مسترجع',
-};
-
 export function OrdersPanel({ request }: OrdersPanelProps) {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [orderDetail, setOrderDetail] = useState<OrderDetail | null>(null);
-  const [statusFilter, setStatusFilter] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [nextStatus, setNextStatus] = useState<OrderStatus>('confirmed');
-  const [statusNote, setStatusNote] = useState('');
-  
+  const [mode, setMode] = useState<OrdersMode>('list');
+  const [ordersData, setOrdersData] = useState<PaginatedOrders>({
+    items: [],
+    total: 0,
+    page: 1,
+    limit: 30,
+    statusCounts: initialStatusCounts,
+  });
+  const [selectedOrder, setSelectedOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [message, setMessage] = useState({ text: '', type: 'info' as 'info' | 'success' | 'error' });
+  const [inlineStatusLoadingId, setInlineStatusLoadingId] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' }>({
+    text: '',
+    type: 'info',
+  });
 
-  // Load initial data
+  const [statusTab, setStatusTab] = useState<'all' | OrderStatus>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
+  const [manualStep, setManualStep] = useState(0);
+  const [manualLines, setManualLines] = useState<ManualLine[]>([]);
+  const [manualCouponCode, setManualCouponCode] = useState('');
+  const [manualNote, setManualNote] = useState('');
+  const [manualPaymentMethod, setManualPaymentMethod] = useState<PaymentMethod>('cod');
+  const [manualCustomer, setManualCustomer] = useState<CustomerLite | null>(null);
+  const [manualAddresses, setManualAddresses] = useState<CustomerAddressResponse[]>([]);
+  const [manualAddressId, setManualAddressId] = useState('');
+  const [manualCustomerQuery, setManualCustomerQuery] = useState('');
+  const [manualCustomerResults, setManualCustomerResults] = useState<CustomerLite[]>([]);
+  const [manualProductsQuery, setManualProductsQuery] = useState('');
+  const [manualProductsLoading, setManualProductsLoading] = useState(false);
+  const [manualProducts, setManualProducts] = useState<ManualOrderProduct[]>([]);
+  const [manualSaving, setManualSaving] = useState(false);
+
   useEffect(() => {
     loadOrders().catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      searchCustomers().catch(() => undefined);
+    }, 250);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [manualCustomerQuery, mode]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      searchManualProducts().catch(() => undefined);
+    }, 250);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [manualProductsQuery, mode]);
+
+  const manualSubtotal = useMemo(
+    () => manualLines.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0),
+    [manualLines],
+  );
+  const manualLineDiscountTotal = useMemo(
+    () => manualLines.reduce((sum, line) => sum + line.lineDiscount, 0),
+    [manualLines],
+  );
+  const manualPreviewTotal = useMemo(
+    () => Math.max(manualSubtotal - manualLineDiscountTotal, 0),
+    [manualLineDiscountTotal, manualSubtotal],
+  );
+
   async function loadOrders(): Promise<void> {
     setLoading(true);
-    setMessage({ text: '', type: 'info' });
     try {
-      const query = buildOrdersQuery(statusFilter, searchQuery);
-      const data = await request<{ items: Order[] }>(`/orders${query}`, { method: 'GET' });
-      setOrders(data?.items ?? []);
+      const params = new URLSearchParams();
+      params.set('page', '1');
+      params.set('limit', '30');
+      if (statusTab !== 'all') {
+        params.set('status', statusTab);
+      }
+      if (searchQuery.trim()) {
+        params.set('q', searchQuery.trim());
+      }
+      if (paymentMethodFilter) {
+        params.set('paymentMethod', paymentMethodFilter);
+      }
+      if (paymentStatusFilter) {
+        params.set('paymentStatus', paymentStatusFilter);
+      }
+      if (dateFrom) {
+        params.set('dateFrom', dateFrom);
+      }
+      if (dateTo) {
+        params.set('dateTo', dateTo);
+      }
+
+      const data = await request<PaginatedOrders>(`/orders?${params.toString()}`, { method: 'GET' });
+      setOrdersData(
+        data ?? {
+          items: [],
+          total: 0,
+          page: 1,
+          limit: 30,
+          statusCounts: initialStatusCounts,
+        },
+      );
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحميل الطلبات', type: 'error' });
+      setMessage({
+        text: error instanceof Error ? error.message : 'Failed to load orders',
+        type: 'error',
+      });
     } finally {
       setLoading(false);
     }
   }
 
-  async function loadOrderDetail(orderId: string): Promise<void> {
+  async function openOrderDetail(orderId: string): Promise<void> {
     setDetailLoading(true);
-    setMessage({ text: '', type: 'info' });
+    setMode('detail');
     try {
       const data = await request<OrderDetail>(`/orders/${orderId}`, { method: 'GET' });
-      setOrderDetail(data ?? null);
-      if (data) {
-        setNextStatus(resolveDefaultNextStatus(data.status));
-        setStatusNote('');
+      if (!data) {
+        throw new Error('Order detail not found');
       }
+      setSelectedOrder(data);
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحميل تفاصيل الطلب', type: 'error' });
+      setMessage({
+        text: error instanceof Error ? error.message : 'Failed to load order detail',
+        type: 'error',
+      });
+      setMode('list');
     } finally {
       setDetailLoading(false);
     }
   }
 
-  async function updateOrderStatus(): Promise<void> {
-    if (!orderDetail) return;
-
-    setMessage({ text: '', type: 'info' });
+  async function updateOrderStatusInline(orderId: string, nextStatus: OrderStatus): Promise<void> {
+    setInlineStatusLoadingId(orderId);
     try {
-      const payload = buildStatusPayload(nextStatus, statusNote);
-      const data = await request<OrderDetail>(`/orders/${orderDetail.id}/status`, {
+      await request(`/orders/${orderId}/status`, {
         method: 'PATCH',
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ status: nextStatus }),
       });
-      if (data) {
-        setOrderDetail(data);
+      await loadOrders();
+      if (selectedOrder?.id === orderId) {
+        await openOrderDetail(orderId);
       }
-      await loadOrders(); // Refresh background list
-      setMessage({ text: 'تم تحديث حالة الطلب بنجاح', type: 'success' });
+      setMessage({ text: 'Order status updated', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحديث حالة الطلب', type: 'error' });
+      setMessage({
+        text: error instanceof Error ? error.message : 'Failed to update order status',
+        type: 'error',
+      });
+    } finally {
+      setInlineStatusLoadingId(null);
     }
   }
 
-  function handleBackToList() {
-    setOrderDetail(null);
-    setMessage({ text: '', type: 'info' });
+  async function exportExcel(): Promise<void> {
+    try {
+      const params = new URLSearchParams();
+      if (statusTab !== 'all') {
+        params.set('status', statusTab);
+      }
+      if (searchQuery.trim()) {
+        params.set('q', searchQuery.trim());
+      }
+      if (paymentMethodFilter) {
+        params.set('paymentMethod', paymentMethodFilter);
+      }
+      if (paymentStatusFilter) {
+        params.set('paymentStatus', paymentStatusFilter);
+      }
+      if (dateFrom) {
+        params.set('dateFrom', dateFrom);
+      }
+      if (dateTo) {
+        params.set('dateTo', dateTo);
+      }
+
+      const blob = await request<Blob>(`/orders/export/excel?${params.toString()}`, { method: 'GET' }, { responseType: 'blob' });
+      if (!blob) {
+        throw new Error('Export failed');
+      }
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `orders-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setMessage({
+        text: error instanceof Error ? error.message : 'Failed to export orders',
+        type: 'error',
+      });
+    }
   }
 
-  // --- DETAIL VIEW ---
-  if (orderDetail || detailLoading) {
+  async function searchCustomers(): Promise<void> {
+    if (mode !== 'create-manual' && mode !== 'edit-manual') {
+      return;
+    }
+    const params = new URLSearchParams();
+    params.set('page', '1');
+    params.set('limit', '20');
+    if (manualCustomerQuery.trim()) {
+      params.set('q', manualCustomerQuery.trim());
+    }
+
+    try {
+      const data = await request<ManagedCustomersListResponse>(`/customers/manage?${params.toString()}`, {
+        method: 'GET',
+      });
+      setManualCustomerResults(
+        (data?.items ?? []).map((customer) => ({
+          id: customer.id,
+          fullName: customer.fullName,
+          phone: customer.phone,
+        })),
+      );
+    } catch {
+      setManualCustomerResults([]);
+    }
+  }
+
+  async function selectManualCustomer(customer: CustomerLite): Promise<void> {
+    setManualCustomer(customer);
+    setManualAddressId('');
+    try {
+      const details = await request<ManagedCustomerDetails>(`/customers/manage/${customer.id}`, {
+        method: 'GET',
+      });
+      setManualAddresses(details?.addresses ?? []);
+      const defaultAddress = details?.addresses.find((address) => address.isDefault);
+      if (defaultAddress) {
+        setManualAddressId(defaultAddress.id);
+      }
+    } catch {
+      setManualAddresses([]);
+    }
+  }
+
+  async function searchManualProducts(): Promise<void> {
+    if (mode !== 'create-manual' && mode !== 'edit-manual') {
+      return;
+    }
+    setManualProductsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set('page', '1');
+      params.set('limit', '20');
+      if (manualProductsQuery.trim()) {
+        params.set('q', manualProductsQuery.trim());
+      }
+      const data = await request<ManualOrderProductSearchResponse>(
+        `/orders/manual/products?${params.toString()}`,
+        { method: 'GET' },
+      );
+      setManualProducts(data?.items ?? []);
+    } catch {
+      setManualProducts([]);
+    } finally {
+      setManualProductsLoading(false);
+    }
+  }
+
+  function addManualProduct(product: ManualOrderProduct): void {
+    setManualLines((prev) => {
+      const existing = prev.find((line) => line.variantId === product.variantId);
+      if (existing) {
+        return prev.map((line) =>
+          line.variantId === product.variantId
+            ? {
+                ...line,
+                quantity: line.stockUnlimited
+                  ? line.quantity + 1
+                  : Math.min(line.quantity + 1, line.availableQuantity || line.quantity + 1),
+              }
+            : line,
+        );
+      }
+      return [
+        ...prev,
+        {
+          variantId: product.variantId,
+          productId: product.productId,
+          title: product.variantTitle || product.productTitle,
+          sku: product.sku,
+          unitPrice: product.price,
+          quantity: 1,
+          lineDiscount: 0,
+          availableQuantity: product.availableQuantity,
+          stockUnlimited: product.stockUnlimited,
+        },
+      ];
+    });
+  }
+
+  function updateLine(
+    variantId: string,
+    patch: Partial<Pick<ManualLine, 'quantity' | 'unitPrice' | 'lineDiscount'>>,
+  ): void {
+    setManualLines((prev) =>
+      prev.map((line) => {
+        if (line.variantId !== variantId) {
+          return line;
+        }
+        const nextQuantity =
+          patch.quantity !== undefined
+            ? Math.max(
+                1,
+                line.stockUnlimited
+                  ? patch.quantity
+                  : Math.min(patch.quantity, Math.max(line.availableQuantity, 1)),
+              )
+            : line.quantity;
+        const nextUnitPrice = patch.unitPrice !== undefined ? Math.max(0, patch.unitPrice) : line.unitPrice;
+        const maxDiscount = nextUnitPrice * nextQuantity;
+        const nextDiscountRaw = patch.lineDiscount !== undefined ? patch.lineDiscount : line.lineDiscount;
+        const nextDiscount = Math.max(0, Math.min(nextDiscountRaw, maxDiscount));
+        return {
+          ...line,
+          quantity: nextQuantity,
+          unitPrice: Number(nextUnitPrice.toFixed(2)),
+          lineDiscount: Number(nextDiscount.toFixed(2)),
+        };
+      }),
+    );
+  }
+
+  function removeLine(variantId: string): void {
+    setManualLines((prev) => prev.filter((line) => line.variantId !== variantId));
+  }
+
+  async function submitManualOrder(): Promise<void> {
+    if (!manualCustomer?.id) {
+      setMessage({ text: 'Select customer first', type: 'error' });
+      return;
+    }
+    if (manualLines.length === 0) {
+      setMessage({ text: 'Add at least one product', type: 'error' });
+      return;
+    }
+
+    setManualSaving(true);
+    try {
+      const payload: Record<string, unknown> = {
+        customerId: manualCustomer.id,
+        paymentMethod: manualPaymentMethod,
+        lines: manualLines.map((line) => ({
+          variantId: line.variantId,
+          quantity: line.quantity,
+          unitPriceOverride: line.unitPrice,
+          lineDiscount: line.lineDiscount,
+        })),
+      };
+
+      if (manualAddressId) {
+        payload.customerAddressId = manualAddressId;
+      }
+      if (manualCouponCode.trim()) {
+        payload.couponCode = manualCouponCode.trim();
+      }
+      if (manualNote.trim()) {
+        payload.note = manualNote.trim();
+      }
+
+      if (mode === 'create-manual') {
+        const created = await request<OrderDetail>('/orders/manual', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+        if (created) {
+          setSelectedOrder(created);
+          setMode('detail');
+        } else {
+          setMode('list');
+        }
+      } else if (mode === 'edit-manual' && selectedOrder) {
+        const updated = await request<OrderDetail>(`/orders/${selectedOrder.id}/manual`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        });
+        if (updated) {
+          setSelectedOrder(updated);
+          setMode('detail');
+        } else {
+          setMode('list');
+        }
+      }
+
+      await loadOrders();
+      setMessage({ text: 'Manual order saved successfully', type: 'success' });
+    } catch (error) {
+      setMessage({
+        text: error instanceof Error ? error.message : 'Failed to save manual order',
+        type: 'error',
+      });
+    } finally {
+      setManualSaving(false);
+    }
+  }
+
+  function resetManualDraft(): void {
+    setManualStep(0);
+    setManualLines([]);
+    setManualCouponCode('');
+    setManualNote('');
+    setManualPaymentMethod('cod');
+    setManualCustomer(null);
+    setManualAddresses([]);
+    setManualAddressId('');
+    setManualCustomerQuery('');
+    setManualCustomerResults([]);
+    setManualProductsQuery('');
+    setManualProducts([]);
+  }
+
+  function openCreateManual(): void {
+    resetManualDraft();
+    setMode('create-manual');
+  }
+
+  function openEditManual(): void {
+    if (!selectedOrder) {
+      return;
+    }
+    resetManualDraft();
+    setMode('edit-manual');
+    setManualLines(
+      selectedOrder.items.map((item) => ({
+        variantId: item.variantId,
+        productId: item.productId,
+        title: item.title,
+        sku: item.sku,
+        unitPrice: item.unitPrice,
+        quantity: item.quantity,
+        lineDiscount: Math.max(item.unitPrice * item.quantity - item.lineTotal, 0),
+        availableQuantity: item.quantity,
+        stockUnlimited: true,
+      })),
+    );
+    setManualPaymentMethod((selectedOrder.payment?.method as PaymentMethod) ?? 'cod');
+    setManualNote(selectedOrder.note ?? '');
+    if (selectedOrder.customer.id) {
+      const customer = {
+        id: selectedOrder.customer.id,
+        fullName: selectedOrder.customer.name ?? 'Customer',
+        phone: selectedOrder.customer.phone ?? '',
+      };
+      setManualCustomer(customer);
+      void selectManualCustomer(customer);
+    }
+  }
+
+  const canEditCurrentOrder =
+    selectedOrder &&
+    (selectedOrder.status === 'new' ||
+      selectedOrder.status === 'confirmed' ||
+      selectedOrder.status === 'preparing');
+
+  if (mode === 'detail' || detailLoading) {
     return (
-      <AppPage maxWidth={1000}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-          <Button 
-            startIcon={<ArrowForwardIcon />} 
-            onClick={handleBackToList}
-            color="inherit"
-            sx={{ fontWeight: 700 }}
-          >
-            العودة للطلبات
-          </Button>
-        </Box>
+      <AppPage maxWidth={1200}>
+        <Button
+          startIcon={<ArrowForwardIcon />}
+          color="inherit"
+          sx={{ mb: 2, fontWeight: 700 }}
+          onClick={() => setMode('list')}
+        >
+          Back to orders
+        </Button>
 
-        {message.text && (
-          <Alert severity={message.type} sx={{ borderRadius: 2 }}>{message.text}</Alert>
-        )}
+        {message.text ? <Alert severity={message.type}>{message.text}</Alert> : null}
 
-        {detailLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 10 }}>
+        {detailLoading || !selectedOrder ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
             <CircularProgress />
           </Box>
-        ) : orderDetail ? (
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' }, gap: 3 }}>
-            
-            {/* Left Column: Order Items & Timeline */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              {/* Order Header */}
-              <Paper elevation={0} sx={{ p: 3, borderRadius: 4, border: '1px solid', borderColor: 'divider' }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-                  <Box>
-                    <Typography variant="h5" fontWeight={800} gutterBottom>
-                      طلب {orderDetail.orderCode}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      تاريخ الإنشاء: {new Date(orderDetail.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </Typography>
-                  </Box>
-                  <Chip 
-                    label={statusLabels[orderDetail.status] || orderDetail.status} 
-                    color={statusColors[orderDetail.status] || 'default'} 
-                    sx={{ fontWeight: 700, px: 1, borderRadius: 2 }} 
-                  />
-                </Stack>
-                <Divider sx={{ my: 2 }} />
-                
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <ShoppingBagIcon color="primary" />
-                  <Typography variant="h6" fontWeight={700}>المنتجات المطلوبة</Typography>
+        ) : (
+          <Stack spacing={2.5}>
+            <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+              <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2}>
+                <Box>
+                  <Typography variant="h5" fontWeight={800}>
+                    Order {selectedOrder.orderCode}
+                  </Typography>
+                  <Typography color="text.secondary">
+                    Created at {new Date(selectedOrder.createdAt).toLocaleString()}
+                  </Typography>
                 </Box>
-                
-                <TableContainer>
-                  <Table size="small">
+                <Stack direction="row" spacing={1}>
+                  <Chip label={statusLabel[selectedOrder.status]} color={statusColor[selectedOrder.status]} />
+                  {canEditCurrentOrder ? (
+                    <Button variant="outlined" onClick={openEditManual}>
+                      Edit order
+                    </Button>
+                  ) : null}
+                </Stack>
+              </Stack>
+            </Paper>
+
+            <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="h6" fontWeight={700} gutterBottom>
+                Order items
+              </Typography>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Product</TableCell>
+                      <TableCell>SKU</TableCell>
+                      <TableCell align="center">Qty</TableCell>
+                      <TableCell align="right">Unit</TableCell>
+                      <TableCell align="right">Line total</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {selectedOrder.items.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{item.title}</TableCell>
+                        <TableCell>{item.sku}</TableCell>
+                        <TableCell align="center">{item.quantity}</TableCell>
+                        <TableCell align="right">{item.unitPrice.toFixed(2)}</TableCell>
+                        <TableCell align="right">{item.lineTotal.toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Paper>
+
+            <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="h6" fontWeight={700} gutterBottom>
+                Payment
+              </Typography>
+              {selectedOrder.payment ? (
+                <Stack spacing={0.75}>
+                  <Typography>Method: {selectedOrder.payment.method}</Typography>
+                  <Typography>Status: {selectedOrder.payment.status}</Typography>
+                  <Typography>Amount: {selectedOrder.payment.amount.toFixed(2)}</Typography>
+                </Stack>
+              ) : (
+                <Typography color="text.secondary">No payment data</Typography>
+              )}
+            </Paper>
+          </Stack>
+        )}
+      </AppPage>
+    );
+  }
+
+  if (mode === 'create-manual' || mode === 'edit-manual') {
+    return (
+      <AppPage maxWidth={1200}>
+        <Button
+          startIcon={<ArrowForwardIcon />}
+          color="inherit"
+          sx={{ mb: 2, fontWeight: 700 }}
+          onClick={() => setMode(selectedOrder ? 'detail' : 'list')}
+        >
+          Back
+        </Button>
+
+        <PageHeader
+          title={mode === 'create-manual' ? 'Create Manual Order' : 'Edit Manual Order'}
+          description="Create or edit order using products, customer, payment method and final summary."
+        />
+
+        {message.text ? <Alert severity={message.type}>{message.text}</Alert> : null}
+
+        <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+          <Stepper activeStep={manualStep} alternativeLabel>
+            {manualSteps.map((label) => (
+              <Step key={label}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+          <Divider sx={{ my: 2 }} />
+
+          {manualStep === 0 ? (
+            <Stack spacing={2}>
+              <TextField
+                label="Search products (title or SKU)"
+                value={manualProductsQuery}
+                onChange={(event) => setManualProductsQuery(event.target.value)}
+                fullWidth
+              />
+              <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                <TableContainer sx={{ maxHeight: 280 }}>
+                  <Table size="small" stickyHeader>
                     <TableHead>
-                      <TableRow sx={{ bgcolor: 'background.default' }}>
-                        <TableCell sx={{ fontWeight: 700 }}>المنتج</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 700 }}>الكمية</TableCell>
-                        <TableCell align="left" sx={{ fontWeight: 700 }}>الإجمالي</TableCell>
+                      <TableRow>
+                        <TableCell>Product</TableCell>
+                        <TableCell>SKU</TableCell>
+                        <TableCell align="right">Price</TableCell>
+                        <TableCell align="right">Available</TableCell>
+                        <TableCell align="left">Action</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {orderDetail.items.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>
-                            <Typography variant="subtitle2" fontWeight={600}>{item.title}</Typography>
-                          </TableCell>
-                          <TableCell align="center">{item.quantity}</TableCell>
-                          <TableCell align="left" sx={{ fontWeight: 700 }}>
-                            {item.lineTotal} {orderDetail.currencyCode}
+                      {manualProductsLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={5} align="center">
+                            <CircularProgress size={22} />
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ) : manualProducts.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} align="center">
+                            <Typography color="text.secondary">No products found</Typography>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        manualProducts.map((product) => (
+                          <TableRow key={product.variantId} hover>
+                            <TableCell>{product.variantTitle || product.productTitle}</TableCell>
+                            <TableCell>{product.sku}</TableCell>
+                            <TableCell align="right">{product.price.toFixed(2)}</TableCell>
+                            <TableCell align="right">
+                              {product.stockUnlimited ? 'Unlimited' : product.availableQuantity}
+                            </TableCell>
+                            <TableCell>
+                              <Button size="small" onClick={() => addManualProduct(product)}>
+                                Add
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </TableContainer>
               </Paper>
 
-              {/* Timeline */}
-              <Paper elevation={0} sx={{ p: 3, borderRadius: 4, border: '1px solid', borderColor: 'divider' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-                  <LocalShippingIcon color="primary" />
-                  <Typography variant="h6" fontWeight={700}>سجل حالة الطلب</Typography>
-                </Box>
-                
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, position: 'relative' }}>
-                  {orderDetail.timeline.map((entry, index) => (
-                    <Box key={`${entry.to}-${entry.createdAt}-${index}`} sx={{ display: 'flex', gap: 2, position: 'relative', zIndex: 1 }}>
-                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: 'primary.main', border: '2px solid white', boxShadow: '0 0 0 2px var(--mui-palette-primary-light)' }} />
-                        {index < orderDetail.timeline.length - 1 && (
-                          <Box sx={{ width: 2, flex: 1, bgcolor: 'divider', mt: 1, mb: 1 }} />
-                        )}
-                      </Box>
-                      <Box sx={{ pb: index < orderDetail.timeline.length - 1 ? 2 : 0 }}>
-                        <Typography variant="subtitle2" fontWeight={700}>
-                          {entry.from ? `${statusLabels[entry.from] || entry.from} â†گ ` : ''} 
-                          {statusLabels[entry.to] || entry.to}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
-                          {new Date(entry.createdAt).toLocaleString('ar-EG')}
-                        </Typography>
-                        {entry.note && (
-                          <Typography variant="body2" sx={{ bgcolor: 'background.default', p: 1, borderRadius: 1, mt: 0.5, border: '1px solid', borderColor: 'divider' }}>
-                            {entry.note}
-                          </Typography>
-                        )}
-                      </Box>
-                    </Box>
-                  ))}
-                </Box>
+              <Typography variant="h6" fontWeight={700}>
+                Selected lines
+              </Typography>
+              <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Product</TableCell>
+                        <TableCell>Qty</TableCell>
+                        <TableCell>Unit price</TableCell>
+                        <TableCell>Line discount</TableCell>
+                        <TableCell align="right">Total</TableCell>
+                        <TableCell />
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {manualLines.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} align="center">
+                            <Typography color="text.secondary">No lines added</Typography>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        manualLines.map((line) => (
+                          <TableRow key={line.variantId}>
+                            <TableCell>
+                              <Typography fontWeight={700}>{line.title}</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {line.sku}
+                              </Typography>
+                            </TableCell>
+                            <TableCell sx={{ width: 120 }}>
+                              <TextField
+                                type="number"
+                                size="small"
+                                value={line.quantity}
+                                onChange={(event) =>
+                                  updateLine(line.variantId, { quantity: Number(event.target.value) })
+                                }
+                                inputProps={{ min: 1 }}
+                              />
+                            </TableCell>
+                            <TableCell sx={{ width: 150 }}>
+                              <TextField
+                                type="number"
+                                size="small"
+                                value={line.unitPrice}
+                                onChange={(event) =>
+                                  updateLine(line.variantId, { unitPrice: Number(event.target.value) })
+                                }
+                                inputProps={{ min: 0, step: '0.01' }}
+                              />
+                            </TableCell>
+                            <TableCell sx={{ width: 150 }}>
+                              <TextField
+                                type="number"
+                                size="small"
+                                value={line.lineDiscount}
+                                onChange={(event) =>
+                                  updateLine(line.variantId, { lineDiscount: Number(event.target.value) })
+                                }
+                                inputProps={{ min: 0, step: '0.01' }}
+                              />
+                            </TableCell>
+                            <TableCell align="right">
+                              {(line.unitPrice * line.quantity - line.lineDiscount).toFixed(2)}
+                            </TableCell>
+                            <TableCell>
+                              <Button size="small" color="error" onClick={() => removeLine(line.variantId)}>
+                                Remove
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               </Paper>
-            </Box>
+            </Stack>
+          ) : null}
 
-            {/* Right Column: Actions & Payment */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              
-              {/* Status Update Action */}
-              <Paper elevation={0} sx={{ p: 3, borderRadius: 4, border: '1px solid', borderColor: 'primary.main', bgcolor: 'primary.50' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <EditNoteIcon color="primary" />
-                  <Typography variant="h6" fontWeight={700} color="primary.dark">تحديث الحالة</Typography>
-                </Box>
-                
-                <Stack spacing={2}>
-                  <TextField
-                    select
-                    label="الحالة الجديدة"
-                    value={nextStatus}
-                    onChange={(event) => setNextStatus(event.target.value as OrderStatus)}
-                    fullWidth
-                    size="small"
-                  >
-                    {statusOptions.map((status) => (
-                      <MenuItem key={status} value={status}>
-                        {statusLabels[status] || status}
-                      </MenuItem>
+          {manualStep === 1 ? (
+            <Stack spacing={2}>
+              <TextField
+                label="Search customers (name or phone)"
+                value={manualCustomerQuery}
+                onChange={(event) => setManualCustomerQuery(event.target.value)}
+              />
+              <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                <TableContainer sx={{ maxHeight: 260 }}>
+                  <Table size="small" stickyHeader>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Name</TableCell>
+                        <TableCell>Phone</TableCell>
+                        <TableCell align="left">Action</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {manualCustomerResults.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={3} align="center">
+                            <Typography color="text.secondary">No customers found</Typography>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        manualCustomerResults.map((customer) => (
+                          <TableRow key={customer.id} hover>
+                            <TableCell>{customer.fullName}</TableCell>
+                            <TableCell>{customer.phone}</TableCell>
+                            <TableCell>
+                              <Button size="small" onClick={() => selectManualCustomer(customer)}>
+                                Select
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Paper>
+
+              {manualCustomer ? (
+                <Box>
+                  <Typography variant="subtitle1" fontWeight={700}>
+                    Selected: {manualCustomer.fullName} ({manualCustomer.phone})
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    Choose delivery address
+                  </Typography>
+                  <Stack sx={{ mt: 1 }}>
+                    {manualAddresses.map((address) => (
+                      <Box key={address.id} sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Radio
+                          checked={manualAddressId === address.id}
+                          onChange={() => setManualAddressId(address.id)}
+                        />
+                        <Typography variant="body2">
+                          {address.addressLine}
+                          {address.city ? `, ${address.city}` : ''}
+                          {address.area ? ` - ${address.area}` : ''}
+                        </Typography>
+                        {address.isDefault ? (
+                          <Chip size="small" label="Default" color="primary" sx={{ ml: 1 }} />
+                        ) : null}
+                      </Box>
                     ))}
-                  </TextField>
-                  <TextField 
-                    label="ملاحظة (اختياري)" 
-                    value={statusNote} 
-                    onChange={(event) => setStatusNote(event.target.value)} 
-                    multiline
-                    rows={2}
-                    fullWidth
-                    size="small"
-                  />
-                  <Button 
-                    variant="contained" 
-                    onClick={() => updateOrderStatus().catch(() => undefined)}
-                    disableElevation
-                  >
-                    تأكيد التحديث
-                  </Button>
+                  </Stack>
+                </Box>
+              ) : null}
+            </Stack>
+          ) : null}
+
+          {manualStep === 2 ? (
+            <Stack spacing={2} maxWidth={420}>
+              <TextField
+                select
+                label="Payment method"
+                value={manualPaymentMethod}
+                onChange={(event) => setManualPaymentMethod(event.target.value as PaymentMethod)}
+              >
+                {paymentMethodOptions.map((method) => (
+                  <MenuItem key={method} value={method}>
+                    {method}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Stack>
+          ) : null}
+
+          {manualStep === 3 ? (
+            <Stack spacing={2} maxWidth={520}>
+              <TextField
+                label="Coupon code (optional)"
+                value={manualCouponCode}
+                onChange={(event) => setManualCouponCode(event.target.value)}
+              />
+              <TextField
+                label="Note (optional)"
+                value={manualNote}
+                onChange={(event) => setManualNote(event.target.value)}
+                multiline
+                rows={3}
+              />
+              <Paper elevation={0} sx={{ p: 2, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+                  Order summary preview
+                </Typography>
+                <Stack spacing={0.75}>
+                  <Typography>Subtotal: {manualSubtotal.toFixed(2)}</Typography>
+                  <Typography>Line discounts: {manualLineDiscountTotal.toFixed(2)}</Typography>
+                  <Typography fontWeight={700}>Total before coupon/shipping: {manualPreviewTotal.toFixed(2)}</Typography>
                 </Stack>
               </Paper>
+            </Stack>
+          ) : null}
 
-              {/* Summary / Payment */}
-              <Paper elevation={0} sx={{ p: 3, borderRadius: 4, border: '1px solid', borderColor: 'divider' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <ReceiptLongIcon color="primary" />
-                  <Typography variant="h6" fontWeight={700}>ملخص الدفع</Typography>
-                </Box>
-
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
-                  <Typography color="text.secondary">الإجمالي</Typography>
-                  <Typography fontWeight={800} variant="h6" color="primary.main">
-                    {orderDetail.total} {orderDetail.currencyCode}
-                  </Typography>
-                </Box>
-                
-                <Divider sx={{ my: 2 }} />
-
-                {orderDetail.payment ? (
-                  <Stack spacing={1.5}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2" color="text.secondary">طريقة الدفع:</Typography>
-                      <Typography variant="body2" fontWeight={600}>{orderDetail.payment.method}</Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2" color="text.secondary">حالة الدفع:</Typography>
-                      <Chip size="small" label={orderDetail.payment.status} color={orderDetail.payment.status === 'paid' ? 'success' : 'warning'} />
-                    </Box>
-                    {orderDetail.payment.receiptUrl && (
-                      <Button 
-                        variant="outlined" 
-                        size="small"
-                        href={orderDetail.payment.receiptUrl} 
-                        target="_blank" 
-                        sx={{ mt: 1 }}
-                      >
-                        عرض إيصال الدفع
-                      </Button>
-                    )}
-                  </Stack>
-                ) : (
-                  <Typography variant="body2" color="text.secondary" textAlign="center">
-                    لا توجد بيانات دفع مسجلة.
-                  </Typography>
-                )}
-              </Paper>
-
-            </Box>
-          </Box>
-        ) : null}
+          <Stack direction="row" justifyContent="space-between" sx={{ mt: 3 }}>
+            <Button
+              variant="outlined"
+              disabled={manualStep === 0}
+              onClick={() => setManualStep((prev) => Math.max(prev - 1, 0))}
+            >
+              Previous
+            </Button>
+            {manualStep < manualSteps.length - 1 ? (
+              <Button
+                variant="contained"
+                onClick={() => setManualStep((prev) => Math.min(prev + 1, manualSteps.length - 1))}
+              >
+                Next
+              </Button>
+            ) : (
+              <Button variant="contained" onClick={() => submitManualOrder().catch(() => undefined)} disabled={manualSaving}>
+                {manualSaving ? 'Saving...' : 'Confirm order'}
+              </Button>
+            )}
+          </Stack>
+        </Paper>
       </AppPage>
     );
   }
 
-  // --- LIST VIEW ---
   return (
     <AppPage>
       <PageHeader
-        title="الطلبات"
-        description="إدارة الطلبات الواردة ومتابعة حالة التنفيذ والتوصيل بشكل يومي."
+        title="Orders Management"
+        description="Manage orders, update status inline, filter and export by current filters."
+        actions={
+          <Stack direction="row" spacing={1}>
+            <Button startIcon={<DownloadIcon />} variant="outlined" onClick={() => exportExcel().catch(() => undefined)}>
+              Export Excel
+            </Button>
+            <Button startIcon={<NoteAddIcon />} variant="contained" onClick={openCreateManual}>
+              Create Manual Order
+            </Button>
+          </Stack>
+        }
       />
 
       {message.text ? <Alert severity={message.type}>{message.text}</Alert> : null}
 
+      <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, px: 1.5 }}>
+        <Tabs value={statusTab} onChange={(_event, value: 'all' | OrderStatus) => setStatusTab(value)}>
+          <Tab label={`All (${ordersData.total})`} value="all" />
+          {statusOptions.map((status) => (
+            <Tab key={status} label={`${statusLabel[status]} (${ordersData.statusCounts[status] ?? 0})`} value={status} />
+          ))}
+        </Tabs>
+      </Paper>
+
       <FilterBar>
         <TextField
-          placeholder="ابحث برمز الطلب..."
+          label="Search order/customer/phone"
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
-          sx={{ minWidth: 240, flex: 1 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon color="action" />
-              </InputAdornment>
-            ),
-          }}
+          sx={{ minWidth: 260, flex: 1 }}
         />
         <TextField
           select
-          label="فلترة بالحالة"
-          value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value)}
-          sx={{ minWidth: 220 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <FilterListIcon color="action" fontSize="small" />
-              </InputAdornment>
-            ),
-          }}
+          label="Payment method"
+          value={paymentMethodFilter}
+          onChange={(event) => setPaymentMethodFilter(event.target.value)}
+          sx={{ minWidth: 180 }}
         >
-          <MenuItem value="">الكل</MenuItem>
-          {statusOptions.map((status) => (
-            <MenuItem key={status} value={status}>
-              {statusLabels[status] || status}
+          <MenuItem value="">All</MenuItem>
+          {paymentMethodOptions.map((method) => (
+            <MenuItem key={method} value={method}>
+              {method}
             </MenuItem>
           ))}
         </TextField>
+        <TextField
+          select
+          label="Payment status"
+          value={paymentStatusFilter}
+          onChange={(event) => setPaymentStatusFilter(event.target.value)}
+          sx={{ minWidth: 180 }}
+        >
+          <MenuItem value="">All</MenuItem>
+          {paymentStatusOptions.map((status) => (
+            <MenuItem key={status} value={status}>
+              {status}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          type="date"
+          label="From"
+          value={dateFrom}
+          onChange={(event) => setDateFrom(event.target.value)}
+          InputLabelProps={{ shrink: true }}
+          sx={{ minWidth: 160 }}
+        />
+        <TextField
+          type="date"
+          label="To"
+          value={dateTo}
+          onChange={(event) => setDateTo(event.target.value)}
+          InputLabelProps={{ shrink: true }}
+          sx={{ minWidth: 160 }}
+        />
         <Button variant="contained" onClick={() => loadOrders().catch(() => undefined)}>
-          بحث وتحديث
+          Apply
         </Button>
       </FilterBar>
 
@@ -404,45 +1074,70 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>رقم الطلب</TableCell>
-                <TableCell>التاريخ</TableCell>
-                <TableCell>الحالة</TableCell>
-                <TableCell>الإجمالي</TableCell>
-                <TableCell align="left">الإجراءات</TableCell>
+                <TableCell>Order #</TableCell>
+                <TableCell>Customer</TableCell>
+                <TableCell>Payment method</TableCell>
+                <TableCell>Payment status</TableCell>
+                <TableCell align="right">Total</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Created at</TableCell>
+                <TableCell align="left">View</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
-              ) : orders.length === 0 ? (
+              ) : ordersData.items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
-                    <Typography color="text.secondary">لا توجد طلبات مطابقة للبحث.</Typography>
+                  <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                    <Typography color="text.secondary">No orders found</Typography>
                   </TableCell>
                 </TableRow>
               ) : (
-                orders.map((order) => (
-                  <TableRow key={order.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                    <TableCell sx={{ fontWeight: 700, fontFamily: 'monospace' }}>{order.orderCode}</TableCell>
-                    <TableCell>{new Date(order.createdAt).toLocaleDateString('ar-EG')}</TableCell>
+                ordersData.items.map((order) => (
+                  <TableRow key={order.id} hover>
                     <TableCell>
-                      <Chip
-                        label={statusLabels[order.status] || order.status}
-                        color={statusColors[order.status] || 'default'}
+                      <Button size="small" onClick={() => openOrderDetail(order.id).catch(() => undefined)}>
+                        {order.orderCode}
+                      </Button>
+                    </TableCell>
+                    <TableCell>
+                      <Typography fontWeight={700}>{order.customer.name ?? '-'}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {order.customer.phone ?? '-'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>{order.paymentMethod ?? '-'}</TableCell>
+                    <TableCell>{order.paymentStatus ?? '-'}</TableCell>
+                    <TableCell align="right">
+                      {order.total.toFixed(2)} {order.currencyCode}
+                    </TableCell>
+                    <TableCell>
+                      <TextField
+                        select
                         size="small"
-                        sx={{ fontWeight: 700 }}
-                      />
+                        value={order.status}
+                        disabled={inlineStatusLoadingId === order.id}
+                        onChange={(event) =>
+                          updateOrderStatusInline(order.id, event.target.value as OrderStatus).catch(() => undefined)
+                        }
+                        sx={{ minWidth: 170 }}
+                      >
+                        {statusOptions.map((status) => (
+                          <MenuItem key={status} value={status}>
+                            {statusLabel[status]}
+                          </MenuItem>
+                        ))}
+                      </TextField>
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>
-                      {order.total} {order.currencyCode}
-                    </TableCell>
+                    <TableCell>{new Date(order.createdAt).toLocaleString()}</TableCell>
                     <TableCell align="left">
-                      <Button size="small" variant="outlined" onClick={() => loadOrderDetail(order.id).catch(() => undefined)}>
-                        إدارة
+                      <Button size="small" variant="outlined" onClick={() => openOrderDetail(order.id).catch(() => undefined)}>
+                        View
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -454,38 +1149,4 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
       </DataTableWrapper>
     </AppPage>
   );
-}
-
-function buildOrdersQuery(status: string, q: string): string {
-  const params = new URLSearchParams();
-  params.set('page', '1');
-  params.set('limit', '30');
-  if (status) {
-    params.set('status', status);
-  }
-  if (q.trim()) {
-    params.set('q', q.trim());
-  }
-
-  return `?${params.toString()}`;
-}
-
-function buildStatusPayload(
-  status: OrderStatus,
-  note: string,
-): { status: OrderStatus; note?: string } {
-  const payload: { status: OrderStatus; note?: string } = { status };
-  const normalizedNote = note.trim();
-  if (normalizedNote) {
-    payload.note = normalizedNote;
-  }
-  return payload;
-}
-
-function resolveDefaultNextStatus(current: OrderStatus): OrderStatus {
-  if (current === 'new') return 'confirmed';
-  if (current === 'confirmed') return 'preparing';
-  if (current === 'preparing') return 'out_for_delivery';
-  if (current === 'out_for_delivery') return 'completed';
-  return current;
 }

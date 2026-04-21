@@ -181,11 +181,14 @@ async function refreshSession(session: MerchantSession): Promise<MerchantSession
 
   refreshPromise = (async () => {
     try {
+      const headers = new Headers({
+        'content-type': 'application/json',
+      });
+      await attachCsrfHeader(session.apiBaseUrl, 'POST', headers);
+
       const response = await fetch(`${session.apiBaseUrl}/auth/refresh`, {
         method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({ refreshToken: session.refreshToken }),
         credentials: 'include',
       });

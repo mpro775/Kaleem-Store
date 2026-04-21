@@ -1,4 +1,4 @@
-import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
 export class UpdateAttributeValueDto {
   @IsOptional()
@@ -15,6 +15,15 @@ export class UpdateAttributeValueDto {
   @IsString()
   @MaxLength(120)
   valueEn?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^#[A-Fa-f0-9]{6}$/)
+  colorHex?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 
   @IsOptional()
   @IsString()

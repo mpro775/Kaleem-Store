@@ -7,6 +7,7 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { AuditModule } from './audit/audit.module';
 import { AttributesModule } from './attributes/attributes.module';
 import { AuthModule } from './auth/auth.module';
+import { BrandsModule } from './brands/brands.module';
 import { CategoriesModule } from './categories/categories.module';
 import { DatabaseModule } from './database/database.module';
 import { DomainsModule } from './domains/domains.module';
@@ -32,6 +33,7 @@ import { AdvancedOffersModule } from './advanced-offers/advanced-offers.module';
 import { CustomersModule } from './customers/customers.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { WarehousesModule } from './warehouses/warehouses.module';
+import { FiltersModule } from './filters/filters.module';
 
 @Module({
   imports: [
@@ -57,7 +59,9 @@ import { WarehousesModule } from './warehouses/warehouses.module';
     StoresModule,
     UsersModule,
     CategoriesModule,
+    BrandsModule,
     AttributesModule,
+    FiltersModule,
     ProductsModule,
     SaasModule,
     MediaModule,

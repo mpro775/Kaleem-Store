@@ -1,8 +1,10 @@
 ﻿import DashboardIcon from '@mui/icons-material/Dashboard';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import InventoryIcon from '@mui/icons-material/Inventory';
+import BrandingWatermarkIcon from '@mui/icons-material/BrandingWatermark';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import StyleIcon from '@mui/icons-material/Style';
+import TuneIcon from '@mui/icons-material/Tune';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import PaymentsIcon from '@mui/icons-material/Payments';
@@ -28,11 +30,14 @@ export const MERCHANT_NAV_ITEMS: MerchantNavItem[] = [
   { key: 'inventory', label: 'المخزون', icon: <InventoryIcon /> },
   { key: 'warehouses', label: 'المستودعات', icon: <WarehouseIcon /> },
   { key: 'categories', label: 'التصنيفات', icon: <AccountTreeIcon /> },
+  { key: 'brands', label: 'العلامات التجارية', icon: <BrandingWatermarkIcon /> },
   { key: 'customers', label: 'العملاء', icon: <PersonSearchIcon /> },
+  { key: 'abandonedCarts', label: 'السلات المتروكة', icon: <ShoppingCartIcon /> },
   { key: 'customerReviews', label: 'تقييمات العملاء', icon: <RateReviewOutlinedIcon /> },
   { key: 'customerQuestions', label: 'أسئلة المنتجات', icon: <QuizOutlinedIcon /> },
   { key: 'restockAlerts', label: 'تنبيهات التوفر', icon: <NotificationsActiveOutlinedIcon /> },
   { key: 'attributes', label: 'الخصائص', icon: <StyleIcon /> },
+  { key: 'filters', label: 'إدارة الفلاتر', icon: <TuneIcon /> },
   { key: 'payments', label: 'المدفوعات', icon: <PaymentsIcon /> },
   { key: 'shipping', label: 'الشحن', icon: <LocalShippingIcon /> },
   { key: 'promotions', label: 'العروض التسويقية', icon: <LocalOfferIcon /> },

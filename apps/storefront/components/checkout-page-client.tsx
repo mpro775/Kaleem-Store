@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { clearCartIdFromStorage, getCartIdFromStorage } from '../lib/cart-storage';
+import { clearCartIdFromStorage, getCartIdFromStorage, saveCartIdToStorage } from '../lib/cart-storage';
 import { checkout, getCart, listShippingZones } from '../lib/storefront-client';
 import { getAccessToken } from '../lib/customer-auth-storage';
 import {
@@ -115,7 +115,17 @@ export function CheckoutPageClient() {
   }, [checkoutStep, loading, cart?.cartId]);
 
   async function bootstrap() {
-    const cartId = getCartIdFromStorage();
+    const urlParams = new URLSearchParams(window.location.search);
+    const cartIdFromUrl = urlParams.get('cartId')?.trim() ?? '';
+    if (cartIdFromUrl) {
+      saveCartIdToStorage(cartIdFromUrl);
+      const nextUrl = new URL(window.location.href);
+      nextUrl.searchParams.delete('cartId');
+      nextUrl.searchParams.delete('recoveryToken');
+      window.history.replaceState({}, '', `${nextUrl.pathname}${nextUrl.search}`);
+    }
+
+    const cartId = cartIdFromUrl || getCartIdFromStorage();
     if (!cartId) {
       setLoading(false);
       return;

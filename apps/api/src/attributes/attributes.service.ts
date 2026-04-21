@@ -15,6 +15,7 @@ import type { ListAttributesQueryDto } from './dto/list-attributes-query.dto';
 import type { ListAttributeValuesQueryDto } from './dto/list-attribute-values-query.dto';
 import type { UpdateAttributeDto } from './dto/update-attribute.dto';
 import type { UpdateAttributeValueDto } from './dto/update-attribute-value.dto';
+import { ATTRIBUTE_TYPES, type AttributeType } from './constants/attribute-type.constants';
 import {
   AttributesRepository,
   type AttributeRecord,
@@ -29,6 +30,8 @@ export interface AttributeValueResponse {
   value: string;
   valueAr: string | null;
   valueEn: string | null;
+  colorHex: string | null;
+  isActive: boolean;
   slug: string;
 }
 
@@ -38,6 +41,10 @@ export interface AttributeResponse {
   name: string;
   nameAr: string | null;
   nameEn: string | null;
+  type: AttributeType;
+  descriptionAr: string | null;
+  descriptionEn: string | null;
+  isActive: boolean;
   slug: string;
   values?: AttributeValueResponse[];
 }
@@ -52,12 +59,14 @@ export interface StorefrontFilterAttributeResponse {
   name: string;
   nameAr: string | null;
   nameEn: string | null;
+  type: AttributeType;
   slug: string;
   values: Array<{
     id: string;
     value: string;
     valueAr: string | null;
     valueEn: string | null;
+    colorHex: string | null;
     slug: string;
   }>;
 }
@@ -93,6 +102,7 @@ export class AttributesService {
   ): Promise<AttributeResponse> {
     const primaryArabicName = this.resolvePrimaryArabicName(input.name, input.nameAr);
     const slug = this.resolveSlug(primaryArabicName, input.slug, 'Attribute slug is invalid');
+    const type = this.resolveAttributeType(input.type);
     await this.ensureAttributeSlugAvailable(currentUser.storeId, slug);
 
     try {
@@ -101,6 +111,10 @@ export class AttributesService {
         name: primaryArabicName,
         nameAr: primaryArabicName,
         nameEn: input.nameEn ?? null,
+        type,
+        descriptionAr: this.normalizeOptionalText(input.descriptionAr),
+        descriptionEn: this.normalizeOptionalText(input.descriptionEn),
+        isActive: input.isActive ?? true,
         slug,
       });
 
@@ -117,15 +131,17 @@ export class AttributesService {
     query: ListAttributesQueryDto,
   ): Promise<AttributeResponse[]> {
     const includeValues = query.includeValues ?? false;
+    const onlyActive = query.onlyActive ?? false;
     if (!includeValues) {
       const attributes = await this.attributesRepository.listAttributes(
         currentUser.storeId,
         query.q?.trim(),
+        onlyActive,
       );
       return attributes.map((item) => this.toAttributeResponse(item));
     }
 
-    return this.listAttributesWithValues(currentUser.storeId, query.q?.trim());
+    return this.listAttributesWithValues(currentUser.storeId, query.q?.trim(), onlyActive);
   }
 
   async getAttribute(currentUser: AuthUser, attributeId: string): Promise<AttributeResponse> {
@@ -133,6 +149,8 @@ export class AttributesService {
     const values = await this.attributesRepository.listAttributeValues(
       currentUser.storeId,
       attribute.id,
+      undefined,
+      false,
     );
     return this.toAttributeResponse(attribute, values);
   }
@@ -149,6 +167,7 @@ export class AttributesService {
       input.nameAr ?? existing.name_ar,
     );
     const slug = this.resolveSlug(name, input.slug ?? existing.slug, 'Attribute slug is invalid');
+    const type = this.resolveAttributeType(input.type ?? existing.type);
 
     if (slug !== existing.slug) {
       await this.ensureAttributeSlugAvailable(currentUser.storeId, slug, attributeId);
@@ -161,6 +180,12 @@ export class AttributesService {
         name,
         nameAr: name,
         nameEn: input.nameEn ?? existing.name_en ?? null,
+        type,
+        descriptionAr:
+          this.normalizeOptionalText(input.descriptionAr) ?? existing.description_ar ?? null,
+        descriptionEn:
+          this.normalizeOptionalText(input.descriptionEn) ?? existing.description_en ?? null,
+        isActive: input.isActive ?? existing.is_active,
         slug,
       });
 
@@ -196,6 +221,7 @@ export class AttributesService {
       currentUser.storeId,
       attributeId,
       query.q?.trim(),
+      query.onlyActive ?? false,
     );
 
     return values.map((value) => this.toValueResponse(value));
@@ -207,22 +233,25 @@ export class AttributesService {
     input: CreateAttributeValueDto,
     context: RequestContextData,
   ): Promise<AttributeValueResponse> {
-    await this.requireAttribute(currentUser.storeId, attributeId);
-    const slug = this.resolveSlug(input.value, input.slug, 'Attribute value slug is invalid');
+    const attribute = await this.requireAttribute(currentUser.storeId, attributeId);
+    const value = input.value.trim();
+    const slug = this.resolveSlug(value, input.slug, 'Attribute value slug is invalid');
     await this.ensureAttributeValueSlugAvailable(currentUser.storeId, attributeId, slug);
 
     try {
-      const value = await this.attributesRepository.createAttributeValue({
+      const createdValue = await this.attributesRepository.createAttributeValue({
         storeId: currentUser.storeId,
         attributeId,
-        value: input.value.trim(),
+        value,
         valueAr: input.valueAr ?? null,
         valueEn: input.valueEn ?? null,
+        colorHex: this.resolveColorHex(attribute.type, input.colorHex ?? null),
+        isActive: input.isActive ?? true,
         slug,
       });
 
-      await this.logAction('attributes.values.created', currentUser, value.id, context);
-      return this.toValueResponse(value);
+      await this.logAction('attributes.values.created', currentUser, createdValue.id, context);
+      return this.toValueResponse(createdValue);
     } catch (error) {
       this.throwOnUniqueViolation(error, 'Attribute value slug already in use for this attribute');
       throw error;
@@ -236,7 +265,7 @@ export class AttributesService {
     input: UpdateAttributeValueDto,
     context: RequestContextData,
   ): Promise<AttributeValueResponse> {
-    await this.requireAttribute(currentUser.storeId, attributeId);
+    const attribute = await this.requireAttribute(currentUser.storeId, attributeId);
     const existing = await this.requireAttributeValue(currentUser.storeId, valueId);
     this.assertAttributeOwnership(attributeId, existing.attribute_id);
 
@@ -258,6 +287,11 @@ export class AttributesService {
         value,
         valueAr: input.valueAr ?? existing.value_ar ?? null,
         valueEn: input.valueEn ?? existing.value_en ?? null,
+        colorHex: this.resolveColorHex(
+          attribute.type,
+          input.colorHex ?? (attribute.type === 'color' ? existing.color_hex : null),
+        ),
+        isActive: input.isActive ?? existing.is_active,
         slug,
       });
 
@@ -331,7 +365,11 @@ export class AttributesService {
     categoryId?: string,
   ): Promise<StorefrontFilterAttributeResponse[]> {
     const attributeIds = await this.resolveFilterAttributeIds(storeId, categoryId ?? null);
-    const attributes = await this.attributesRepository.listAttributesByIds(storeId, attributeIds);
+    const attributes = await this.attributesRepository.listAttributesByIds(
+      storeId,
+      attributeIds,
+      true,
+    );
     if (attributes.length === 0) {
       return [];
     }
@@ -339,6 +377,7 @@ export class AttributesService {
     const values = await this.attributesRepository.listAttributeValuesByAttributeIds(
       storeId,
       attributes.map((attribute) => attribute.id),
+      true,
     );
 
     return this.toStorefrontFilters(attributes, values);
@@ -359,6 +398,7 @@ export class AttributesService {
     }
 
     const orderedValues = await this.resolveOrderedValues(storeId, uniqueValueIds);
+    this.assertResolvedValuesAreUsable(orderedValues);
     this.assertNoDuplicateAttributes(orderedValues);
     await this.assertCategoryScope(storeId, categoryId, orderedValues);
 
@@ -484,7 +524,7 @@ export class AttributesService {
       }
     }
 
-    const all = await this.attributesRepository.listAttributes(storeId);
+    const all = await this.attributesRepository.listAttributes(storeId, undefined, true);
     return all.map((item) => item.id);
   }
 
@@ -506,6 +546,7 @@ export class AttributesService {
         name: attribute.name,
         nameAr: attribute.name_ar,
         nameEn: attribute.name_en,
+        type: attribute.type,
         slug: attribute.slug,
         values:
           valuesByAttributeId.get(attribute.id)?.map((value) => ({
@@ -513,6 +554,7 @@ export class AttributesService {
             value: value.value,
             valueAr: value.valueAr,
             valueEn: value.valueEn,
+            colorHex: value.colorHex,
             slug: value.slug,
           })) ?? [],
       }))
@@ -530,6 +572,18 @@ export class AttributesService {
 
     const recordsById = new Map(records.map((record) => [record.id, record]));
     return valueIds.map((id) => recordsById.get(id) as AttributeValueWithAttributeRecord);
+  }
+
+  private assertResolvedValuesAreUsable(values: AttributeValueWithAttributeRecord[]): void {
+    for (const value of values) {
+      if (!value.is_active) {
+        throw new BadRequestException('Inactive attribute value cannot be selected');
+      }
+
+      if (!value.attribute_is_active) {
+        throw new BadRequestException('Inactive attribute cannot be selected');
+      }
+    }
   }
 
   private assertNoDuplicateAttributes(values: AttributeValueWithAttributeRecord[]): void {
@@ -568,6 +622,36 @@ export class AttributesService {
 
   private uniqueIds(ids: string[]): string[] {
     return [...new Set(ids.filter((id) => id.trim().length > 0))];
+  }
+
+  private resolveAttributeType(value: string): AttributeType {
+    if (!(ATTRIBUTE_TYPES as readonly string[]).includes(value)) {
+      throw new BadRequestException('Attribute type is invalid');
+    }
+
+    return value as AttributeType;
+  }
+
+  private normalizeOptionalText(value?: string | null): string | null {
+    const normalized = value?.trim();
+    return normalized && normalized.length > 0 ? normalized : null;
+  }
+
+  private resolveColorHex(type: AttributeType, colorHex: string | null): string | null {
+    const normalized = colorHex?.trim() ?? null;
+    if (type === 'color') {
+      if (!normalized) {
+        throw new BadRequestException('Color attribute values require colorHex');
+      }
+
+      return normalized.toUpperCase();
+    }
+
+    if (normalized) {
+      throw new BadRequestException('colorHex is allowed only for color attributes');
+    }
+
+    return null;
   }
 
   private resolveSlug(source: string, explicit: string | undefined, errorMessage: string): string {
@@ -638,6 +722,10 @@ export class AttributesService {
       name: attribute.name,
       nameAr: attribute.name_ar ?? null,
       nameEn: attribute.name_en ?? null,
+      type: attribute.type,
+      descriptionAr: attribute.description_ar ?? null,
+      descriptionEn: attribute.description_en ?? null,
+      isActive: attribute.is_active,
       slug: attribute.slug,
       ...(values.length > 0 ? { values: values.map((value) => this.toValueResponse(value)) } : {}),
     };
@@ -651,6 +739,8 @@ export class AttributesService {
       value: value.value,
       valueAr: value.value_ar ?? null,
       valueEn: value.value_en ?? null,
+      colorHex: value.color_hex ?? null,
+      isActive: value.is_active,
       slug: value.slug,
     };
   }
@@ -658,8 +748,9 @@ export class AttributesService {
   private async listAttributesWithValues(
     storeId: string,
     q?: string,
+    onlyActive = false,
   ): Promise<AttributeResponse[]> {
-    const attributes = await this.attributesRepository.listAttributes(storeId, q);
+    const attributes = await this.attributesRepository.listAttributes(storeId, q, onlyActive);
     if (attributes.length === 0) {
       return [];
     }
@@ -667,6 +758,7 @@ export class AttributesService {
     const values = await this.attributesRepository.listAttributeValuesByAttributeIds(
       storeId,
       attributes.map((attribute) => attribute.id),
+      onlyActive,
     );
 
     const valuesByAttribute = new Map<string, AttributeValueRecord[]>();

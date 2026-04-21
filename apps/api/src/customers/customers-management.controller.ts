@@ -25,13 +25,18 @@ import { ListManagedCustomersQueryDto } from './dto/list-managed-customers-query
 import { UpdateManagedCustomerStatusDto } from './dto/update-managed-customer-status.dto';
 import { UpdateManagedCustomerDto } from './dto/update-managed-customer.dto';
 import { CustomersService } from './customers.service';
+import { ListManagedAbandonedCartsQueryDto } from './dto/list-managed-abandoned-carts-query.dto';
+import { AbandonedCartsService } from './abandoned-carts.service';
 
 @ApiTags('customers')
 @ApiBearerAuth()
 @Controller('customers/manage')
 @UseGuards(AccessTokenGuard, TenantGuard, PermissionsGuard)
 export class CustomersManagementController {
-  constructor(private readonly customersService: CustomersService) {}
+  constructor(
+    private readonly customersService: CustomersService,
+    private readonly abandonedCartsService: AbandonedCartsService,
+  ) {}
 
   @Get()
   @RequirePermissions(PERMISSIONS.customersRead)
@@ -52,6 +57,32 @@ export class CustomersManagementController {
     @Req() request: Request,
   ) {
     return this.customersService.createManagedCustomer(currentUser, body, getRequestContext(request));
+  }
+
+  @Get('abandoned-carts')
+  @RequirePermissions(PERMISSIONS.customersRead)
+  @ApiOkResponse({ description: 'List abandoned carts for merchant dashboard' })
+  async listAbandonedCarts(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: ListManagedAbandonedCartsQueryDto,
+  ) {
+    return this.abandonedCartsService.listManagedAbandonedCarts({
+      currentUser,
+      status: query.status ?? null,
+      q: query.q?.trim() ?? null,
+      page: query.page ?? 1,
+      limit: query.limit ?? 20,
+    });
+  }
+
+  @Post('abandoned-carts/:abandonedCartId/send-recovery')
+  @RequirePermissions(PERMISSIONS.customersWrite)
+  @ApiOkResponse({ description: 'Send abandoned cart recovery email manually' })
+  async sendAbandonedCartRecovery(
+    @CurrentUser() currentUser: AuthUser,
+    @Param('abandonedCartId', ParseUUIDPipe) abandonedCartId: string,
+  ) {
+    return this.abandonedCartsService.sendManagedRecoveryEmail(currentUser, abandonedCartId);
   }
 
   @Get(':customerId')

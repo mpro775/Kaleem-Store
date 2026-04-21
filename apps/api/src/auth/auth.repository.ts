@@ -13,6 +13,7 @@ export interface UserRecord {
   password_hash: string;
   is_active: boolean;
   store_is_suspended: boolean;
+  store_onboarding_completed_at: Date | null;
 }
 
 export interface SessionRecord {
@@ -66,6 +67,7 @@ export class AuthRepository {
       `
         SELECT id, store_id, email, full_name, role, permissions, password_hash, is_active
                , (SELECT is_suspended FROM stores WHERE id = store_users.store_id) AS store_is_suspended
+               , (SELECT onboarding_completed_at FROM stores WHERE id = store_users.store_id) AS store_onboarding_completed_at
         FROM store_users
         WHERE LOWER(email) = LOWER($1)
         LIMIT 1
@@ -81,6 +83,7 @@ export class AuthRepository {
       `
         SELECT id, store_id, email, full_name, role, permissions, password_hash, is_active
                , (SELECT is_suspended FROM stores WHERE id = store_users.store_id) AS store_is_suspended
+               , (SELECT onboarding_completed_at FROM stores WHERE id = store_users.store_id) AS store_onboarding_completed_at
         FROM store_users
         WHERE id = $1
         LIMIT 1
@@ -116,17 +119,16 @@ export class AuthRepository {
     }
   }
 
-  async deletePendingOwnerRegistrationChallengesByEmailOrSlug(
+  async deletePendingOwnerRegistrationChallengesByEmail(
     emailNormalized: string,
-    storeSlug: string,
   ): Promise<void> {
     await this.databaseService.db.query(
       `
         DELETE FROM owner_registration_challenges
         WHERE consumed_at IS NULL
-          AND (email_normalized = $1 OR store_slug = $2)
+          AND email_normalized = $1
       `,
-      [emailNormalized, storeSlug],
+      [emailNormalized],
     );
   }
 

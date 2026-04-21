@@ -1,3 +1,4 @@
+/* eslint-disable complexity */
 import { headers } from 'next/headers';
 import type {
   PublicStoreResolveResponse,
@@ -30,7 +31,8 @@ export async function listProducts(
     limit?: number;
     q?: string;
     categorySlug?: string;
-    attrs?: Record<string, string[]>;
+    filters?: Record<string, string[]>;
+    ranges?: Record<string, { min?: number; max?: number }>;
   } = {},
 ): Promise<StorefrontProductsResponse> {
   const params = new URLSearchParams();
@@ -46,10 +48,20 @@ export async function listProducts(
   if (input.categorySlug) {
     params.set('categorySlug', input.categorySlug);
   }
-  if (input.attrs) {
-    for (const [attributeSlug, valueSlugs] of Object.entries(input.attrs)) {
+  if (input.filters) {
+    for (const [filterSlug, valueSlugs] of Object.entries(input.filters)) {
       for (const valueSlug of valueSlugs) {
-        params.append(`attrs[${attributeSlug}]`, valueSlug);
+        params.append(`filters[${filterSlug}]`, valueSlug);
+      }
+    }
+  }
+  if (input.ranges) {
+    for (const [filterSlug, range] of Object.entries(input.ranges)) {
+      if (range.min !== undefined) {
+        params.append(`ranges[${filterSlug}][min]`, String(range.min));
+      }
+      if (range.max !== undefined) {
+        params.append(`ranges[${filterSlug}][max]`, String(range.max));
       }
     }
   }

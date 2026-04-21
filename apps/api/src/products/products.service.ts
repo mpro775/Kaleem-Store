@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { v4 as uuidv4, validate as isUuid } from 'uuid';
 import * as XLSX from 'xlsx';
+import { BrandsRepository } from '../brands/brands.repository';
 import {
   AttributesService,
   type ResolvedVariantAttributes,
@@ -18,6 +19,7 @@ import { slugify } from '../common/utils/slug.util';
 import { SaasService } from '../saas/saas.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { WarehousesService } from '../warehouses/warehouses.service';
+import { FiltersRepository } from '../filters/filters.repository';
 import type { AttachProductImageDto } from './dto/attach-product-image.dto';
 import type { CreateProductDto } from './dto/create-product.dto';
 import type { CreateVariantDto } from './dto/create-variant.dto';
@@ -116,6 +118,7 @@ export interface ProductResponse {
   digitalFiles?: ProductDigitalFileResponse[];
   relatedProductIds?: string[];
   brand: string | null;
+  brandId: string | null;
   weight: number | null;
   weightUnit: string | null;
   dimensions: { length?: number; width?: number; height?: number } | null;
@@ -141,6 +144,8 @@ export interface ProductResponse {
   publishedAt: string | null;
   ratingAvg: number;
   ratingCount: number;
+  filterValueIds?: string[];
+  filterRanges?: Array<{ filterId: string; numericValue: number }>;
 }
 
 export interface ProductListResponse {
@@ -164,10 +169,12 @@ export class ProductsService {
     private readonly productsRepository: ProductsRepository,
     private readonly categoriesRepository: CategoriesRepository,
     private readonly attributesService: AttributesService,
+    private readonly filtersRepository: FiltersRepository,
     private readonly auditService: AuditService,
     private readonly saasService: SaasService,
     private readonly webhooksService: WebhooksService,
     private readonly warehousesService: WarehousesService,
+    private readonly brandsRepository: BrandsRepository,
   ) {}
 
   async create(
@@ -187,6 +194,10 @@ export class ProductsService {
     await this.validateBundleItems(currentUser.storeId, input.bundleItems ?? [], productType);
     await this.validateDigitalFiles(currentUser.storeId, productType, input.digitalFiles ?? []);
     this.validateInlineDiscount(input.inlineDiscount, input.inlineDiscountEnabled);
+    const brandAssignment = await this.resolveBrandAssignment(currentUser.storeId, {
+      ...(input.brandId !== undefined ? { brandId: input.brandId } : {}),
+      ...(input.brand !== undefined ? { brand: input.brand } : {}),
+    });
 
     const productId = uuidv4();
     const stockUnlimited = this.resolveStockUnlimited(input.stockUnlimited, productType);
@@ -212,7 +223,8 @@ export class ProductsService {
         detailedDescriptionAr: input.detailedDescriptionAr?.trim() ?? null,
         detailedDescriptionEn: input.detailedDescriptionEn?.trim() ?? null,
         status: input.status ?? 'draft',
-        brand: input.brand?.trim() ?? null,
+        brand: brandAssignment.brand,
+        brandId: brandAssignment.brandId,
         weight: input.weight ?? null,
         weightUnit: input.weightUnit?.trim() ?? null,
         dimensions: input.dimensions ?? null,
@@ -523,14 +535,17 @@ export class ProductsService {
 
   async getById(currentUser: AuthUser, productId: string): Promise<ProductResponse> {
     const product = await this.requireProduct(currentUser.storeId, productId);
-    const [variants, images, categoryIds, relatedProductIds, bundleItems, digitalFiles] = await Promise.all([
-      this.productsRepository.listVariants(currentUser.storeId, productId),
-      this.productsRepository.listProductImages(currentUser.storeId, productId),
-      this.productsRepository.listProductCategoryIds(currentUser.storeId, productId),
-      this.productsRepository.listRelatedProductIds(currentUser.storeId, productId),
-      this.productsRepository.listBundleItems(currentUser.storeId, productId),
-      this.productsRepository.listDigitalFiles(currentUser.storeId, productId),
-    ]);
+    const [variants, images, categoryIds, relatedProductIds, bundleItems, digitalFiles, filterValues, filterRanges] =
+      await Promise.all([
+        this.productsRepository.listVariants(currentUser.storeId, productId),
+        this.productsRepository.listProductImages(currentUser.storeId, productId),
+        this.productsRepository.listProductCategoryIds(currentUser.storeId, productId),
+        this.productsRepository.listRelatedProductIds(currentUser.storeId, productId),
+        this.productsRepository.listBundleItems(currentUser.storeId, productId),
+        this.productsRepository.listDigitalFiles(currentUser.storeId, productId),
+        this.filtersRepository.listProductFilterValues(currentUser.storeId, productId),
+        this.filtersRepository.listProductFilterRanges(currentUser.storeId, productId),
+      ]);
     const variantAttributeState = await this.attributesService.listVariantAttributeState(
       currentUser.storeId,
       variants.map((variant) => variant.id),
@@ -544,6 +559,11 @@ export class ProductsService {
       images: images.map((image) => this.toImageResponse(image)),
       bundleItems: bundleItems.map((item) => this.toBundleItemResponse(item)),
       digitalFiles: digitalFiles.map((item) => this.toDigitalFileResponse(item)),
+      filterValueIds: filterValues.map((item) => item.id),
+      filterRanges: filterRanges.map((item) => ({
+        filterId: item.filter_id,
+        numericValue: Number(item.numeric_value),
+      })),
     };
   }
 
@@ -608,6 +628,15 @@ export class ProductsService {
     await this.validateBundleItems(currentUser.storeId, bundleItems, productType, productId);
     await this.validateDigitalFiles(currentUser.storeId, productType, digitalFiles);
     this.validateInlineDiscount(input.inlineDiscount, input.inlineDiscountEnabled);
+    const brandAssignment = await this.resolveBrandAssignment(currentUser.storeId, {
+      brandId: input.brandId !== undefined ? input.brandId : existing.brand_id,
+      brand:
+        input.brand !== undefined
+          ? input.brand
+          : input.brandId !== undefined && input.brandId === null
+            ? null
+            : existing.brand,
+    });
 
     const stockUnlimited = this.resolveStockUnlimited(
       input.stockUnlimited ?? existing.stock_unlimited,
@@ -635,7 +664,8 @@ export class ProductsService {
         detailedDescriptionAr: input.detailedDescriptionAr ?? existing.detailed_description_ar,
         detailedDescriptionEn: input.detailedDescriptionEn ?? existing.detailed_description_en,
         status: input.status ?? existing.status,
-        brand: input.brand?.trim() ?? existing.brand,
+        brand: brandAssignment.brand,
+        brandId: brandAssignment.brandId,
         weight: input.weight ?? (existing.weight ? Number(existing.weight) : null),
         weightUnit: input.weightUnit ?? existing.weight_unit,
         dimensions: input.dimensions ?? existing.dimensions,
@@ -1063,6 +1093,32 @@ export class ProductsService {
     }
   }
 
+  private async resolveBrandAssignment(
+    storeId: string,
+    input: { brandId?: string | null; brand?: string | null },
+  ): Promise<{ brandId: string | null; brand: string | null }> {
+    const normalizedBrandId = input.brandId?.trim() ? input.brandId : null;
+    const normalizedBrandText =
+      input.brand === null ? null : input.brand?.trim() ? input.brand.trim() : null;
+
+    if (!normalizedBrandId) {
+      return {
+        brandId: null,
+        brand: normalizedBrandText,
+      };
+    }
+
+    const brand = await this.brandsRepository.findById(storeId, normalizedBrandId);
+    if (!brand) {
+      throw new BadRequestException('Brand not found in this store');
+    }
+
+    return {
+      brandId: brand.id,
+      brand: normalizedBrandText ?? brand.name_ar,
+    };
+  }
+
   private async validateRelatedProducts(
     storeId: string,
     excludedProductIds: string[],
@@ -1281,6 +1337,7 @@ export class ProductsService {
       relatedProductIds,
       status: record.status,
       brand: record.brand,
+      brandId: record.brand_id,
       weight: record.weight ? Number(record.weight) : null,
       weightUnit: record.weight_unit,
       dimensions: record.dimensions,

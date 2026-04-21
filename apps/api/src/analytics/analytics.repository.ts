@@ -159,6 +159,15 @@ interface KpiWindowSnapshotRecord {
   store_visits: number;
 }
 
+export interface AbandonedCartMetricsRecord {
+  abandoned_carts_count: number;
+  recovery_emails_sent: number;
+  recovered_carts_count: number;
+  recovered_revenue: string;
+  avg_recovery_minutes: number;
+  checkout_starts: number;
+}
+
 @Injectable()
 export class AnalyticsRepository {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -1076,6 +1085,84 @@ export class AnalyticsRepository {
         approved_payments: 0,
         checkout_completes: 0,
         store_visits: 0,
+      }
+    );
+  }
+
+  async getAbandonedCartMetrics(input: {
+    storeId: string;
+    startAt: Date;
+    endAt: Date;
+  }): Promise<AbandonedCartMetricsRecord> {
+    const result = await this.databaseService.db.query<AbandonedCartMetricsRecord>(
+      `
+        WITH scoped_abandoned AS (
+          SELECT *
+          FROM abandoned_carts
+          WHERE store_id = $1
+            AND created_at >= $2
+            AND created_at < $3
+        ),
+        scoped_recovered_orders AS (
+          SELECT ac.recovered_order_id
+          FROM scoped_abandoned ac
+          WHERE ac.recovered_at IS NOT NULL
+            AND ac.recovered_order_id IS NOT NULL
+            AND ac.recovered_at >= $2
+            AND ac.recovered_at < $3
+        )
+        SELECT
+          (SELECT COUNT(*)::int FROM scoped_abandoned) AS abandoned_carts_count,
+          (
+            SELECT COUNT(*)::int
+            FROM scoped_abandoned ac
+            WHERE ac.recovery_sent_at IS NOT NULL
+              AND ac.recovery_sent_at >= $2
+              AND ac.recovery_sent_at < $3
+          ) AS recovery_emails_sent,
+          (
+            SELECT COUNT(*)::int
+            FROM scoped_abandoned ac
+            WHERE ac.recovered_at IS NOT NULL
+              AND ac.recovered_at >= $2
+              AND ac.recovered_at < $3
+          ) AS recovered_carts_count,
+          (
+            SELECT COALESCE(SUM(o.total), 0)::text
+            FROM orders o
+            WHERE o.id IN (SELECT recovered_order_id FROM scoped_recovered_orders)
+          ) AS recovered_revenue,
+          (
+            SELECT COALESCE(
+              AVG(EXTRACT(EPOCH FROM (ac.recovered_at - ac.recovery_sent_at)) / 60),
+              0
+            )::float8
+            FROM scoped_abandoned ac
+            WHERE ac.recovered_at IS NOT NULL
+              AND ac.recovery_sent_at IS NOT NULL
+              AND ac.recovered_at >= $2
+              AND ac.recovered_at < $3
+          ) AS avg_recovery_minutes,
+          (
+            SELECT COUNT(DISTINCT se.session_id)::int
+            FROM storefront_events se
+            WHERE se.store_id = $1
+              AND se.event_type = 'checkout_start'
+              AND se.occurred_at >= $2
+              AND se.occurred_at < $3
+          ) AS checkout_starts
+      `,
+      [input.storeId, input.startAt, input.endAt],
+    );
+
+    return (
+      result.rows[0] ?? {
+        abandoned_carts_count: 0,
+        recovery_emails_sent: 0,
+        recovered_carts_count: 0,
+        recovered_revenue: '0',
+        avg_recovery_minutes: 0,
+        checkout_starts: 0,
       }
     );
   }

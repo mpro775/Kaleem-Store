@@ -36,8 +36,6 @@ import { PlatformConsole } from './features/platform-console';
 import { useMerchantSession } from './features/merchant/use-merchant-session';
 import type { MerchantSession } from './features/merchant/types';
 
-const ONBOARDING_STORAGE_KEY = 'merchant.onboarding.pending.v1';
-
 type AppRoute = 'marketing' | 'register' | 'login' | 'merchant' | 'platform';
 type ThemeMode = 'light' | 'dark';
 
@@ -95,12 +93,7 @@ export function App({ themeMode, onThemeModeChange }: AppProps) {
   }
 
   useEffect(() => {
-    if (!session) {
-      setShowOnboarding(false);
-      return;
-    }
-
-    setShowOnboarding(readOnboardingState(session.user.id));
+    setShowOnboarding(Boolean(session && !session.user.onboardingCompleted));
   }, [session]);
 
   useEffect(() => {
@@ -170,7 +163,6 @@ export function App({ themeMode, onThemeModeChange }: AppProps) {
           onBackHome={() => navigate('marketing')}
           onSignIn={() => navigate('login')}
           onRegistered={(nextSession) => {
-            writeOnboardingState(nextSession.user.id, true);
             setSession(nextSession);
             navigate('merchant', true);
           }}
@@ -182,7 +174,6 @@ export function App({ themeMode, onThemeModeChange }: AppProps) {
       return (
         <MerchantLoginPage
           onLoggedIn={(nextSession) => {
-            writeOnboardingState(nextSession.user.id, false);
             setSession(nextSession);
             navigate('merchant', true);
           }}
@@ -197,12 +188,11 @@ export function App({ themeMode, onThemeModeChange }: AppProps) {
         return (
           <MerchantOnboarding
             session={currentSession}
-            onContinue={() => {
-              writeOnboardingState(currentSession.user.id, false);
+            onCompleted={(nextSession) => {
+              setSession(nextSession);
               setShowOnboarding(false);
             }}
             onSignedOut={() => {
-              writeOnboardingState(currentSession.user.id, false);
               setSession(null);
               navigate('login', true);
             }}
@@ -211,13 +201,12 @@ export function App({ themeMode, onThemeModeChange }: AppProps) {
       }
 
       return (
-        <MerchantDashboard
+          <MerchantDashboard
           session={currentSession}
           onSessionUpdate={setSession}
           themeMode={themeMode}
           onToggleThemeMode={toggleThemeMode}
           onSignedOut={() => {
-            writeOnboardingState(currentSession.user.id, false);
             setSession(null);
             navigate('login', true);
           }}
@@ -376,25 +365,4 @@ export function App({ themeMode, onThemeModeChange }: AppProps) {
       ) : null}
     </Box>
   );
-}
-
-function readOnboardingState(userId: string): boolean {
-  try {
-    return window.localStorage.getItem(ONBOARDING_STORAGE_KEY) === userId;
-  } catch {
-    return false;
-  }
-}
-
-function writeOnboardingState(userId: string, enabled: boolean): void {
-  try {
-    if (!enabled) {
-      window.localStorage.removeItem(ONBOARDING_STORAGE_KEY);
-      return;
-    }
-
-    window.localStorage.setItem(ONBOARDING_STORAGE_KEY, userId);
-  } catch {
-    return;
-  }
 }

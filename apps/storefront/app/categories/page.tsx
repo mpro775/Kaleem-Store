@@ -1,6 +1,8 @@
+/* eslint-disable complexity */
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 import { AnalyticsPageView } from '../../components/analytics-page-view';
 import { listCategories, listFilterAttributes, listProducts } from '../../lib/storefront-server';
 import type { StorefrontFilterAttribute } from '../../lib/types';
@@ -79,7 +81,8 @@ export default async function CategoriesPage({ searchParams }: CategoriesPagePro
   const selectedCategory = readSingleSearchParam(resolvedParams, 'category');
   const query = readSingleSearchParam(resolvedParams, 'q');
   const page = normalizePage(readSingleSearchParam(resolvedParams, 'page'));
-  const attributeFilters = parseAttributeFilters(resolvedParams);
+  const valueFilters = parseValueFilters(resolvedParams);
+  const rangeFilters = parseRangeFilters(resolvedParams);
   const limit = 12;
 
   const [categories, products, filterAttributes] = await Promise.all([
@@ -90,7 +93,8 @@ export default async function CategoriesPage({ searchParams }: CategoriesPagePro
         limit,
         categorySlug: selectedCategory,
         query,
-        attributeFilters,
+        valueFilters,
+        rangeFilters,
       }),
     ),
     listFilterAttributes(selectedCategory ? { categorySlug: selectedCategory } : {}),
@@ -110,7 +114,7 @@ export default async function CategoriesPage({ searchParams }: CategoriesPagePro
         selectedCategoryData.description ?? 'Browse products with quick filters and pagination.',
       )
     : 'Browse products with quick filters and pagination.';
-  const pageUrl = buildPageHref(page, selectedCategory, query, attributeFilters);
+  const pageUrl = buildPageHref(page, selectedCategory, query, valueFilters, rangeFilters);
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
@@ -173,13 +177,15 @@ export default async function CategoriesPage({ searchParams }: CategoriesPagePro
       <SearchPanel
         selectedCategory={selectedCategory}
         query={query}
-        attributeFilters={attributeFilters}
+        valueFilters={valueFilters}
+        rangeFilters={rangeFilters}
       />
       <AttributeFiltersPanel
         attributes={filterAttributes}
         selectedCategory={selectedCategory}
         query={query}
-        selectedFilters={attributeFilters}
+        selectedValueFilters={valueFilters}
+        selectedRangeFilters={rangeFilters}
       />
       <ProductsGrid products={products.items} />
       <PaginationControls
@@ -187,7 +193,8 @@ export default async function CategoriesPage({ searchParams }: CategoriesPagePro
         totalPages={totalPages}
         selectedCategory={selectedCategory}
         query={query}
-        attributeFilters={attributeFilters}
+        valueFilters={valueFilters}
+        rangeFilters={rangeFilters}
       />
     </main>
   );
@@ -239,16 +246,19 @@ function CategoryTabs({
 function SearchPanel({
   selectedCategory,
   query,
-  attributeFilters,
+  valueFilters,
+  rangeFilters,
 }: {
   selectedCategory: string | undefined;
   query: string | undefined;
-  attributeFilters: Record<string, string[]>;
+  valueFilters: Record<string, string[]>;
+  rangeFilters: Record<string, { min?: number; max?: number }>;
 }) {
   return (
     <form className="panel" method="get" action="/categories">
       {selectedCategory ? <input type="hidden" name="category" value={selectedCategory} /> : null}
-      {renderAttributeHiddenInputs(attributeFilters)}
+      {renderValueHiddenInputs(valueFilters)}
+      {renderRangeHiddenInputs(rangeFilters)}
       <div className="search-row">
         <input
           id="product-search"
@@ -271,12 +281,14 @@ function AttributeFiltersPanel({
   attributes,
   selectedCategory,
   query,
-  selectedFilters,
+  selectedValueFilters,
+  selectedRangeFilters,
 }: {
   attributes: StorefrontFilterAttribute[];
   selectedCategory: string | undefined;
   query: string | undefined;
-  selectedFilters: Record<string, string[]>;
+  selectedValueFilters: Record<string, string[]>;
+  selectedRangeFilters: Record<string, { min?: number; max?: number }>;
 }) {
   if (attributes.length === 0) {
     return null;
@@ -286,31 +298,73 @@ function AttributeFiltersPanel({
     <form className="panel stack-md" method="get" action="/categories">
       {selectedCategory ? <input type="hidden" name="category" value={selectedCategory} /> : null}
       {query ? <input type="hidden" name="q" value={query} /> : null}
-      <h3>Filter by attributes</h3>
-      {attributes.map((attribute) => (
-        <fieldset key={attribute.id} className="panel">
-          <legend>{bilingual(attribute.nameAr, attribute.nameEn, attribute.name)}</legend>
-          <div className="stack-md">
-            {attribute.values.map((value) => (
-              <label key={value.id} className="inline-check">
-                <input
-                  type="checkbox"
-                  name={`attrs[${attribute.slug}]`}
-                  value={value.slug}
-                  defaultChecked={Boolean(selectedFilters[attribute.slug]?.includes(value.slug))}
-                />
-                {bilingual(value.valueAr, value.valueEn, value.value)}
-              </label>
-            ))}
-          </div>
+      <h3>Filter by options</h3>
+      {attributes.map((filter) => (
+        <fieldset key={filter.id} className="panel">
+          <legend>{bilingual(filter.nameAr, filter.nameEn, filter.nameAr)}</legend>
+          {filter.type === 'range' ? (
+            <div className="search-row">
+              <input
+                className="input"
+                type="number"
+                step="0.01"
+                min={0}
+                name={`ranges[${filter.slug}][min]`}
+                defaultValue={selectedRangeFilters[filter.slug]?.min ?? ''}
+                placeholder="Min"
+              />
+              <input
+                className="input"
+                type="number"
+                step="0.01"
+                min={0}
+                name={`ranges[${filter.slug}][max]`}
+                defaultValue={selectedRangeFilters[filter.slug]?.max ?? ''}
+                placeholder="Max"
+              />
+            </div>
+          ) : (
+            <div className="stack-md">
+              {filter.values.map((value) => {
+                const checked = Boolean(selectedValueFilters[filter.slug]?.includes(value.slug));
+                const inputType = filter.type === 'radio' ? 'radio' : 'checkbox';
+
+                return (
+                  <label key={value.id} className="inline-check">
+                    <input
+                      type={inputType}
+                      name={`filters[${filter.slug}]`}
+                      value={value.slug}
+                      defaultChecked={checked}
+                    />
+                    {filter.type === 'color' && value.colorHex ? (
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          width: 12,
+                          height: 12,
+                          borderRadius: 999,
+                          display: 'inline-block',
+                          border: '1px solid #ddd',
+                          backgroundColor: value.colorHex,
+                          marginInlineStart: 4,
+                        }}
+                      />
+                    ) : null}
+                    {bilingual(value.valueAr, value.valueEn, value.valueAr)}
+                  </label>
+                );
+              })}
+            </div>
+          )}
         </fieldset>
       ))}
       <div className="actions">
         <button className="button-primary" type="submit">
-          Apply Attribute Filters
+          Apply Filters
         </button>
-        <Link className="button-secondary" href={buildPageHref(1, selectedCategory, query, {})}>
-          Clear Attribute Filters
+        <Link className="button-secondary" href={buildPageHref(1, selectedCategory, query, {}, {})}>
+          Clear Filters
         </Link>
       </div>
     </form>
@@ -356,13 +410,12 @@ function ProductsGrid({
             ) : (
               <div className="image-fallback">No image</div>
             )}
-            {product.isFeatured ? <span className="badge-featured">مميز</span> : null}
+            {product.isFeatured ? <span className="badge-featured">Featured</span> : null}
           </div>
           <strong>{bilingual(product.titleAr, product.titleEn, product.title)}</strong>
           {product.ratingCount > 0 ? (
             <span className="product-rating-sm" aria-label={`Rating ${product.ratingAvg.toFixed(1)} out of 5`}>
-              {'★'.repeat(Math.min(Math.round(product.ratingAvg), 5))}
-              {'☆'.repeat(Math.max(5 - Math.round(product.ratingAvg), 0))}
+              {'*'.repeat(Math.min(Math.round(product.ratingAvg), 5))}
               {' '}({product.ratingCount})
             </span>
           ) : null}
@@ -380,19 +433,21 @@ function PaginationControls({
   totalPages,
   selectedCategory,
   query,
-  attributeFilters,
+  valueFilters,
+  rangeFilters,
 }: {
   page: number;
   totalPages: number;
   selectedCategory: string | undefined;
   query: string | undefined;
-  attributeFilters: Record<string, string[]>;
+  valueFilters: Record<string, string[]>;
+  rangeFilters: Record<string, { min?: number; max?: number }>;
 }) {
   return (
     <footer className="pagination" aria-label="Pagination navigation">
       <Link
         className={page <= 1 ? 'button-secondary disabled' : 'button-secondary'}
-        href={buildPageHref(page - 1, selectedCategory, query, attributeFilters)}
+        href={buildPageHref(page - 1, selectedCategory, query, valueFilters, rangeFilters)}
         aria-disabled={page <= 1}
       >
         Previous
@@ -402,7 +457,7 @@ function PaginationControls({
       </span>
       <Link
         className={page >= totalPages ? 'button-secondary disabled' : 'button-secondary'}
-        href={buildPageHref(page + 1, selectedCategory, query, attributeFilters)}
+        href={buildPageHref(page + 1, selectedCategory, query, valueFilters, rangeFilters)}
         aria-disabled={page >= totalPages}
       >
         Next
@@ -421,20 +476,23 @@ function buildProductQuery(input: {
   limit: number;
   categorySlug: string | undefined;
   query: string | undefined;
-  attributeFilters: Record<string, string[]>;
+  valueFilters: Record<string, string[]>;
+  rangeFilters: Record<string, { min?: number; max?: number }>;
 }): {
   page: number;
   limit: number;
   categorySlug?: string;
   q?: string;
-  attrs?: Record<string, string[]>;
+  filters?: Record<string, string[]>;
+  ranges?: Record<string, { min?: number; max?: number }>;
 } {
   const productQuery: {
     page: number;
     limit: number;
     categorySlug?: string;
     q?: string;
-    attrs?: Record<string, string[]>;
+    filters?: Record<string, string[]>;
+    ranges?: Record<string, { min?: number; max?: number }>;
   } = {
     page: input.page,
     limit: input.limit,
@@ -446,8 +504,11 @@ function buildProductQuery(input: {
   if (input.query) {
     productQuery.q = input.query;
   }
-  if (Object.keys(input.attributeFilters).length > 0) {
-    productQuery.attrs = input.attributeFilters;
+  if (Object.keys(input.valueFilters).length > 0) {
+    productQuery.filters = input.valueFilters;
+  }
+  if (Object.keys(input.rangeFilters).length > 0) {
+    productQuery.ranges = input.rangeFilters;
   }
 
   return productQuery;
@@ -457,7 +518,8 @@ function buildPageHref(
   page: number,
   category: string | undefined,
   q: string | undefined,
-  attributeFilters: Record<string, string[]>,
+  valueFilters: Record<string, string[]>,
+  rangeFilters: Record<string, { min?: number; max?: number }>,
 ): string {
   const params = new URLSearchParams();
   params.set('page', String(page));
@@ -468,9 +530,18 @@ function buildPageHref(
     params.set('q', q);
   }
 
-  for (const [attributeSlug, values] of Object.entries(attributeFilters)) {
+  for (const [filterSlug, values] of Object.entries(valueFilters)) {
     for (const value of values) {
-      params.append(`attrs[${attributeSlug}]`, value);
+      params.append(`filters[${filterSlug}]`, value);
+    }
+  }
+
+  for (const [filterSlug, range] of Object.entries(rangeFilters)) {
+    if (range.min !== undefined) {
+      params.append(`ranges[${filterSlug}][min]`, String(range.min));
+    }
+    if (range.max !== undefined) {
+      params.append(`ranges[${filterSlug}][max]`, String(range.max));
     }
   }
 
@@ -489,13 +560,13 @@ function readSingleSearchParam(
   return typeof value === 'string' ? value.trim() : undefined;
 }
 
-function parseAttributeFilters(
+function parseValueFilters(
   params: Record<string, string | string[] | undefined>,
 ): Record<string, string[]> {
   const filters: Record<string, string[]> = {};
   for (const [key, rawValue] of Object.entries(params)) {
-    const attributeSlug = parseAttributeKey(key);
-    if (!attributeSlug) {
+    const filterSlug = parseValueFilterKey(key);
+    if (!filterSlug) {
       continue;
     }
 
@@ -506,27 +577,94 @@ function parseAttributeFilters(
       .filter((item) => item.length > 0);
 
     if (normalizedValues.length > 0) {
-      filters[attributeSlug] = [...new Set(normalizedValues)];
+      filters[filterSlug] = [...new Set(normalizedValues)];
     }
   }
 
   return filters;
 }
 
-function parseAttributeKey(key: string): string | null {
-  const match = /^attrs\[([a-z0-9]+(?:-[a-z0-9]+)*)\]$/.exec(key);
-  return match?.[1] ?? null;
+function parseRangeFilters(
+  params: Record<string, string | string[] | undefined>,
+): Record<string, { min?: number; max?: number }> {
+  const ranges: Record<string, { min?: number; max?: number }> = {};
+  for (const [key, rawValue] of Object.entries(params)) {
+    const parsed = parseRangeFilterKey(key);
+    if (!parsed) {
+      continue;
+    }
+
+    const value = Array.isArray(rawValue) ? rawValue[0] : rawValue;
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      continue;
+    }
+
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      continue;
+    }
+
+    const current = ranges[parsed.slug] ?? {};
+    current[parsed.boundary] = numeric;
+    ranges[parsed.slug] = current;
+  }
+
+  return ranges;
 }
 
-function renderAttributeHiddenInputs(attributeFilters: Record<string, string[]>) {
-  return Object.entries(attributeFilters).flatMap(([attributeSlug, values]) =>
+function parseValueFilterKey(key: string): string | null {
+  const match = /^filters\[([a-z0-9]+(?:-[a-z0-9]+)*)\]$/i.exec(key);
+  return match?.[1]?.toLowerCase() ?? null;
+}
+
+function parseRangeFilterKey(key: string): { slug: string; boundary: 'min' | 'max' } | null {
+  const match = /^ranges\[([a-z0-9]+(?:-[a-z0-9]+)*)\]\[(min|max)\]$/i.exec(key);
+  if (!match) {
+    return null;
+  }
+
+  return {
+    slug: match[1].toLowerCase(),
+    boundary: match[2].toLowerCase() as 'min' | 'max',
+  };
+}
+
+function renderValueHiddenInputs(valueFilters: Record<string, string[]>) {
+  return Object.entries(valueFilters).flatMap(([filterSlug, values]) =>
     values.map((value) => (
       <input
-        key={`${attributeSlug}:${value}`}
+        key={`${filterSlug}:${value}`}
         type="hidden"
-        name={`attrs[${attributeSlug}]`}
+        name={`filters[${filterSlug}]`}
         value={value}
       />
     )),
   );
+}
+
+function renderRangeHiddenInputs(rangeFilters: Record<string, { min?: number; max?: number }>) {
+  return Object.entries(rangeFilters).flatMap(([filterSlug, range]) => {
+    const inputs: ReactNode[] = [];
+    if (range.min !== undefined) {
+      inputs.push(
+        <input
+          key={`${filterSlug}:min`}
+          type="hidden"
+          name={`ranges[${filterSlug}][min]`}
+          value={String(range.min)}
+        />,
+      );
+    }
+    if (range.max !== undefined) {
+      inputs.push(
+        <input
+          key={`${filterSlug}:max`}
+          type="hidden"
+          name={`ranges[${filterSlug}][max]`}
+          value={String(range.max)}
+        />,
+      );
+    }
+    return inputs;
+  });
 }

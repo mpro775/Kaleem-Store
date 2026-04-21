@@ -11,4 +11,9 @@ export class ListAttributesQueryDto {
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   includeValues?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  onlyActive?: boolean;
 }

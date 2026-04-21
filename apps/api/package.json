@@ -6,6 +6,7 @@
     "dev": "tsx watch src/main.ts",
     "worker:outbox": "tsx src/workers/outbox.worker.ts",
     "worker:notifications": "tsx src/workers/notifications.worker.ts",
+    "worker:abandoned-carts": "tsx src/workers/abandoned-carts.worker.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.build.json",
     "lint": "eslint src",
