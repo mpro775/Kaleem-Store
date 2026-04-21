@@ -53,6 +53,7 @@ export interface StoreSettings {
   returnPolicy: string | null;
   privacyPolicy: string | null;
   termsAndConditions: string | null;
+  loyaltyPolicy: string | null;
 }
 
 export interface StoreSettingsOptions {
@@ -1140,5 +1141,47 @@ export interface WebhookDelivery {
   deliveredAt: string | null;
   nextRetryAt: string | null;
   errorMessage: string | null;
+  createdAt: string;
+}
+
+export interface LoyaltySettings {
+  isEnabled: boolean;
+  redeemRatePoints: number;
+  redeemRateAmount: number;
+  minRedeemPoints: number;
+  redeemStepPoints: number;
+  maxDiscountPercent: number;
+}
+
+export interface LoyaltyRule {
+  id: string;
+  name: string;
+  ruleType: 'order_percent';
+  earnRate: number;
+  minOrderAmount: number;
+  isActive: boolean;
+  priority: number;
+}
+
+export interface LoyaltyWallet {
+  customerId: string;
+  availablePoints: number;
+  lockedPoints: number;
+  lifetimeEarnedPoints: number;
+  lifetimeRedeemedPoints: number;
+}
+
+export interface LoyaltyLedgerEntry {
+  id: string;
+  customerId: string;
+  orderId: string | null;
+  entryType: 'earn' | 'redeem' | 'adjust' | 'reverse';
+  pointsDelta: number;
+  amountDelta: number;
+  balanceAfter: number;
+  referenceEntryId: string | null;
+  reason: string | null;
+  metadata: Record<string, unknown>;
+  createdByStoreUserId: string | null;
   createdAt: string;
 }

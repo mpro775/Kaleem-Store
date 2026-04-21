@@ -1,12 +1,20 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useCustomerAuth } from '../lib/customer-auth-context';
 import * as client from '../lib/customer-client';
-import type { CustomerProfile, CustomerAddress, ProductReview, WishlistItem, CustomerOrder } from '../lib/customer-client';
+import type {
+  CustomerProfile,
+  CustomerAddress,
+  ProductReview,
+  WishlistItem,
+  CustomerOrder,
+  CustomerLoyaltyWallet,
+  CustomerLoyaltyLedgerEntry,
+} from '../lib/customer-client';
 
-type AccountTab = 'profile' | 'addresses' | 'wishlist' | 'reviews' | 'orders';
+type AccountTab = 'profile' | 'addresses' | 'wishlist' | 'reviews' | 'orders' | 'loyalty';
 
 export function AccountPageClient() {
   const { customer, isLoading, isAuthenticated, logout } = useCustomerAuth();
@@ -39,6 +47,8 @@ export function AccountPageClient() {
   // Orders state
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [ordersTotal, setOrdersTotal] = useState(0);
+  const [loyaltyWallet, setLoyaltyWallet] = useState<CustomerLoyaltyWallet | null>(null);
+  const [loyaltyLedger, setLoyaltyLedger] = useState<CustomerLoyaltyLedgerEntry[]>([]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -78,9 +88,18 @@ export function AccountPageClient() {
           setOrdersTotal(o.total);
           break;
         }
+        case 'loyalty': {
+          const [wallet, ledger] = await Promise.all([
+            client.getCustomerLoyaltyWallet(),
+            client.listCustomerLoyaltyLedger(),
+          ]);
+          setLoyaltyWallet(wallet);
+          setLoyaltyLedger(ledger);
+          break;
+        }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'فشل تحميل البيانات');
+      setError(err instanceof Error ? err.message : 'ظپط´ظ„ طھط­ظ…ظٹظ„ ط§ظ„ط¨ظٹط§ظ†ط§طھ');
     } finally {
       setLoading(false);
     }
@@ -102,7 +121,7 @@ export function AccountPageClient() {
       setProfile(updated);
       setEditMode(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'فشل تحديث الملف الشخصي');
+      setError(err instanceof Error ? err.message : 'ظپط´ظ„ طھط­ط¯ظٹط« ط§ظ„ظ…ظ„ظپ ط§ظ„ط´ط®طµظٹ');
     } finally {
       setLoading(false);
     }
@@ -118,20 +137,20 @@ export function AccountPageClient() {
       setShowAddAddress(false);
       setAddressForm({ addressLine: '', city: '', area: '', notes: '', isDefault: false });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'فشل إضافة العنوان');
+      setError(err instanceof Error ? err.message : 'ظپط´ظ„ ط¥ط¶ط§ظپط© ط§ظ„ط¹ظ†ظˆط§ظ†');
     } finally {
       setLoading(false);
     }
   }
 
   async function handleDeleteAddress(addressId: string) {
-    if (!confirm('هل أنت متأكد من حذف هذا العنوان؟')) return;
+    if (!confirm('ظ‡ظ„ ط£ظ†طھ ظ…طھط£ظƒط¯ ظ…ظ† ط­ط°ظپ ظ‡ط°ط§ ط§ظ„ط¹ظ†ظˆط§ظ†طں')) return;
     setError(null);
     try {
       await client.deleteCustomerAddress(addressId);
       setAddresses(addresses.filter((a) => a.id !== addressId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'فشل حذف العنوان');
+      setError(err instanceof Error ? err.message : 'ظپط´ظ„ ط­ط°ظپ ط§ظ„ط¹ظ†ظˆط§ظ†');
     }
   }
 
@@ -141,25 +160,25 @@ export function AccountPageClient() {
       await client.removeFromWishlist(productId);
       setWishlist(wishlist.filter((w) => w.productId !== productId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'فشل إزالة المنتج من المفضلة');
+      setError(err instanceof Error ? err.message : 'ظپط´ظ„ ط¥ط²ط§ظ„ط© ط§ظ„ظ…ظ†طھط¬ ظ…ظ† ط§ظ„ظ…ظپط¶ظ„ط©');
     }
   }
 
   async function handleDeleteReview(reviewId: string) {
-    if (!confirm('هل أنت متأكد من حذف هذا التقييم؟')) return;
+    if (!confirm('ظ‡ظ„ ط£ظ†طھ ظ…طھط£ظƒط¯ ظ…ظ† ط­ط°ظپ ظ‡ط°ط§ ط§ظ„طھظ‚ظٹظٹظ…طں')) return;
     setError(null);
     try {
       await client.deleteReview(reviewId);
       setReviews(reviews.filter((r) => r.id !== reviewId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'فشل حذف التقييم');
+      setError(err instanceof Error ? err.message : 'ظپط´ظ„ ط­ط°ظپ ط§ظ„طھظ‚ظٹظٹظ…');
     }
   }
 
   if (isLoading) {
     return (
       <main className="page-shell">
-        <div className="panel">جاري التحميل...</div>
+        <div className="panel">ط¬ط§ط±ظٹ ط§ظ„طھط­ظ…ظٹظ„...</div>
       </main>
     );
   }
@@ -168,9 +187,9 @@ export function AccountPageClient() {
     return (
       <main className="page-shell">
         <div className="panel">
-          <h2>يرجى تسجيل الدخول</h2>
-          <p>يجب تسجيل الدخول لعرض حسابك</p>
-          <Link href="/" className="button-primary">العودة للرئيسية</Link>
+          <h2>ظٹط±ط¬ظ‰ طھط³ط¬ظٹظ„ ط§ظ„ط¯ط®ظˆظ„</h2>
+          <p>ظٹط¬ط¨ طھط³ط¬ظٹظ„ ط§ظ„ط¯ط®ظˆظ„ ظ„ط¹ط±ط¶ ط­ط³ط§ط¨ظƒ</p>
+          <Link href="/" className="button-primary">ط§ظ„ط¹ظˆط¯ط© ظ„ظ„ط±ط¦ظٹط³ظٹط©</Link>
         </div>
       </main>
     );
@@ -179,8 +198,8 @@ export function AccountPageClient() {
   return (
     <main className="page-shell">
       <header className="page-header">
-        <h1>حسابي</h1>
-        <p>مرحباً {customer?.fullName}! إدارة حسابك وطلباتك</p>
+        <h1>ط­ط³ط§ط¨ظٹ</h1>
+        <p>ظ…ط±ط­ط¨ط§ظ‹ {customer?.fullName}! ط¥ط¯ط§ط±ط© ط­ط³ط§ط¨ظƒ ظˆط·ظ„ط¨ط§طھظƒ</p>
       </header>
 
       <nav className="account-tabs">
@@ -188,31 +207,37 @@ export function AccountPageClient() {
           className={`tab ${activeTab === 'profile' ? 'active' : ''}`}
           onClick={() => setActiveTab('profile')}
         >
-          الملف الشخصي
+          ط§ظ„ظ…ظ„ظپ ط§ظ„ط´ط®طµظٹ
         </button>
         <button
           className={`tab ${activeTab === 'addresses' ? 'active' : ''}`}
           onClick={() => setActiveTab('addresses')}
         >
-          العناوين
+          ط§ظ„ط¹ظ†ط§ظˆظٹظ†
         </button>
         <button
           className={`tab ${activeTab === 'orders' ? 'active' : ''}`}
           onClick={() => setActiveTab('orders')}
         >
-          الطلبات
+          ط§ظ„ط·ظ„ط¨ط§طھ
         </button>
         <button
           className={`tab ${activeTab === 'wishlist' ? 'active' : ''}`}
           onClick={() => setActiveTab('wishlist')}
         >
-          المفضلة
+          ط§ظ„ظ…ظپط¶ظ„ط©
         </button>
         <button
           className={`tab ${activeTab === 'reviews' ? 'active' : ''}`}
           onClick={() => setActiveTab('reviews')}
         >
-          التقييمات
+          ط§ظ„طھظ‚ظٹظٹظ…ط§طھ
+        </button>
+        <button
+          className={`tab ${activeTab === 'loyalty' ? 'active' : ''}`}
+          onClick={() => setActiveTab('loyalty')}
+        >
+          نقاطي
         </button>
       </nav>
 
@@ -222,13 +247,13 @@ export function AccountPageClient() {
         {/* Profile Tab */}
         {activeTab === 'profile' && (
           <div className="section">
-            <h3>الملف الشخصي</h3>
+            <h3>ط§ظ„ظ…ظ„ظپ ط§ظ„ط´ط®طµظٹ</h3>
             {loading ? (
-              <p>جاري التحميل...</p>
+              <p>ط¬ط§ط±ظٹ ط§ظ„طھط­ظ…ظٹظ„...</p>
             ) : editMode ? (
               <form onSubmit={handleUpdateProfile} className="auth-form" style={{ marginTop: '1rem' }}>
                 <div className="auth-field">
-                  <label htmlFor="profile-name">الاسم الكامل</label>
+                  <label htmlFor="profile-name">ط§ظ„ط§ط³ظ… ط§ظ„ظƒط§ظ…ظ„</label>
                   <input
                     id="profile-name"
                     type="text"
@@ -239,7 +264,7 @@ export function AccountPageClient() {
                   />
                 </div>
                 <div className="auth-field">
-                  <label htmlFor="profile-phone">رقم الهاتف</label>
+                  <label htmlFor="profile-phone">ط±ظ‚ظ… ط§ظ„ظ‡ط§طھظپ</label>
                   <input
                     id="profile-phone"
                     type="tel"
@@ -250,7 +275,7 @@ export function AccountPageClient() {
                   />
                 </div>
                 <div className="auth-field">
-                  <label htmlFor="profile-email">البريد الإلكتروني</label>
+                  <label htmlFor="profile-email">ط§ظ„ط¨ط±ظٹط¯ ط§ظ„ط¥ظ„ظƒطھط±ظˆظ†ظٹ</label>
                   <input
                     id="profile-email"
                     type="email"
@@ -261,21 +286,21 @@ export function AccountPageClient() {
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <button type="submit" className="button-primary" disabled={loading}>
-                    {loading ? 'جاري الحفظ...' : 'حفظ'}
+                    {loading ? 'ط¬ط§ط±ظٹ ط§ظ„ط­ظپط¸...' : 'ط­ظپط¸'}
                   </button>
                   <button type="button" className="button-secondary" onClick={() => setEditMode(false)}>
-                    إلغاء
+                    ط¥ظ„ط؛ط§ط،
                   </button>
                 </div>
               </form>
             ) : profile ? (
               <div style={{ marginTop: '1rem' }} className="stack-md">
-                <p><strong>الاسم:</strong> {profile.fullName}</p>
-                <p><strong>الهاتف:</strong> {profile.phone}</p>
-                <p><strong>البريد:</strong> {profile.email ?? 'غير محدد'}</p>
-                <p><strong>تاريخ الانضمام:</strong> {new Date(profile.createdAt).toLocaleDateString('ar')}</p>
+                <p><strong>ط§ظ„ط§ط³ظ…:</strong> {profile.fullName}</p>
+                <p><strong>ط§ظ„ظ‡ط§طھظپ:</strong> {profile.phone}</p>
+                <p><strong>ط§ظ„ط¨ط±ظٹط¯:</strong> {profile.email ?? 'ط؛ظٹط± ظ…ط­ط¯ط¯'}</p>
+                <p><strong>طھط§ط±ظٹط® ط§ظ„ط§ظ†ط¶ظ…ط§ظ…:</strong> {new Date(profile.createdAt).toLocaleDateString('ar')}</p>
                 <button className="button-secondary" onClick={() => setEditMode(true)}>
-                  تعديل
+                  طھط¹ط¯ظٹظ„
                 </button>
               </div>
             ) : null}
@@ -286,16 +311,16 @@ export function AccountPageClient() {
         {activeTab === 'addresses' && (
           <div className="section">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3>العناوين</h3>
+              <h3>ط§ظ„ط¹ظ†ط§ظˆظٹظ†</h3>
               <button className="button-primary" onClick={() => setShowAddAddress(!showAddAddress)}>
-                {showAddAddress ? 'إلغاء' : 'إضافة عنوان'}
+                {showAddAddress ? 'ط¥ظ„ط؛ط§ط،' : 'ط¥ط¶ط§ظپط© ط¹ظ†ظˆط§ظ†'}
               </button>
             </div>
 
             {showAddAddress && (
               <form onSubmit={handleAddAddress} className="auth-form" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--line)' }}>
                 <div className="auth-field">
-                  <label htmlFor="addr-line">العنوان</label>
+                  <label htmlFor="addr-line">ط§ظ„ط¹ظ†ظˆط§ظ†</label>
                   <input
                     id="addr-line"
                     type="text"
@@ -306,7 +331,7 @@ export function AccountPageClient() {
                   />
                 </div>
                 <div className="auth-field">
-                  <label htmlFor="addr-city">المدينة</label>
+                  <label htmlFor="addr-city">ط§ظ„ظ…ط¯ظٹظ†ط©</label>
                   <input
                     id="addr-city"
                     type="text"
@@ -316,7 +341,7 @@ export function AccountPageClient() {
                   />
                 </div>
                 <div className="auth-field">
-                  <label htmlFor="addr-area">المنطقة</label>
+                  <label htmlFor="addr-area">ط§ظ„ظ…ظ†ط·ظ‚ط©</label>
                   <input
                     id="addr-area"
                     type="text"
@@ -326,7 +351,7 @@ export function AccountPageClient() {
                   />
                 </div>
                 <div className="auth-field">
-                  <label htmlFor="addr-notes">ملاحظات</label>
+                  <label htmlFor="addr-notes">ظ…ظ„ط§ط­ط¸ط§طھ</label>
                   <textarea
                     id="addr-notes"
                     className="input"
@@ -340,19 +365,19 @@ export function AccountPageClient() {
                     checked={addressForm.isDefault}
                     onChange={(e) => setAddressForm({ ...addressForm, isDefault: e.target.checked })}
                   />
-                  جعله العنوان الافتراضي
+                  ط¬ط¹ظ„ظ‡ ط§ظ„ط¹ظ†ظˆط§ظ† ط§ظ„ط§ظپطھط±ط§ط¶ظٹ
                 </label>
                 <button type="submit" className="button-primary" disabled={loading}>
-                  {loading ? 'جاري الإضافة...' : 'إضافة العنوان'}
+                  {loading ? 'ط¬ط§ط±ظٹ ط§ظ„ط¥ط¶ط§ظپط©...' : 'ط¥ط¶ط§ظپط© ط§ظ„ط¹ظ†ظˆط§ظ†'}
                 </button>
               </form>
             )}
 
             <div className="stack-md" style={{ marginTop: '1rem' }}>
               {loading ? (
-                <p>جاري التحميل...</p>
+                <p>ط¬ط§ط±ظٹ ط§ظ„طھط­ظ…ظٹظ„...</p>
               ) : addresses.length === 0 ? (
-                <p className="muted">لا توجد عناوين محفوظة</p>
+                <p className="muted">ظ„ط§ طھظˆط¬ط¯ ط¹ظ†ط§ظˆظٹظ† ظ…ط­ظپظˆط¸ط©</p>
               ) : (
                 addresses.map((addr) => (
                   <div key={addr.id} className="address-card">
@@ -360,14 +385,14 @@ export function AccountPageClient() {
                       <p><strong>{addr.addressLine}</strong></p>
                       {addr.city && <p>{addr.city}{addr.area && ` - ${addr.area}`}</p>}
                       {addr.notes && <p className="muted">{addr.notes}</p>}
-                      {addr.isDefault && <span className="badge">افتراضي</span>}
+                      {addr.isDefault && <span className="badge">ط§ظپطھط±ط§ط¶ظٹ</span>}
                     </div>
                     <button
                       className="button-secondary"
                       onClick={() => handleDeleteAddress(addr.id)}
                       style={{ color: 'var(--danger)' }}
                     >
-                      حذف
+                      ط­ط°ظپ
                     </button>
                   </div>
                 ))
@@ -379,12 +404,12 @@ export function AccountPageClient() {
         {/* Wishlist Tab */}
         {activeTab === 'wishlist' && (
           <div className="section">
-            <h3>المفضلة</h3>
+            <h3>ط§ظ„ظ…ظپط¶ظ„ط©</h3>
             <div className="stack-md" style={{ marginTop: '1rem' }}>
               {loading ? (
-                <p>جاري التحميل...</p>
+                <p>ط¬ط§ط±ظٹ ط§ظ„طھط­ظ…ظٹظ„...</p>
               ) : wishlist.length === 0 ? (
-                <p className="muted">لا توجد منتجات في المفضلة</p>
+                <p className="muted">ظ„ط§ طھظˆط¬ط¯ ظ…ظ†طھط¬ط§طھ ظپظٹ ط§ظ„ظ…ظپط¶ظ„ط©</p>
               ) : (
                 wishlist.map((item) => (
                   <div key={item.id} className="wishlist-card">
@@ -397,7 +422,7 @@ export function AccountPageClient() {
                           {item.title}
                         </Link>
                         {item.priceFrom !== null && (
-                          <p className="muted">{item.priceFrom.toLocaleString('ar')} ر.ي</p>
+                          <p className="muted">{item.priceFrom.toLocaleString('ar')} ط±.ظٹ</p>
                         )}
                       </div>
                     </div>
@@ -406,7 +431,7 @@ export function AccountPageClient() {
                       onClick={() => handleRemoveFromWishlist(item.productId)}
                       style={{ color: 'var(--danger)' }}
                     >
-                      إزالة
+                      ط¥ط²ط§ظ„ط©
                     </button>
                   </div>
                 ))
@@ -418,21 +443,21 @@ export function AccountPageClient() {
         {/* Reviews Tab */}
         {activeTab === 'reviews' && (
           <div className="section">
-            <h3>تقييماتي</h3>
+            <h3>طھظ‚ظٹظٹظ…ط§طھظٹ</h3>
             <div className="stack-md" style={{ marginTop: '1rem' }}>
               {loading ? (
-                <p>جاري التحميل...</p>
+                <p>ط¬ط§ط±ظٹ ط§ظ„طھط­ظ…ظٹظ„...</p>
               ) : reviews.length === 0 ? (
-                <p className="muted">لم تقم بإضافة أي تقييمات بعد</p>
+                <p className="muted">ظ„ظ… طھظ‚ظ… ط¨ط¥ط¶ط§ظپط© ط£ظٹ طھظ‚ظٹظٹظ…ط§طھ ط¨ط¹ط¯</p>
               ) : (
                 reviews.map((review) => (
                   <div key={review.id} className="review-card">
                     <div className="review-header">
                       <div className="review-rating">
-                        {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
+                        {'âک…'.repeat(review.rating)}{'âک†'.repeat(5 - review.rating)}
                       </div>
                       {review.isVerifiedPurchase && (
-                        <span className="badge">شراء موثق</span>
+                        <span className="badge">ط´ط±ط§ط، ظ…ظˆط«ظ‚</span>
                       )}
                     </div>
                     <p className="muted">
@@ -447,7 +472,7 @@ export function AccountPageClient() {
                       onClick={() => handleDeleteReview(review.id)}
                       style={{ color: 'var(--danger)', marginTop: '0.5rem' }}
                     >
-                      حذف التقييم
+                      ط­ط°ظپ ط§ظ„طھظ‚ظٹظٹظ…
                     </button>
                   </div>
                 ))
@@ -459,18 +484,18 @@ export function AccountPageClient() {
         {/* Orders Tab */}
         {activeTab === 'orders' && (
           <div className="section">
-            <h3>طلباتي ({ordersTotal})</h3>
+            <h3>ط·ظ„ط¨ط§طھظٹ ({ordersTotal})</h3>
             <div className="stack-md" style={{ marginTop: '1rem' }}>
               {loading ? (
-                <p>جاري التحميل...</p>
+                <p>ط¬ط§ط±ظٹ ط§ظ„طھط­ظ…ظٹظ„...</p>
               ) : orders.length === 0 ? (
-                <p className="muted">لا توجد طلبات سابقة</p>
+                <p className="muted">ظ„ط§ طھظˆط¬ط¯ ط·ظ„ط¨ط§طھ ط³ط§ط¨ظ‚ط©</p>
               ) : (
                 orders.map((order) => (
                   <div key={order.id} className="order-card">
                     <div className="order-header">
                       <div>
-                        <strong>طلب #{order.orderCode}</strong>
+                        <strong>ط·ظ„ط¨ #{order.orderCode}</strong>
                         <span className={`order-status status-${order.status}`}>
                           {getStatusLabel(order.status)}
                         </span>
@@ -481,21 +506,21 @@ export function AccountPageClient() {
                     </div>
                     <div className="order-details">
                       <div className="order-row">
-                        <span>المجموع الفرعي</span>
+                        <span>ط§ظ„ظ…ط¬ظ…ظˆط¹ ط§ظ„ظپط±ط¹ظٹ</span>
                         <span>{order.subtotal.toFixed(2)} {order.currencyCode}</span>
                       </div>
                       <div className="order-row">
-                        <span>الشحن</span>
+                        <span>ط§ظ„ط´ط­ظ†</span>
                         <span>{order.shippingFee.toFixed(2)} {order.currencyCode}</span>
                       </div>
                       {order.discountTotal > 0 && (
                         <div className="order-row">
-                          <span>الخصم</span>
+                          <span>ط§ظ„ط®طµظ…</span>
                           <span className="discount">-{order.discountTotal.toFixed(2)} {order.currencyCode}</span>
                         </div>
                       )}
                       <div className="order-row total">
-                        <span>الإجمالي</span>
+                        <span>ط§ظ„ط¥ط¬ظ…ط§ظ„ظٹ</span>
                         <strong>{order.total.toFixed(2)} {order.currencyCode}</strong>
                       </div>
                     </div>
@@ -503,12 +528,45 @@ export function AccountPageClient() {
                       href={`/track-order?orderCode=${encodeURIComponent(order.orderCode)}`}
                       className="button-secondary"
                     >
-                      تتبع الطلب
+                      طھطھط¨ط¹ ط§ظ„ط·ظ„ط¨
                     </Link>
                   </div>
                 ))
               )}
             </div>
+          </div>
+        )}
+
+        {activeTab === 'loyalty' && (
+          <div className="section">
+            <h3>نقاط الولاء</h3>
+            {loading ? (
+              <p>جاري التحميل...</p>
+            ) : (
+              <div className="stack-md" style={{ marginTop: '1rem' }}>
+                {loyaltyWallet ? (
+                  <div className="panel">
+                    <p><strong>الرصيد المتاح:</strong> {loyaltyWallet.availablePoints}</p>
+                    <p><strong>المكتسبة:</strong> {loyaltyWallet.lifetimeEarnedPoints}</p>
+                    <p><strong>المصروفة:</strong> {loyaltyWallet.lifetimeRedeemedPoints}</p>
+                  </div>
+                ) : null}
+                <div className="panel">
+                  <h4>آخر الحركات</h4>
+                  {loyaltyLedger.length === 0 ? (
+                    <p className="muted">لا توجد حركات نقاط حتى الآن</p>
+                  ) : (
+                    loyaltyLedger.slice(0, 20).map((entry) => (
+                      <div key={entry.id} className="order-row">
+                        <span>{entry.entryType}</span>
+                        <span>{entry.pointsDelta}</span>
+                        <span>{new Date(entry.createdAt).toLocaleDateString('ar')}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -519,7 +577,7 @@ export function AccountPageClient() {
           onClick={async () => { await logout(); }}
           style={{ color: 'var(--danger)' }}
         >
-          تسجيل الخروج
+          طھط³ط¬ظٹظ„ ط§ظ„ط®ط±ظˆط¬
         </button>
       </div>
     </main>
@@ -528,14 +586,17 @@ export function AccountPageClient() {
 
 function getStatusLabel(status: string): string {
   const labels: Record<string, string> = {
-    pending: 'قيد الانتظار',
-    confirmed: 'مؤكد',
-    processing: 'قيد المعالجة',
-    shipped: 'تم الشحن',
-    delivered: 'تم التوصيل',
-    completed: 'مكتمل',
-    cancelled: 'ملغي',
-    refunded: 'مسترجع',
+    pending: 'ظ‚ظٹط¯ ط§ظ„ط§ظ†طھط¸ط§ط±',
+    confirmed: 'ظ…ط¤ظƒط¯',
+    processing: 'ظ‚ظٹط¯ ط§ظ„ظ…ط¹ط§ظ„ط¬ط©',
+    shipped: 'طھظ… ط§ظ„ط´ط­ظ†',
+    delivered: 'طھظ… ط§ظ„طھظˆطµظٹظ„',
+    completed: 'ظ…ظƒطھظ…ظ„',
+    cancelled: 'ظ…ظ„ط؛ظٹ',
+    refunded: 'ظ…ط³طھط±ط¬ط¹',
   };
   return labels[status] ?? status;
 }
+
+
+

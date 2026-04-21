@@ -18,6 +18,7 @@ import type { Request, Response } from 'express';
 import { Public } from '../auth/decorators/public.decorator';
 import { AddCartItemDto } from './dto/add-cart-item.dto';
 import { CheckoutDto } from './dto/checkout.dto';
+import { CheckoutQuoteDto } from './dto/checkout-quote.dto';
 import { ListStorefrontFiltersQueryDto } from './dto/list-storefront-filters-query.dto';
 import { TrackStorefrontEventDto } from './dto/track-storefront-event.dto';
 import { ThemeQueryDto } from './dto/theme-query.dto';
@@ -148,6 +149,13 @@ export class StorefrontController {
   async checkout(@Req() request: Request, @Body() body: CheckoutDto) {
     const idempotencyKey = this.extractIdempotencyKey(request);
     return this.storefrontService.checkout(request, body, idempotencyKey);
+  }
+
+  @Post('checkout/quote')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ description: 'Quote checkout totals with optional loyalty redemption' })
+  async checkoutQuote(@Req() request: Request, @Body() body: CheckoutQuoteDto) {
+    return this.storefrontService.quoteCheckout(request, body);
   }
 
   @Get('restock/track/:token')

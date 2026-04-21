@@ -166,6 +166,21 @@ export interface CheckoutResponse {
   currencyCode: string;
   shippingFee: number;
   discountTotal: number;
+  pointsRedeemed: number;
+  pointsDiscountAmount: number;
+  pointsEarned: number;
+}
+
+export interface CheckoutQuoteResponse {
+  subtotal: number;
+  shippingFee: number;
+  promotionDiscount: number;
+  pointsDiscount: number;
+  total: number;
+  currencyCode: string;
+  pointsToRedeemApplied: number;
+  potentialEarnPoints: number;
+  availablePoints: number;
 }
 
 export interface TrackOrderResponse {
@@ -187,4 +202,5 @@ export interface StorefrontPolicies {
   returnPolicy: string | null;
   privacyPolicy: string | null;
   termsAndConditions: string | null;
+  loyaltyPolicy: string | null;
 }

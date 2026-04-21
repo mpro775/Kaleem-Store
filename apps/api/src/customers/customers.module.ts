@@ -11,9 +11,10 @@ import { CustomerEngagementService } from './customer-engagement.service';
 import { CustomerEngagementRepository } from './customer-engagement.repository';
 import { AbandonedCartsRepository } from './abandoned-carts.repository';
 import { AbandonedCartsService } from './abandoned-carts.service';
+import { LoyaltyModule } from '../loyalty/loyalty.module';
 
 @Module({
-  imports: [forwardRef(() => StorefrontModule)],
+  imports: [forwardRef(() => StorefrontModule), LoyaltyModule],
   controllers: [
     CustomersController,
     CustomersManagementController,

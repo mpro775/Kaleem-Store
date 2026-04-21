@@ -593,7 +593,8 @@ function FooterSection({ storeName }: { storeName: string }) {
         <Link href="/policies/shipping">Shipping policy</Link> |{' '}
         <Link href="/policies/return">Return policy</Link> |{' '}
         <Link href="/policies/privacy">Privacy policy</Link> |{' '}
-        <Link href="/policies/terms">Terms</Link>
+        <Link href="/policies/terms">Terms</Link> |{' '}
+        <Link href="/policies/loyalty">Loyalty policy</Link>
       </p>
     </footer>
   );

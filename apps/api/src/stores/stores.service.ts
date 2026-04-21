@@ -53,6 +53,7 @@ export interface StoreSettingsResponse {
   returnPolicy: string | null;
   privacyPolicy: string | null;
   termsAndConditions: string | null;
+  loyaltyPolicy: string | null;
 }
 
 export interface StoreSettingsOptionsResponse {
@@ -155,6 +156,7 @@ export class StoresService {
     const hasReturnPolicy = this.hasOwn(input, 'returnPolicy');
     const hasPrivacyPolicy = this.hasOwn(input, 'privacyPolicy');
     const hasTerms = this.hasOwn(input, 'termsAndConditions');
+    const hasLoyaltyPolicy = this.hasOwn(input, 'loyaltyPolicy');
     const hasLatitude = this.hasOwn(input, 'latitude');
     const hasLongitude = this.hasOwn(input, 'longitude');
 
@@ -247,6 +249,9 @@ export class StoresService {
       termsOfService: hasTerms
         ? this.normalizeOptionalText(input.termsAndConditions, 20000)
         : current.terms_of_service,
+      loyaltyPolicy: hasLoyaltyPolicy
+        ? this.normalizeOptionalText(input.loyaltyPolicy, 20000)
+        : current.loyalty_policy,
       onboardingCompletedAt: hasOnboardingCompleted
         ? (input.onboardingCompleted ? new Date() : null)
         : current.onboarding_completed_at,
@@ -295,6 +300,7 @@ export class StoresService {
       returnPolicy: store.return_policy,
       privacyPolicy: store.privacy_policy,
       termsAndConditions: store.terms_of_service,
+      loyaltyPolicy: store.loyalty_policy,
     };
   }
 

@@ -170,6 +170,11 @@ export class UpdateStoreSettingsDto {
   termsAndConditions?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(20000)
+  loyaltyPolicy?: string;
+
+  @IsOptional()
   @IsBoolean()
   onboardingCompleted?: boolean;
 }

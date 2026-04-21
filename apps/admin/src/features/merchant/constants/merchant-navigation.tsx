@@ -18,6 +18,7 @@ import PersonSearchIcon from '@mui/icons-material/PersonSearch';
 import RateReviewOutlinedIcon from '@mui/icons-material/RateReviewOutlined';
 import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
 import NotificationsActiveOutlinedIcon from '@mui/icons-material/NotificationsActiveOutlined';
+import StarsIcon from '@mui/icons-material/Stars';
 import type { MerchantNavItem, MerchantTabKey } from '../merchant-dashboard.types';
 import { ADMIN_TOKENS } from '../../../theme/tokens';
 
@@ -41,6 +42,7 @@ export const MERCHANT_NAV_ITEMS: MerchantNavItem[] = [
   { key: 'payments', label: 'المدفوعات', icon: <PaymentsIcon /> },
   { key: 'shipping', label: 'الشحن', icon: <LocalShippingIcon /> },
   { key: 'promotions', label: 'العروض التسويقية', icon: <LocalOfferIcon /> },
+  { key: 'loyalty', label: 'برنامج الولاء', icon: <StarsIcon /> },
   { key: 'themes', label: 'واجهة المتجر', icon: <PaletteIcon /> },
   { key: 'domains', label: 'النطاقات (الدومين)', icon: <LanguageIcon /> },
   { key: 'staff', label: 'فريق العمل', icon: <PeopleIcon /> },

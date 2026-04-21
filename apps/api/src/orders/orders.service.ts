@@ -15,6 +15,7 @@ import { OutboxService } from '../messaging/outbox.service';
 import { PromotionsService } from '../promotions/promotions.service';
 import { ShippingRepository } from '../shipping/shipping.repository';
 import { WebhooksService } from '../webhooks/webhooks.service';
+import { LoyaltyService } from '../loyalty/loyalty.service';
 import { canTransitionOrderStatus, ORDER_STATUSES, type OrderStatus } from './constants/order-status.constants';
 import type { PaymentMethod } from './constants/payment.constants';
 import { CreateManualOrderDto } from './dto/create-manual-order.dto';
@@ -123,6 +124,7 @@ export class OrdersService {
     private readonly auditService: AuditService,
     private readonly outboxService: OutboxService,
     private readonly webhooksService: WebhooksService,
+    private readonly loyaltyService: LoyaltyService,
   ) {}
 
   async list(currentUser: AuthUser, query: ListOrdersQueryDto) {
@@ -551,6 +553,7 @@ export class OrdersService {
 
     const lowStockSignals: LowStockSignal[] = [];
     const backInStockSignals: BackInStockSignal[] = [];
+    let loyaltyCustomerId: string | null = null;
 
     await this.ordersRepository.withTransaction(async (db) => {
       await this.inventoryService.releaseExpiredReservationsInTransaction(db, currentUser.storeId);
@@ -578,6 +581,25 @@ export class OrdersService {
         changedBy: currentUser.id,
         note: input.note?.trim() ?? null,
       });
+
+      if (input.status === 'completed') {
+        await this.loyaltyService.handleOrderCompletedInTransaction(db, {
+          storeId: currentUser.storeId,
+          orderId,
+          createdByStoreUserId: currentUser.id,
+        });
+      }
+
+      if (input.status === 'cancelled' || input.status === 'returned') {
+        await this.loyaltyService.handleOrderCancelledOrReturnedInTransaction(db, {
+          storeId: currentUser.storeId,
+          orderId,
+          createdByStoreUserId: currentUser.id,
+        });
+      }
+
+      const refreshedOrder = await this.ordersRepository.findOrderById(currentUser.storeId, orderId);
+      loyaltyCustomerId = refreshedOrder?.customer_id ?? null;
     });
 
     await this.inventoryService.publishLowStockAlerts(lowStockSignals);
@@ -590,6 +612,9 @@ export class OrdersService {
       status: input.status,
       note: input.note?.trim() ?? null,
     });
+    if (loyaltyCustomerId) {
+      await this.loyaltyService.publishWalletUpdated(currentUser.storeId, loyaltyCustomerId);
+    }
     return this.getById(currentUser, orderId);
   }
 

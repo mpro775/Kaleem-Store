@@ -24,6 +24,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import type { MerchantRequester } from '../merchant-dashboard.types';
 import type {
   CustomerGender,
+  LoyaltyWallet,
   ManagedCustomerDetails,
   ManagedCustomersListResponse,
 } from '../types';
@@ -71,6 +72,7 @@ export function CustomersPanel({ request }: CustomersPanelProps) {
   const [actionLoading, setActionLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<ManagedCustomerDetails | null>(null);
+  const [selectedCustomerWallet, setSelectedCustomerWallet] = useState<LoyaltyWallet | null>(null);
   const [editForm, setEditForm] = useState<CustomerFormState>(DEFAULT_FORM);
 
   useEffect(() => {
@@ -125,6 +127,7 @@ export function CustomersPanel({ request }: CustomersPanelProps) {
         return;
       }
       setSelectedCustomer(data);
+      setSelectedCustomerWallet(wallet);
       setEditForm({
         fullName: data.customer.fullName,
         phone: data.customer.phone,
@@ -232,6 +235,7 @@ export function CustomersPanel({ request }: CustomersPanelProps) {
 
   function resetToList(): void {
     setSelectedCustomer(null);
+    setSelectedCustomerWallet(null);
     setEditForm(DEFAULT_FORM);
     setMessage({ text: '', type: 'info' });
   }
@@ -276,6 +280,19 @@ export function CustomersPanel({ request }: CustomersPanelProps) {
                 </Stack>
               </Stack>
             </Paper>
+
+            {selectedCustomerWallet ? (
+              <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+                <Typography variant="h6" fontWeight={700} gutterBottom>
+                  نقاط الولاء
+                </Typography>
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5}>
+                  <Chip label={`الرصيد: ${selectedCustomerWallet.availablePoints}`} color="primary" />
+                  <Chip label={`المكتسبة: ${selectedCustomerWallet.lifetimeEarnedPoints}`} />
+                  <Chip label={`المصروفة: ${selectedCustomerWallet.lifetimeRedeemedPoints}`} />
+                </Stack>
+              </Paper>
+            ) : null}
 
             <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
               <Typography variant="h6" fontWeight={700} gutterBottom>
@@ -717,3 +734,5 @@ function formatGender(gender: CustomerGender): string {
 function formatDate(value: string): string {
   return new Date(value).toLocaleString('ar-EG');
 }
+
+

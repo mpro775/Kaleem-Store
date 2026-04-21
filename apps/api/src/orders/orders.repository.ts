@@ -61,6 +61,9 @@ export interface OrderRecord {
   shipping_zone_id: string | null;
   shipping_fee: string;
   discount_total: string;
+  points_redeemed: number;
+  points_discount_amount: string;
+  points_earned: number;
   coupon_code: string | null;
   currency_code: string;
   note: string | null;
@@ -159,7 +162,7 @@ interface CreateOrderInput {
 }
 
 const ORDER_RETURNING_FIELDS =
-  'id, store_id, customer_id, order_code, status, subtotal, total, shipping_zone_id, shipping_fee, discount_total, coupon_code, currency_code, note, shipping_address, created_at, updated_at';
+  'id, store_id, customer_id, order_code, status, subtotal, total, shipping_zone_id, shipping_fee, discount_total, points_redeemed, points_discount_amount, points_earned, coupon_code, currency_code, note, shipping_address, created_at, updated_at';
 
 const INSERT_ORDER_QUERY = `
   INSERT INTO orders (
@@ -570,7 +573,7 @@ export class OrdersRepository {
   async findOrderByCode(storeId: string, orderCode: string): Promise<OrderRecord | null> {
     const result = await this.databaseService.db.query<OrderRecord>(
       `
-        SELECT id, store_id, customer_id, order_code, status, subtotal, total, shipping_zone_id, shipping_fee, discount_total, coupon_code, currency_code, note, shipping_address, created_at, updated_at
+        SELECT id, store_id, customer_id, order_code, status, subtotal, total, shipping_zone_id, shipping_fee, discount_total, points_redeemed, points_discount_amount, points_earned, coupon_code, currency_code, note, shipping_address, created_at, updated_at
         FROM orders
         WHERE store_id = $1
           AND order_code = $2
@@ -599,7 +602,7 @@ export class OrdersRepository {
   async findOrderById(storeId: string, orderId: string): Promise<OrderRecord | null> {
     const result = await this.databaseService.db.query<OrderRecord>(
       `
-        SELECT id, store_id, customer_id, order_code, status, subtotal, total, shipping_zone_id, shipping_fee, discount_total, coupon_code, currency_code, note, shipping_address, created_at, updated_at
+        SELECT id, store_id, customer_id, order_code, status, subtotal, total, shipping_zone_id, shipping_fee, discount_total, points_redeemed, points_discount_amount, points_earned, coupon_code, currency_code, note, shipping_address, created_at, updated_at
         FROM orders
         WHERE store_id = $1
           AND id = $2
@@ -1041,7 +1044,7 @@ export class OrdersRepository {
             updated_at = NOW()
         WHERE id = $1
           AND store_id = $2
-        RETURNING id, store_id, customer_id, order_code, status, subtotal, total, shipping_zone_id, shipping_fee, discount_total, coupon_code, currency_code, note, shipping_address, created_at, updated_at
+        RETURNING id, store_id, customer_id, order_code, status, subtotal, total, shipping_zone_id, shipping_fee, discount_total, points_redeemed, points_discount_amount, points_earned, coupon_code, currency_code, note, shipping_address, created_at, updated_at
       `,
       [input.orderId, input.storeId, input.nextStatus],
     );

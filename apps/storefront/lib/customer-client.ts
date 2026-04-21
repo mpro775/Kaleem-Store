@@ -88,6 +88,29 @@ export interface CustomerOrder {
   createdAt: string;
 }
 
+export interface CustomerLoyaltyWallet {
+  customerId: string;
+  availablePoints: number;
+  lockedPoints: number;
+  lifetimeEarnedPoints: number;
+  lifetimeRedeemedPoints: number;
+}
+
+export interface CustomerLoyaltyLedgerEntry {
+  id: string;
+  customerId: string;
+  orderId: string | null;
+  entryType: 'earn' | 'redeem' | 'adjust' | 'reverse';
+  pointsDelta: number;
+  amountDelta: number;
+  balanceAfter: number;
+  referenceEntryId: string | null;
+  reason: string | null;
+  metadata: Record<string, unknown>;
+  createdByStoreUserId: string | null;
+  createdAt: string;
+}
+
 // ==================== AUTH ====================
 
 export async function customerRegister(input: {
@@ -331,6 +354,14 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+export async function getCustomerLoyaltyWallet(): Promise<CustomerLoyaltyWallet> {
+  return fetchJson('/customers/loyalty/wallet');
+}
+
+export async function listCustomerLoyaltyLedger(): Promise<CustomerLoyaltyLedgerEntry[]> {
+  return fetchJson('/customers/loyalty/ledger');
 }
 
 function createRequestHeaders(headers: HeadersInit | undefined): Headers {

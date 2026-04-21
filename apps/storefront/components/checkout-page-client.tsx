@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { clearCartIdFromStorage, getCartIdFromStorage, saveCartIdToStorage } from '../lib/cart-storage';
-import { checkout, getCart, listShippingZones } from '../lib/storefront-client';
+import { checkout, checkoutQuote, getCart, listShippingZones } from '../lib/storefront-client';
 import { getAccessToken } from '../lib/customer-auth-storage';
 import {
   clearRestockTokenFromStorage,
@@ -13,7 +13,7 @@ import * as customerClient from '../lib/customer-client';
 import { useCustomerAuth } from '../lib/customer-auth-context';
 import { trackStorefrontEvent } from '../lib/storefront-analytics';
 import { AuthModal } from './auth-modal';
-import type { ShippingZone, StorefrontCart } from '../lib/types';
+import type { CheckoutQuoteResponse, ShippingZone, StorefrontCart } from '../lib/types';
 import type { CustomerAddress } from '../lib/customer-client';
 
 export function CheckoutPageClient() {
@@ -28,6 +28,7 @@ export function CheckoutPageClient() {
   const [submitting, setSubmitting] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [quote, setQuote] = useState<CheckoutQuoteResponse | null>(null);
 
   const [form, setForm] = useState({
     customerName: '',
@@ -38,6 +39,7 @@ export function CheckoutPageClient() {
     area: '',
     shippingZoneId: '',
     couponCode: '',
+    pointsToRedeem: '',
     note: '',
     paymentMethod: 'cod' as 'cod' | 'transfer',
   });
@@ -88,8 +90,15 @@ export function CheckoutPageClient() {
     return zone?.fee ?? 0;
   }, [form.shippingZoneId, zones]);
 
-  const estimatedTotal = (cart?.subtotal ?? 0) + shippingFee;
+  const estimatedTotal = quote?.total ?? (cart?.subtotal ?? 0) + shippingFee;
   const checkoutStep = resolveCheckoutStep(form, zones.length > 0);
+
+  useEffect(() => {
+    if (!cart) {
+      return;
+    }
+    void refreshQuote();
+  }, [cart?.cartId, form.shippingZoneId, form.couponCode, form.pointsToRedeem]);
 
   useEffect(() => {
     if (!loading) {
@@ -140,12 +149,40 @@ export function CheckoutPageClient() {
       ]);
       setCart(cartResponse);
       setZones(zoneResponse);
+      const accessToken = getAccessToken();
+      const quoteData = await checkoutQuote({
+        cartId: cartResponse.cartId,
+        ...(form.shippingZoneId ? { shippingZoneId: form.shippingZoneId } : {}),
+        ...(form.couponCode.trim() ? { couponCode: form.couponCode.trim() } : {}),
+        ...(accessToken ? { customerAccessToken: accessToken } : {}),
+        ...(form.pointsToRedeem.trim() ? { pointsToRedeem: Number(form.pointsToRedeem) } : {}),
+      });
+      setQuote(quoteData);
     } catch (requestError) {
       setError(
         requestError instanceof Error ? requestError.message : 'Failed to load checkout data',
       );
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function refreshQuote() {
+    if (!cart) {
+      return;
+    }
+    try {
+      const accessToken = getAccessToken();
+      const quoteData = await checkoutQuote({
+        cartId: cart.cartId,
+        ...(form.shippingZoneId ? { shippingZoneId: form.shippingZoneId } : {}),
+        ...(form.couponCode.trim() ? { couponCode: form.couponCode.trim() } : {}),
+        ...(accessToken ? { customerAccessToken: accessToken } : {}),
+        ...(form.pointsToRedeem.trim() ? { pointsToRedeem: Number(form.pointsToRedeem) } : {}),
+      });
+      setQuote(quoteData);
+    } catch {
+      setQuote(null);
     }
   }
 
@@ -401,7 +438,23 @@ export function CheckoutPageClient() {
             placeholder="كود الخصم (إن وجد)"
             value={form.couponCode}
             onChange={(event) => setForm((prev) => ({ ...prev, couponCode: event.target.value }))}
+            disabled={Number(form.pointsToRedeem || 0) > 0}
           />
+          <input
+            className="input"
+            type="number"
+            min={0}
+            step={1}
+            aria-label="Points to redeem"
+            placeholder="النقاط المراد صرفها"
+            value={form.pointsToRedeem}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, pointsToRedeem: event.target.value }))
+            }
+            disabled={Boolean(form.couponCode.trim())}
+          />
+          {fieldErrors.pointsToRedeem ? <p className="error-message">{fieldErrors.pointsToRedeem}</p> : null}
+          <p className="muted">لا يمكن الجمع بين الكوبون والنقاط في نفس الطلب.</p>
           <textarea
             className="input"
             aria-label="Order note"
@@ -433,12 +486,21 @@ export function CheckoutPageClient() {
             <span>الشحن</span>
             <strong>{shippingFee.toFixed(2)}</strong>
           </div>
+          {quote && quote.pointsDiscount > 0 ? (
+            <div className="summary-row">
+              <span>خصم النقاط</span>
+              <strong>-{quote.pointsDiscount.toFixed(2)}</strong>
+            </div>
+          ) : null}
           <div className="summary-row total-row">
             <span>الإجمالي التقديري</span>
             <strong>
               {estimatedTotal.toFixed(2)} {cart.currencyCode}
             </strong>
           </div>
+          {quote ? (
+            <p className="muted">النقاط المتوقعة بعد الإكمال: {quote.potentialEarnPoints}</p>
+          ) : null}
 
           <div className="checkout-trust-grid">
             <div className="checkout-trust-item">
@@ -473,6 +535,7 @@ function buildCheckoutPayload(
     area: string;
     shippingZoneId: string;
     couponCode: string;
+    pointsToRedeem: string;
     note: string;
     paymentMethod: 'cod' | 'transfer';
   },
@@ -491,6 +554,7 @@ function buildCheckoutPayload(
   paymentMethod: 'cod' | 'transfer';
   customerAccessToken?: string;
   restockToken?: string;
+  pointsToRedeem?: number;
 } {
   const accessToken = getAccessToken();
   const payload: {
@@ -507,6 +571,7 @@ function buildCheckoutPayload(
     paymentMethod: 'cod' | 'transfer';
     customerAccessToken?: string;
     restockToken?: string;
+    pointsToRedeem?: number;
   } = {
     cartId,
     customerName: form.customerName,
@@ -529,6 +594,10 @@ function buildCheckoutPayload(
   }
   if (form.couponCode) {
     payload.couponCode = form.couponCode;
+  }
+  const pointsToRedeem = Number(form.pointsToRedeem);
+  if (Number.isFinite(pointsToRedeem) && pointsToRedeem > 0) {
+    payload.pointsToRedeem = Math.floor(pointsToRedeem);
   }
   if (form.note) {
     payload.note = form.note;
@@ -553,6 +622,7 @@ function validateCheckoutForm(
     area: string;
     shippingZoneId: string;
     couponCode: string;
+    pointsToRedeem: string;
     note: string;
     paymentMethod: 'cod' | 'transfer';
   },
@@ -579,6 +649,12 @@ function validateCheckoutForm(
   if (form.customerEmail && !/^\S+@\S+\.\S+$/.test(form.customerEmail.trim())) {
     errors.customerEmail = 'صيغة البريد الإلكتروني غير صحيحة.';
   }
+  if (form.pointsToRedeem.trim()) {
+    const points = Number(form.pointsToRedeem);
+    if (!Number.isFinite(points) || points < 0 || !Number.isInteger(points)) {
+      errors.pointsToRedeem = 'يرجى إدخال عدد صحيح صالح للنقاط.';
+    }
+  }
 
   return errors;
 }
@@ -593,6 +669,7 @@ function resolveCheckoutStep(
     area: string;
     shippingZoneId: string;
     couponCode: string;
+    pointsToRedeem: string;
     note: string;
     paymentMethod: 'cod' | 'transfer';
   },

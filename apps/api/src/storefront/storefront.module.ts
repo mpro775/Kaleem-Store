@@ -13,6 +13,7 @@ import { ShippingModule } from '../shipping/shipping.module';
 import { StoresModule } from '../stores/stores.module';
 import { ThemesModule } from '../themes/themes.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
+import { LoyaltyModule } from '../loyalty/loyalty.module';
 import { PublicStoreController } from './public-store.controller';
 import { StoreResolverService } from './store-resolver.service';
 import { StorefrontController } from './storefront.controller';
@@ -33,6 +34,7 @@ import { StorefrontService } from './storefront.service';
     PromotionsModule,
     ThemesModule,
     WebhooksModule,
+    LoyaltyModule,
     SaasModule,
     IdempotencyModule,
     forwardRef(() => CustomersModule),

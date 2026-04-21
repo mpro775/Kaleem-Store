@@ -21,6 +21,7 @@ export type MerchantTabKey =
   | 'payments'
   | 'shipping'
   | 'promotions'
+  | 'loyalty'
   | 'themes'
   | 'domains'
   | 'staff'

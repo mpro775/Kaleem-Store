@@ -39,6 +39,8 @@ import { UpdateCustomerProfileDto } from './dto/update-customer-profile.dto';
 import { CreateCustomerAddressDto } from './dto/create-customer-address.dto';
 import { CreateCustomerReviewDto } from './dto/create-customer-review.dto';
 import { UpdateCustomerReviewDto } from './dto/update-customer-review.dto';
+import { LoyaltyService } from '../loyalty/loyalty.service';
+import { ListLoyaltyLedgerQueryDto } from '../loyalty/dto/list-loyalty-ledger-query.dto';
 
 @ApiTags('customers')
 @Controller('customers')
@@ -47,6 +49,7 @@ export class CustomersController {
   constructor(
     private readonly customersService: CustomersService,
     private readonly storeResolverService: StoreResolverService,
+    private readonly loyaltyService: LoyaltyService,
   ) {}
 
   @CustomerPublic()
@@ -292,5 +295,22 @@ export class CustomersController {
       limit ? parseInt(limit, 10) : 20,
       offset ? parseInt(offset, 10) : 0,
     );
+  }
+
+  @Get('loyalty/wallet')
+  @ApiBearerAuth()
+  @ApiOkResponse({ description: 'Get current customer loyalty wallet' })
+  async getLoyaltyWallet(@CurrentCustomer() customer: CustomerUser) {
+    return this.loyaltyService.getWalletForCurrentCustomer(customer.id, customer.storeId);
+  }
+
+  @Get('loyalty/ledger')
+  @ApiBearerAuth()
+  @ApiOkResponse({ description: 'List current customer loyalty ledger' })
+  async getLoyaltyLedger(
+    @CurrentCustomer() customer: CustomerUser,
+    @Query() query: ListLoyaltyLedgerQueryDto,
+  ) {
+    return this.loyaltyService.listLedgerForCurrentCustomer(customer.id, customer.storeId, query);
   }
 }

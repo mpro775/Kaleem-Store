@@ -26,6 +26,7 @@ export interface StoreSettingsRecord {
   return_policy: string | null;
   privacy_policy: string | null;
   terms_of_service: string | null;
+  loyalty_policy: string | null;
 }
 
 export interface StorePublicRecord {
@@ -51,6 +52,7 @@ export class StoresRepository {
                working_hours, social_links,
                currency_code, timezone,
                shipping_policy, return_policy, privacy_policy, terms_of_service
+               , loyalty_policy
         FROM stores
         WHERE id = $1
         LIMIT 1
@@ -130,6 +132,7 @@ export class StoresRepository {
     returnPolicy: string | null;
     privacyPolicy: string | null;
     termsOfService: string | null;
+    loyaltyPolicy: string | null;
     onboardingCompletedAt: Date | null;
   }): Promise<StoreSettingsRecord> {
     const result = await this.databaseService.db.query<StoreSettingsRecord>(
@@ -157,7 +160,8 @@ export class StoresRepository {
             return_policy = $21,
             privacy_policy = $22,
             terms_of_service = $23,
-            onboarding_completed_at = $24,
+            loyalty_policy = $24,
+            onboarding_completed_at = $25,
             updated_at = NOW()
         WHERE id = $1
         RETURNING id, name, slug, logo_media_asset_id, logo_url,
@@ -166,7 +170,7 @@ export class StoresRepository {
                   country, city, address_details, latitude, longitude,
                   working_hours, social_links,
                   currency_code, timezone,
-                  shipping_policy, return_policy, privacy_policy, terms_of_service
+                  shipping_policy, return_policy, privacy_policy, terms_of_service, loyalty_policy
       `,
       [
         input.storeId,
@@ -192,6 +196,7 @@ export class StoresRepository {
         input.returnPolicy,
         input.privacyPolicy,
         input.termsOfService,
+        input.loyaltyPolicy,
         input.onboardingCompletedAt,
       ],
     );

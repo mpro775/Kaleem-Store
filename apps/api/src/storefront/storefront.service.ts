@@ -37,6 +37,7 @@ import { ShippingRepository, type ShippingZoneRecord } from '../shipping/shippin
 import { ThemesService } from '../themes/themes.service';
 import { StoresRepository } from '../stores/stores.repository';
 import { WebhooksService } from '../webhooks/webhooks.service';
+import { LoyaltyService } from '../loyalty/loyalty.service';
 import { StoreResolverService } from './store-resolver.service';
 import { StorefrontTrackingService } from './storefront-tracking.service';
 import {
@@ -45,6 +46,7 @@ import {
 } from './constants/storefront-event.constants';
 import type { AddCartItemDto } from './dto/add-cart-item.dto';
 import type { CheckoutDto } from './dto/checkout.dto';
+import type { CheckoutQuoteDto } from './dto/checkout-quote.dto';
 import type { ListStorefrontFiltersQueryDto } from './dto/list-storefront-filters-query.dto';
 import type { TrackStorefrontEventDto } from './dto/track-storefront-event.dto';
 import type { ThemeQueryDto } from './dto/theme-query.dto';
@@ -139,6 +141,7 @@ export interface StorefrontPoliciesResponse {
   returnPolicy: string | null;
   privacyPolicy: string | null;
   termsAndConditions: string | null;
+  loyaltyPolicy: string | null;
 }
 
 export interface StorefrontCartResponse {
@@ -165,6 +168,21 @@ export interface CheckoutResponse {
   currencyCode: string;
   shippingFee: number;
   discountTotal: number;
+  pointsRedeemed: number;
+  pointsDiscountAmount: number;
+  pointsEarned: number;
+}
+
+export interface CheckoutQuoteResponse {
+  subtotal: number;
+  shippingFee: number;
+  promotionDiscount: number;
+  pointsDiscount: number;
+  total: number;
+  currencyCode: string;
+  pointsToRedeemApplied: number;
+  potentialEarnPoints: number;
+  availablePoints: number;
 }
 
 type QueryRunner = {
@@ -181,6 +199,11 @@ interface CheckoutData {
   subtotal: number;
   shippingZone: ShippingZoneRecord | null;
   promotion: PromotionComputationResult;
+  pointsToRedeem: number;
+  pointsDiscountAmount: number;
+  pointsRedeemed: number;
+  customerIdForLoyalty: string | null;
+  potentialEarnPoints: number;
   total: number;
 }
 
@@ -219,6 +242,7 @@ export class StorefrontService {
     private readonly customerEngagementService: CustomerEngagementService,
     private readonly abandonedCartsService: AbandonedCartsService,
     private readonly storefrontTrackingService: StorefrontTrackingService,
+    private readonly loyaltyService: LoyaltyService,
   ) {}
 
   async getStore(request: Request) {
@@ -397,6 +421,7 @@ export class StorefrontService {
       returnPolicy: storeSettings.return_policy,
       privacyPolicy: storeSettings.privacy_policy,
       termsAndConditions: storeSettings.terms_of_service,
+      loyaltyPolicy: storeSettings.loyalty_policy,
     };
   }
 
@@ -542,6 +567,30 @@ export class StorefrontService {
 
   async trackAbandonedCartRecoveryOpen(token: string): Promise<void> {
     await this.abandonedCartsService.trackRecoveryEmailOpen(token);
+  }
+
+  async quoteCheckout(request: Request, input: CheckoutQuoteDto): Promise<CheckoutQuoteResponse> {
+    const store = await this.storeResolverService.resolve(request);
+    const checkoutData = await this.prepareCheckoutData(store.id, input);
+
+    return {
+      subtotal: checkoutData.subtotal,
+      shippingFee: checkoutData.shippingZone?.fee ? Number(checkoutData.shippingZone.fee) : 0,
+      promotionDiscount: checkoutData.promotion.totalDiscount,
+      pointsDiscount: checkoutData.pointsDiscountAmount,
+      total: checkoutData.total,
+      currencyCode: checkoutData.cart.currency_code,
+      pointsToRedeemApplied: checkoutData.pointsRedeemed,
+      potentialEarnPoints: checkoutData.potentialEarnPoints,
+      availablePoints: checkoutData.customerIdForLoyalty
+        ? (
+            await this.loyaltyService.getWalletForCurrentCustomer(
+              checkoutData.customerIdForLoyalty,
+              store.id,
+            )
+          ).availablePoints
+        : 0,
+    };
   }
 
   async checkout(
@@ -1209,7 +1258,13 @@ export class StorefrontService {
     return { subtotal };
   }
 
-  private async prepareCheckoutData(storeId: string, input: CheckoutDto): Promise<CheckoutData> {
+  private async prepareCheckoutData(
+    storeId: string,
+    input: Pick<
+      CheckoutDto,
+      'cartId' | 'shippingZoneId' | 'couponCode' | 'customerAccessToken' | 'pointsToRedeem'
+    >,
+  ): Promise<CheckoutData> {
     const cart = await this.ordersRepository.findOpenCartById(storeId, input.cartId);
     if (!cart) {
       throw new BadRequestException('Cart not found or already checked out');
@@ -1225,14 +1280,75 @@ export class StorefrontService {
     const inventoryReservationItems = await this.mapCheckoutItemsToInventoryInput(storeId, items);
     const subtotal = this.calculateTotals(items).subtotal;
     const shippingZone = await this.resolveShippingZone(storeId, input.shippingZoneId);
-    const promotion = await this.promotionsService.computeCheckoutDiscount(
+    const customerIdForLoyalty = await this.resolveCustomerIdFromAccessToken(
       storeId,
-      this.buildPromotionInput(subtotal, items, input.couponCode),
+      input.customerAccessToken,
     );
+    const requestedPointsToRedeem = Math.max(0, Math.trunc(input.pointsToRedeem ?? 0));
+
+    if (requestedPointsToRedeem > 0 && !customerIdForLoyalty) {
+      throw new BadRequestException('Customer login is required to redeem loyalty points');
+    }
+    if (requestedPointsToRedeem > 0 && input.couponCode?.trim()) {
+      throw new BadRequestException('Cannot combine loyalty points with coupon codes');
+    }
+
+    let promotion: PromotionComputationResult;
+    if (requestedPointsToRedeem > 0) {
+      promotion = {
+        couponId: null,
+        couponCode: null,
+        couponDiscount: 0,
+        offerId: null,
+        offerDiscount: 0,
+        totalDiscount: 0,
+      };
+    } else {
+      promotion = await this.promotionsService.computeCheckoutDiscount(
+        storeId,
+        this.buildPromotionInput(subtotal, items, input.couponCode),
+      );
+    }
+
+    if (requestedPointsToRedeem > 0 && promotion.totalDiscount > 0) {
+      throw new BadRequestException('Cannot combine loyalty points with offers or coupons');
+    }
+
+    const shippingFee = shippingZone?.fee ? Number(shippingZone.fee) : 0;
+    const baseTotal = this.calculateTotal(subtotal, shippingFee, promotion.totalDiscount);
+    let pointsRedeemed = 0;
+    let pointsDiscountAmount = 0;
+    if (requestedPointsToRedeem > 0 && customerIdForLoyalty) {
+      const settings = await this.loyaltyService.getSettingsByStoreId(storeId);
+      if (!settings.isEnabled) {
+        throw new BadRequestException('Loyalty program is disabled');
+      }
+      const wallet = await this.loyaltyService.getWalletForCurrentCustomer(customerIdForLoyalty, storeId);
+      const estimate = this.loyaltyService.computeRedeemEstimate({
+        program: {
+          id: '',
+          store_id: storeId,
+          is_enabled: settings.isEnabled,
+          redeem_rate_points: settings.redeemRatePoints,
+          redeem_rate_amount: String(settings.redeemRateAmount),
+          min_redeem_points: settings.minRedeemPoints,
+          redeem_step_points: settings.redeemStepPoints,
+          max_discount_percent: String(settings.maxDiscountPercent),
+        },
+        availablePoints: wallet.availablePoints,
+        requestedPoints: requestedPointsToRedeem,
+        totalBeforeDiscount: baseTotal,
+      });
+      pointsRedeemed = estimate.pointsRedeemed;
+      pointsDiscountAmount = estimate.discountAmount;
+    }
+
+    const loyaltyRuleList = await this.loyaltyService.getRulesByStoreId(storeId);
+    const potentialEarnPoints = this.computePotentialEarnPoints(subtotal, loyaltyRuleList);
     const total = this.calculateTotal(
-      subtotal,
-      shippingZone?.fee ? Number(shippingZone.fee) : 0,
-      promotion.totalDiscount,
+      subtotal + shippingFee,
+      0,
+      promotion.totalDiscount + pointsDiscountAmount,
     );
 
     return {
@@ -1242,6 +1358,11 @@ export class StorefrontService {
       subtotal,
       shippingZone,
       promotion,
+      pointsToRedeem: requestedPointsToRedeem,
+      pointsDiscountAmount,
+      pointsRedeemed,
+      customerIdForLoyalty,
+      potentialEarnPoints,
       total,
     };
   }
@@ -1267,6 +1388,9 @@ export class StorefrontService {
     orderCode: string,
   ): Promise<OrderRecord> {
     const customerId = await this.findOrCreateCheckoutCustomer(db, storeId, input);
+    if (checkoutData.pointsToRedeem > 0 && checkoutData.customerIdForLoyalty !== customerId) {
+      throw new BadRequestException('Loyalty redemption requires authenticated customer');
+    }
     await this.saveCheckoutAddress(db, storeId, customerId, input);
 
     const order = await this.ordersRepository.createOrder(db, {
@@ -1278,14 +1402,21 @@ export class StorefrontService {
       total: checkoutData.total,
       shippingZoneId: checkoutData.shippingZone?.id ?? null,
       shippingFee: checkoutData.shippingZone?.fee ? Number(checkoutData.shippingZone.fee) : 0,
-      discountTotal: checkoutData.promotion.totalDiscount,
+      discountTotal: checkoutData.promotion.totalDiscount + checkoutData.pointsDiscountAmount,
       couponCode: checkoutData.promotion.couponCode,
       currencyCode: checkoutData.cart.currency_code,
       note: input.note?.trim() ?? null,
       shippingAddress: this.buildShippingAddress(input),
     });
 
-    await this.completeCheckoutArtifacts(db, storeId, orderId, input.paymentMethod, checkoutData);
+    await this.completeCheckoutArtifacts(
+      db,
+      storeId,
+      orderId,
+      customerId,
+      input.paymentMethod,
+      checkoutData,
+    );
     return order;
   }
 
@@ -1335,6 +1466,7 @@ export class StorefrontService {
     db: QueryRunner,
     storeId: string,
     orderId: string,
+    customerId: string,
     paymentMethod: PaymentMethod,
     checkoutData: CheckoutData,
   ): Promise<void> {
@@ -1357,6 +1489,17 @@ export class StorefrontService {
         storeId,
         checkoutData.promotion.couponId,
       );
+    }
+    if (checkoutData.pointsToRedeem > 0) {
+      await this.loyaltyService.applyRedemptionToOrderInTransaction(db, {
+        storeId,
+        customerId,
+        orderId,
+        pointsToRedeem: checkoutData.pointsToRedeem,
+        totalBeforeDiscount:
+          checkoutData.subtotal + (checkoutData.shippingZone?.fee ? Number(checkoutData.shippingZone.fee) : 0),
+        createdByStoreUserId: null,
+      });
     }
     await this.ordersRepository.insertOrderStatusHistory(db, {
       storeId,
@@ -1393,6 +1536,9 @@ export class StorefrontService {
       currencyCode: order.currency_code,
       shippingFee: Number(order.shipping_fee),
       discountTotal: Number(order.discount_total),
+      pointsRedeemed: order.points_redeemed,
+      pointsDiscountAmount: Number(order.points_discount_amount),
+      pointsEarned: order.points_earned,
     };
   }
 
@@ -1433,6 +1579,41 @@ export class StorefrontService {
       at: new Date(),
       ...(normalizedCouponCode ? { couponCode: normalizedCouponCode } : {}),
     };
+  }
+
+  private async resolveCustomerIdFromAccessToken(
+    storeId: string,
+    customerAccessToken?: string,
+  ): Promise<string | null> {
+    if (!customerAccessToken) {
+      return null;
+    }
+
+    try {
+      const payload = await this.customersService.verifyAccessToken(customerAccessToken);
+      if (payload.storeId === storeId) {
+        return payload.sub;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  private computePotentialEarnPoints(
+    subtotal: number,
+    rules: Array<{ earnRate: number; minOrderAmount: number; isActive: boolean; priority: number }>,
+  ): number {
+    const matched =
+      rules
+        .filter((rule) => rule.isActive)
+        .sort((a, b) => a.priority - b.priority)
+        .find((rule) => subtotal >= rule.minOrderAmount) ?? null;
+
+    if (!matched) {
+      return 0;
+    }
+    return Math.max(0, Math.floor((subtotal * matched.earnRate) / 100));
   }
 
   private generateOrderCode(): string {

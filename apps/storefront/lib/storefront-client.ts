@@ -1,6 +1,12 @@
 'use client';
 
-import type { CheckoutResponse, ShippingZone, StorefrontCart, TrackOrderResponse } from './types';
+import type {
+  CheckoutQuoteResponse,
+  CheckoutResponse,
+  ShippingZone,
+  StorefrontCart,
+  TrackOrderResponse,
+} from './types';
 import { attachCsrfHeader } from './csrf-client';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
@@ -66,6 +72,7 @@ export async function checkout(input: {
   paymentMethod: 'cod' | 'transfer';
   customerAccessToken?: string;
   restockToken?: string;
+  pointsToRedeem?: number;
 }): Promise<CheckoutResponse> {
   const idempotencyKey = generateIdempotencyKey();
   return fetchJson('/sf/checkout', {
@@ -74,6 +81,19 @@ export async function checkout(input: {
     headers: {
       'Idempotency-Key': idempotencyKey,
     },
+  });
+}
+
+export async function checkoutQuote(input: {
+  cartId: string;
+  shippingZoneId?: string;
+  couponCode?: string;
+  customerAccessToken?: string;
+  pointsToRedeem?: number;
+}): Promise<CheckoutQuoteResponse> {
+  return fetchJson('/sf/checkout/quote', {
+    method: 'POST',
+    body: JSON.stringify(input),
   });
 }
 

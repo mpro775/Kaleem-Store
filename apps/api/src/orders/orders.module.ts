@@ -4,12 +4,20 @@ import { PromotionsModule } from '../promotions/promotions.module';
 import { SecurityModule } from '../security/security.module';
 import { ShippingModule } from '../shipping/shipping.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
+import { LoyaltyModule } from '../loyalty/loyalty.module';
 import { OrdersController } from './orders.controller';
 import { OrdersRepository } from './orders.repository';
 import { OrdersService } from './orders.service';
 
 @Module({
-  imports: [SecurityModule, InventoryModule, PromotionsModule, ShippingModule, WebhooksModule],
+  imports: [
+    SecurityModule,
+    InventoryModule,
+    PromotionsModule,
+    ShippingModule,
+    WebhooksModule,
+    LoyaltyModule,
+  ],
   controllers: [OrdersController],
   providers: [OrdersService, OrdersRepository],
   exports: [OrdersRepository, OrdersService],

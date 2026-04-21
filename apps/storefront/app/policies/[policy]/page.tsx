@@ -2,13 +2,14 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getPolicies, resolveStore } from '../../../lib/storefront-server';
 
-type PolicyKey = 'shipping' | 'return' | 'privacy' | 'terms';
+type PolicyKey = 'shipping' | 'return' | 'privacy' | 'terms' | 'loyalty';
 
 const POLICY_LABELS: Record<PolicyKey, string> = {
   shipping: 'Shipping Policy',
   return: 'Return Policy',
   privacy: 'Privacy Policy',
   terms: 'Terms and Conditions',
+  loyalty: 'Loyalty Policy',
 };
 
 export const dynamic = 'force-dynamic';
@@ -39,7 +40,13 @@ export default async function PolicyPage({ params }: { params: Promise<{ policy:
 }
 
 function isPolicyKey(value: string): value is PolicyKey {
-  return value === 'shipping' || value === 'return' || value === 'privacy' || value === 'terms';
+  return (
+    value === 'shipping' ||
+    value === 'return' ||
+    value === 'privacy' ||
+    value === 'terms' ||
+    value === 'loyalty'
+  );
 }
 
 function getPolicyContent(
@@ -49,6 +56,7 @@ function getPolicyContent(
     returnPolicy: string | null;
     privacyPolicy: string | null;
     termsAndConditions: string | null;
+    loyaltyPolicy: string | null;
   },
 ): string | null {
   switch (key) {
@@ -60,6 +68,8 @@ function getPolicyContent(
       return policies.privacyPolicy;
     case 'terms':
       return policies.termsAndConditions;
+    case 'loyalty':
+      return policies.loyaltyPolicy;
     default:
       return null;
   }

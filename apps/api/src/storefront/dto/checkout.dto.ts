@@ -1,4 +1,5 @@
-import { IsIn, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 import { PAYMENT_METHODS, type PaymentMethod } from '../../orders/constants/payment.constants';
 
 export class CheckoutDto {
@@ -57,4 +58,9 @@ export class CheckoutDto {
   @IsString()
   @MaxLength(255)
   restockToken?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @Min(0)
+  pointsToRedeem?: number;
 }
