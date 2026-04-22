@@ -4,6 +4,16 @@ import type { MerchantSession } from './types';
 
 export type MerchantTabKey =
   | 'overview'
+  | 'analyticsGeneral'
+  | 'analyticsLive'
+  | 'analyticsProducts'
+  | 'analyticsOperations'
+  | 'analyticsPayments'
+  | 'analyticsFinancial'
+  | 'analyticsShipments'
+  | 'reportsCustomers'
+  | 'reportsSales'
+  | 'reportsInventory'
   | 'store'
   | 'products'
   | 'inventory'

@@ -20,6 +20,9 @@ import RateReviewOutlinedIcon from '@mui/icons-material/RateReviewOutlined';
 import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
 import NotificationsActiveOutlinedIcon from '@mui/icons-material/NotificationsActiveOutlined';
 import StarsIcon from '@mui/icons-material/Stars';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import DescriptionIcon from '@mui/icons-material/Description';
 import type { MerchantNavItem, MerchantTabKey } from '../merchant-dashboard.types';
 import { ADMIN_TOKENS } from '../../../theme/tokens';
 
@@ -89,6 +92,30 @@ export const MERCHANT_NAV_ITEMS: MerchantNavItem[] = [
     children: [
       { key: 'themes', label: 'واجهة المتجر والتصميم' },
       { key: 'domains', label: 'النطاقات (الدومين)' },
+    ],
+  },
+  {
+    key: 'group_analytics',
+    label: 'التحليلات',
+    icon: <AnalyticsIcon />,
+    children: [
+      { key: 'analyticsGeneral', label: 'عام', icon: <AnalyticsIcon /> },
+      { key: 'analyticsLive', label: 'مباشر', icon: <BarChartIcon /> },
+      { key: 'analyticsProducts', label: 'تحليلات المنتجات' },
+      { key: 'analyticsOperations', label: 'تحليلات العمليات' },
+      { key: 'analyticsPayments', label: 'تحليلات المدفوعات' },
+      { key: 'analyticsFinancial', label: 'التحليلات المالية' },
+      { key: 'analyticsShipments', label: 'تحليلات الشحنات' },
+    ],
+  },
+  {
+    key: 'group_reports',
+    label: 'التقارير',
+    icon: <DescriptionIcon />,
+    children: [
+      { key: 'reportsCustomers', label: 'تقارير العملاء' },
+      { key: 'reportsSales', label: 'تقارير المبيعات' },
+      { key: 'reportsInventory', label: 'تقارير المخزون' },
     ],
   },
   {

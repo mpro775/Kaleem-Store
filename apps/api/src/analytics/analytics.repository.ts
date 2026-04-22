@@ -168,6 +168,49 @@ export interface AbandonedCartMetricsRecord {
   checkout_starts: number;
 }
 
+export interface DailySalesRecord {
+  day: string;
+  sales: string;
+  orders: number;
+}
+
+export interface SimpleCountAmountRecord {
+  key: string;
+  count: number;
+  amount: string;
+}
+
+export interface CityPerformanceRecord {
+  city: string;
+  orders: number;
+  sales: string;
+}
+
+export interface ProductPerformanceRecord {
+  product_id: string;
+  product_title: string;
+  quantity_sold: number;
+  gross_sales: string;
+  discount_total: string;
+}
+
+export interface TopPageRecord {
+  page: string;
+  visits: number;
+}
+
+export interface ShipmentSummaryRecord {
+  total_shipments: number;
+  delivered: number;
+  in_transit: number;
+  cancelled: number;
+  failed_delivery: number;
+  lost: number;
+  damaged: number;
+  delayed: number;
+  late_received: number;
+}
+
 @Injectable()
 export class AnalyticsRepository {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -1253,5 +1296,320 @@ export class AnalyticsRepository {
         checkout_starts: 0,
       }
     );
+  }
+
+  async listDailySales(input: {
+    storeId: string;
+    startAt: Date;
+    endAt: Date;
+  }): Promise<DailySalesRecord[]> {
+    const result = await this.databaseService.db.query<DailySalesRecord>(
+      `
+        SELECT
+          to_char(date_trunc('day', o.created_at), 'YYYY-MM-DD') AS day,
+          COALESCE(SUM(o.total) FILTER (WHERE o.status NOT IN ('cancelled', 'returned')), 0)::text AS sales,
+          COUNT(*)::int AS orders
+        FROM orders o
+        WHERE o.store_id = $1
+          AND o.created_at >= $2
+          AND o.created_at < $3
+        GROUP BY date_trunc('day', o.created_at)
+        ORDER BY date_trunc('day', o.created_at) ASC
+      `,
+      [input.storeId, input.startAt, input.endAt],
+    );
+
+    return result.rows;
+  }
+
+  async listPaymentMethodsBreakdown(input: {
+    storeId: string;
+    startAt: Date;
+    endAt: Date;
+  }): Promise<SimpleCountAmountRecord[]> {
+    const result = await this.databaseService.db.query<SimpleCountAmountRecord>(
+      `
+        SELECT
+          p.method AS key,
+          COUNT(*)::int AS count,
+          COALESCE(SUM(p.amount), 0)::text AS amount
+        FROM payments p
+        WHERE p.store_id = $1
+          AND p.created_at >= $2
+          AND p.created_at < $3
+        GROUP BY p.method
+        ORDER BY COUNT(*) DESC, p.method ASC
+      `,
+      [input.storeId, input.startAt, input.endAt],
+    );
+
+    return result.rows;
+  }
+
+  async listShippingMethodsBreakdown(input: {
+    storeId: string;
+    startAt: Date;
+    endAt: Date;
+  }): Promise<SimpleCountAmountRecord[]> {
+    const result = await this.databaseService.db.query<SimpleCountAmountRecord>(
+      `
+        SELECT
+          COALESCE(
+            NULLIF(BTRIM(o.shipping_method_snapshot->>'displayName'), ''),
+            NULLIF(BTRIM(sm.display_name), ''),
+            'unassigned'
+          ) AS key,
+          COUNT(*)::int AS count,
+          COALESCE(SUM(o.shipping_fee), 0)::text AS amount
+        FROM orders o
+        LEFT JOIN shipping_methods sm ON sm.id = o.shipping_method_id
+        WHERE o.store_id = $1
+          AND o.created_at >= $2
+          AND o.created_at < $3
+        GROUP BY key
+        ORDER BY count DESC, key ASC
+      `,
+      [input.storeId, input.startAt, input.endAt],
+    );
+
+    return result.rows;
+  }
+
+  async listTopCities(input: {
+    storeId: string;
+    startAt: Date;
+    endAt: Date;
+    limit: number;
+  }): Promise<CityPerformanceRecord[]> {
+    const result = await this.databaseService.db.query<CityPerformanceRecord>(
+      `
+        SELECT
+          COALESCE(NULLIF(BTRIM(o.shipping_address->>'city'), ''), 'غير محدد') AS city,
+          COUNT(*)::int AS orders,
+          COALESCE(SUM(o.total) FILTER (WHERE o.status NOT IN ('cancelled', 'returned')), 0)::text AS sales
+        FROM orders o
+        WHERE o.store_id = $1
+          AND o.created_at >= $2
+          AND o.created_at < $3
+        GROUP BY city
+        ORDER BY orders DESC, sales::numeric DESC
+        LIMIT $4
+      `,
+      [input.storeId, input.startAt, input.endAt, input.limit],
+    );
+
+    return result.rows;
+  }
+
+  async listProductsPerformance(input: {
+    storeId: string;
+    startAt: Date;
+    endAt: Date;
+    limit: number;
+  }): Promise<ProductPerformanceRecord[]> {
+    const result = await this.databaseService.db.query<ProductPerformanceRecord>(
+      `
+        SELECT
+          oi.product_id,
+          COALESCE(NULLIF(TRIM(p.title), ''), MAX(oi.title)) AS product_title,
+          COALESCE(SUM(oi.quantity), 0)::int AS quantity_sold,
+          COALESCE(SUM(oi.line_total), 0)::text AS gross_sales,
+          COALESCE(SUM(
+            CASE
+              WHEN o.subtotal > 0 THEN (o.discount_total * oi.line_total / o.subtotal)
+              ELSE 0
+            END
+          ), 0)::text AS discount_total
+        FROM order_items oi
+        INNER JOIN orders o ON o.id = oi.order_id
+        LEFT JOIN products p ON p.id = oi.product_id
+        WHERE o.store_id = $1
+          AND o.created_at >= $2
+          AND o.created_at < $3
+        GROUP BY oi.product_id, p.title
+        ORDER BY quantity_sold DESC, gross_sales::numeric DESC
+        LIMIT $4
+      `,
+      [input.storeId, input.startAt, input.endAt, input.limit],
+    );
+
+    return result.rows;
+  }
+
+  async listTopVisitedPages(input: {
+    storeId: string;
+    startAt: Date;
+    endAt: Date;
+    limit: number;
+  }): Promise<TopPageRecord[]> {
+    const result = await this.databaseService.db.query<TopPageRecord>(
+      `
+        SELECT
+          COALESCE(NULLIF(BTRIM(se.metadata->>'path'), ''), se.event_type) AS page,
+          COUNT(*)::int AS visits
+        FROM storefront_events se
+        WHERE se.store_id = $1
+          AND se.occurred_at >= $2
+          AND se.occurred_at < $3
+        GROUP BY page
+        ORDER BY visits DESC, page ASC
+        LIMIT $4
+      `,
+      [input.storeId, input.startAt, input.endAt, input.limit],
+    );
+
+    return result.rows;
+  }
+
+  async getShipmentSummary(input: {
+    storeId: string;
+    startAt: Date;
+    endAt: Date;
+  }): Promise<ShipmentSummaryRecord> {
+    const result = await this.databaseService.db.query<ShipmentSummaryRecord>(
+      `
+        SELECT
+          COUNT(*)::int AS total_shipments,
+          COUNT(*) FILTER (WHERE status = 'delivered')::int AS delivered,
+          COUNT(*) FILTER (WHERE status = 'in_transit')::int AS in_transit,
+          COUNT(*) FILTER (WHERE status = 'cancelled')::int AS cancelled,
+          COUNT(*) FILTER (WHERE status = 'failed_delivery')::int AS failed_delivery,
+          COUNT(*) FILTER (WHERE status = 'lost')::int AS lost,
+          COUNT(*) FILTER (WHERE status = 'damaged')::int AS damaged,
+          COUNT(*) FILTER (WHERE status = 'delayed')::int AS delayed,
+          COUNT(*) FILTER (WHERE status = 'late_received')::int AS late_received
+        FROM shipments
+        WHERE store_id = $1
+          AND created_at >= $2
+          AND created_at < $3
+      `,
+      [input.storeId, input.startAt, input.endAt],
+    );
+
+    return (
+      result.rows[0] ?? {
+        total_shipments: 0,
+        delivered: 0,
+        in_transit: 0,
+        cancelled: 0,
+        failed_delivery: 0,
+        lost: 0,
+        damaged: 0,
+        delayed: 0,
+        late_received: 0,
+      }
+    );
+  }
+
+  async listCustomersReport(input: {
+    storeId: string;
+    startAt: Date;
+    endAt: Date;
+    limit: number;
+  }): Promise<Array<{ customer_id: string; full_name: string; phone: string; orders_count: number; total_sales: string }>> {
+    const result = await this.databaseService.db.query<{
+      customer_id: string;
+      full_name: string;
+      phone: string;
+      orders_count: number;
+      total_sales: string;
+    }>(
+      `
+        SELECT
+          c.id AS customer_id,
+          c.full_name,
+          c.phone,
+          COUNT(o.id)::int AS orders_count,
+          COALESCE(SUM(o.total) FILTER (WHERE o.status NOT IN ('cancelled', 'returned')), 0)::text AS total_sales
+        FROM customers c
+        LEFT JOIN orders o ON o.customer_id = c.id
+          AND o.store_id = $1
+          AND o.created_at >= $2
+          AND o.created_at < $3
+        WHERE c.store_id = $1
+        GROUP BY c.id, c.full_name, c.phone
+        ORDER BY orders_count DESC, total_sales::numeric DESC
+        LIMIT $4
+      `,
+      [input.storeId, input.startAt, input.endAt, input.limit],
+    );
+
+    return result.rows;
+  }
+
+  async listSalesReport(input: {
+    storeId: string;
+    startAt: Date;
+    endAt: Date;
+    limit: number;
+  }): Promise<Array<{ order_code: string; created_at: Date; status: string; city: string; total: string; shipping_fee: string; discount_total: string }>> {
+    const result = await this.databaseService.db.query<{
+      order_code: string;
+      created_at: Date;
+      status: string;
+      city: string;
+      total: string;
+      shipping_fee: string;
+      discount_total: string;
+    }>(
+      `
+        SELECT
+          o.order_code,
+          o.created_at,
+          o.status,
+          COALESCE(NULLIF(BTRIM(o.shipping_address->>'city'), ''), 'غير محدد') AS city,
+          o.total::text AS total,
+          o.shipping_fee::text AS shipping_fee,
+          o.discount_total::text AS discount_total
+        FROM orders o
+        WHERE o.store_id = $1
+          AND o.created_at >= $2
+          AND o.created_at < $3
+        ORDER BY o.created_at DESC
+        LIMIT $4
+      `,
+      [input.storeId, input.startAt, input.endAt, input.limit],
+    );
+
+    return result.rows;
+  }
+
+  async listInventoryReport(input: {
+    storeId: string;
+    limit: number;
+  }): Promise<Array<{ product_title: string; sku: string; stock_quantity: number; reserved_quantity: number; available_quantity: number }>> {
+    const result = await this.databaseService.db.query<{
+      product_title: string;
+      sku: string;
+      stock_quantity: number;
+      reserved_quantity: number;
+      available_quantity: number;
+    }>(
+      `
+        WITH active_reservations AS (
+          SELECT variant_id, SUM(quantity)::int AS reserved_quantity
+          FROM inventory_reservations
+          WHERE store_id = $1
+            AND status = 'reserved'
+            AND expires_at > NOW()
+          GROUP BY variant_id
+        )
+        SELECT
+          p.title AS product_title,
+          pv.sku,
+          pv.stock_quantity,
+          COALESCE(ar.reserved_quantity, 0)::int AS reserved_quantity,
+          GREATEST(pv.stock_quantity - COALESCE(ar.reserved_quantity, 0)::int, 0)::int AS available_quantity
+        FROM product_variants pv
+        INNER JOIN products p ON p.id = pv.product_id
+        LEFT JOIN active_reservations ar ON ar.variant_id = pv.id
+        WHERE pv.store_id = $1
+        ORDER BY available_quantity ASC, p.title ASC
+        LIMIT $2
+      `,
+      [input.storeId, input.limit],
+    );
+
+    return result.rows;
   }
 }

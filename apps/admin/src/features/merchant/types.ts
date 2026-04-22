@@ -913,6 +913,158 @@ export interface AnalyticsAnomalyReport {
   }>;
 }
 
+export interface AnalyticsGeneral {
+  windowDays: number;
+  timezone: string;
+  currencyCode: string;
+  startAt: string;
+  endAt: string;
+  summary: {
+    totalSales: number;
+    totalOrders: number;
+    totalSessions: number;
+    totalCustomers: number;
+  };
+  salesTrend: Array<{ day: string; sales: number; orders: number }>;
+  customerJourneyFunnel: Array<{
+    event: string;
+    sessions: number;
+    stepConversionRate: number;
+    fromVisitRate: number;
+  }>;
+  trafficSources: {
+    split: Array<{ sourceType: 'public' | 'affiliate'; visits: number; checkouts: number }>;
+    detailed: Array<{
+      source: string;
+      medium: string;
+      campaign: string;
+      visits: number;
+      checkoutStarts: number;
+      checkouts: number;
+      visitToCheckoutRate: number;
+    }>;
+  };
+  paymentMethods: Array<{ key: string; count: number; amount: number }>;
+  shippingMethods: Array<{ key: string; count: number; amount: number }>;
+  topCustomersByOrders: AnalyticsCustomersRetention['topRepeatCustomers'];
+  topCustomersBySales: AnalyticsCustomersRetention['topRepeatCustomers'];
+  topCitiesByOrders: Array<{ city: string; orders: number; sales: number }>;
+  topCitiesBySales: Array<{ city: string; orders: number; sales: number }>;
+  topProductsByQuantity: Array<{ productId: string; productTitle: string; quantitySold: number; grossSales: number }>;
+  topProductsBySales: Array<{ productId: string; productTitle: string; quantitySold: number; grossSales: number }>;
+  orderStatusSummary: Array<{ status: string; count: number; percentage: number }>;
+}
+
+export interface AnalyticsLive {
+  timezone: string;
+  liveMinutes: number;
+  startAt: string;
+  endAt: string;
+  liveVisits: number;
+  topVisitedPages: Array<{ page: string; visits: number }>;
+  liveOrders: number;
+  liveSales: number;
+  topCities: Array<{ city: string; orders: number; sales: number }>;
+  topProducts: Array<{ productId: string; productTitle: string; quantitySold: number; grossSales: number }>;
+}
+
+export interface AnalyticsProductsTable {
+  windowDays: number;
+  timezone: string;
+  currencyCode: string;
+  startAt: string;
+  endAt: string;
+  items: Array<{
+    productId: string;
+    productTitle: string;
+    totalSales: number;
+    totalDiscounts: number;
+    salesCount: number;
+  }>;
+}
+
+export interface AnalyticsOperations {
+  windowDays: number;
+  timezone: string;
+  startAt: string;
+  endAt: string;
+  kpis: {
+    totalShipments: number;
+    totalOrders: number;
+    avgOrderPreparationMinutes: number;
+    avgDeliveryMinutes: number;
+    avgReturnMinutes: number;
+  };
+  paymentMethods: Array<{ key: string; count: number; amount: number }>;
+  shippingMethods: Array<{ key: string; count: number; amount: number }>;
+  orderStatusSummary: Array<{ status: string; count: number; percentage: number }>;
+}
+
+export interface AnalyticsPaymentsAdvanced {
+  windowDays: number;
+  timezone: string;
+  currencyCode: string;
+  startAt: string;
+  endAt: string;
+  metrics: {
+    successfulOperations: number;
+    failedOperations: number;
+    refundedOperations: number;
+    pendingOperations: number;
+    successRate: number;
+    failureRate: number;
+    refundRate: number;
+    refundedSalesVolume: number;
+    successfulSalesVolume: number;
+    settledOperations: number;
+    depositOperations: number;
+    suspendedOperations: number;
+    successfulCompletedOperations: number;
+    collectedAmount: number;
+  };
+  methods: Array<{ key: string; count: number; amount: number }>;
+}
+
+export interface AnalyticsFinancial {
+  windowDays: number;
+  timezone: string;
+  currencyCode: string;
+  startAt: string;
+  endAt: string;
+  totals: {
+    grossSalesValue: number;
+    ordersCount: number;
+    productsSalesValue: number;
+    shippingValue: number;
+    discountValue: number;
+  };
+  platformPerformance: Array<{ sourceType: 'public' | 'affiliate'; sales: number; orders: number }>;
+}
+
+export interface AnalyticsShipments {
+  windowDays: number;
+  timezone: string;
+  startAt: string;
+  endAt: string;
+  counts: {
+    totalShipments: number;
+    delivered: number;
+    inTransit: number;
+    cancelled: number;
+    failedDelivery: number;
+    lost: number;
+    damaged: number;
+    delayed: number;
+    lateReceived: number;
+  };
+  rates: {
+    deliveredRate: number;
+    failedRate: number;
+    damagedRate: number;
+    delayedRate: number;
+  };
+}
+
 export interface PaginatedOrders {
   items: Order[];
   total: number;

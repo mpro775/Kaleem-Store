@@ -25,10 +25,30 @@ import { ThemesPanel } from './panels/themes-panel';
 import { WebhooksPanel } from './panels/webhooks-panel';
 import { WarehousesPanel } from './panels/warehouses-panel';
 import { OverviewPanel } from './overview/overview-panel';
+import { AnalyticsGeneralPanel } from './panels/analytics-general-panel';
+import { AnalyticsLivePanel } from './panels/analytics-live-panel';
+import { AnalyticsProductsPanel } from './panels/analytics-products-panel';
+import { AnalyticsOperationsPanel } from './panels/analytics-operations-panel';
+import { AnalyticsPaymentsPanel } from './panels/analytics-payments-panel';
+import { AnalyticsFinancialPanel } from './panels/analytics-financial-panel';
+import { AnalyticsShipmentsPanel } from './panels/analytics-shipments-panel';
+import { ReportsCustomersPanel } from './panels/reports-customers-panel';
+import { ReportsSalesPanel } from './panels/reports-sales-panel';
+import { ReportsInventoryPanel } from './panels/reports-inventory-panel';
 import type { MerchantPanelProps, MerchantTabKey } from './merchant-dashboard.types';
 
 const panelRenderers: Record<MerchantTabKey, (props: MerchantPanelProps) => ReactElement> = {
   overview: (props) => <OverviewPanel session={props.session} request={props.request} />,
+  analyticsGeneral: (props) => <AnalyticsGeneralPanel request={props.request} />,
+  analyticsLive: (props) => <AnalyticsLivePanel request={props.request} />,
+  analyticsProducts: (props) => <AnalyticsProductsPanel request={props.request} />,
+  analyticsOperations: (props) => <AnalyticsOperationsPanel request={props.request} />,
+  analyticsPayments: (props) => <AnalyticsPaymentsPanel request={props.request} />,
+  analyticsFinancial: (props) => <AnalyticsFinancialPanel request={props.request} />,
+  analyticsShipments: (props) => <AnalyticsShipmentsPanel request={props.request} />,
+  reportsCustomers: (props) => <ReportsCustomersPanel request={props.request} />,
+  reportsSales: (props) => <ReportsSalesPanel request={props.request} />,
+  reportsInventory: (props) => <ReportsInventoryPanel request={props.request} />,
   store: (props) => <StoreSettingsPanel request={props.request} />,
   products: (props) => <ProductsPanel request={props.request} />,
   inventory: (props) => <InventoryPanel request={props.request} />,

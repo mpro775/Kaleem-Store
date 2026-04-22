@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Header, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { PERMISSIONS } from '../auth/constants/permission.constants';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -28,6 +28,13 @@ import {
   type AffiliatePerformanceResponse,
   type StockoutRiskResponse,
   type TopSellingProductsResponse,
+  type AnalyticsGeneralResponse,
+  type AnalyticsLiveResponse,
+  type AnalyticsProductsResponse,
+  type AnalyticsOperationsResponse,
+  type AnalyticsPaymentsAdvancedResponse,
+  type AnalyticsFinancialResponse,
+  type AnalyticsShipmentsResponse,
 } from './analytics.service';
 
 @ApiTags('analytics')
@@ -36,6 +43,109 @@ import {
 @UseGuards(AccessTokenGuard, TenantGuard, PermissionsGuard)
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
+
+  @Get('general')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get unified general analytics dashboard payload' })
+  async getGeneralAnalytics(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<AnalyticsGeneralResponse> {
+    return this.analyticsService.getGeneralAnalytics(currentUser, query);
+  }
+
+  @Get('live')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get near real-time analytics dashboard payload' })
+  async getLiveAnalytics(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<AnalyticsLiveResponse> {
+    return this.analyticsService.getLiveAnalytics(currentUser, {
+      ...query,
+      liveMinutes: query.liveMinutes ?? 15,
+    });
+  }
+
+  @Get('products')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get product analytics table' })
+  async getProductsAnalytics(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<AnalyticsProductsResponse> {
+    return this.analyticsService.getProductsAnalytics(currentUser, query);
+  }
+
+  @Get('operations')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get operations analytics dashboard payload' })
+  async getOperationsAnalytics(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<AnalyticsOperationsResponse> {
+    return this.analyticsService.getOperationsAnalytics(currentUser, query);
+  }
+
+  @Get('payments/advanced')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get advanced payments analytics payload' })
+  async getPaymentsAdvancedAnalytics(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<AnalyticsPaymentsAdvancedResponse> {
+    return this.analyticsService.getPaymentsAdvancedAnalytics(currentUser, query);
+  }
+
+  @Get('financial')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get financial analytics dashboard payload' })
+  async getFinancialAnalytics(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<AnalyticsFinancialResponse> {
+    return this.analyticsService.getFinancialAnalytics(currentUser, query);
+  }
+
+  @Get('shipments')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @ApiOkResponse({ description: 'Get shipments analytics dashboard payload' })
+  async getShipmentsAnalytics(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<AnalyticsShipmentsResponse> {
+    return this.analyticsService.getShipmentsAnalytics(currentUser, query);
+  }
+
+  @Get('reports/customers.csv')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  async exportCustomersReportCsv(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<string> {
+    return this.analyticsService.exportCustomersReportCsv(currentUser, query);
+  }
+
+  @Get('reports/sales.csv')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  async exportSalesReportCsv(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<string> {
+    return this.analyticsService.exportSalesReportCsv(currentUser, query);
+  }
+
+  @Get('reports/inventory.csv')
+  @RequirePermissions(PERMISSIONS.storeRead)
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  async exportInventoryReportCsv(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() query: AnalyticsWindowQueryDto,
+  ): Promise<string> {
+    return this.analyticsService.exportInventoryReportCsv(currentUser, query);
+  }
 
   @Get('overview')
   @RequirePermissions(PERMISSIONS.storeRead)
