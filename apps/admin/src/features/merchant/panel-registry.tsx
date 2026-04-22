@@ -6,6 +6,7 @@ import { BrandsPanel } from './panels/brands-panel';
 import { CustomerQuestionsPanel } from './panels/customer-questions-panel';
 import { CustomerReviewsPanel } from './panels/customer-reviews-panel';
 import { CustomersPanel } from './panels/customers-panel';
+import { NotificationsCenterPanel } from './panels/notifications-center-panel';
 import { AbandonedCartsPanel } from './panels/abandoned-carts-panel';
 import { DomainsPanel } from './panels/domains-panel';
 import { InventoryPanel } from './panels/inventory-panel';
@@ -22,6 +23,7 @@ import { RestockAlertsPanel } from './panels/restock-alerts-panel';
 import { ShippingPanel } from './panels/shipping-panel';
 import { StaffPanel } from './panels/staff-panel';
 import { StoreSettingsPanel } from './panels/store-settings-panel';
+import { SupportTicketsPanel } from './panels/support-tickets-panel';
 import { ThemesPanel } from './panels/themes-panel';
 import { WebhooksPanel } from './panels/webhooks-panel';
 import { WarehousesPanel } from './panels/warehouses-panel';
@@ -62,6 +64,8 @@ const panelRenderers: Record<MerchantTabKey, (props: MerchantPanelProps) => Reac
   abandonedCarts: (props) => <AbandonedCartsPanel request={props.request} />,
   customerReviews: (props) => <CustomerReviewsPanel request={props.request} />,
   customerQuestions: (props) => <CustomerQuestionsPanel request={props.request} />,
+  supportTickets: (props) => <SupportTicketsPanel request={props.request} />,
+  notificationsCenter: (props) => <NotificationsCenterPanel request={props.request} />,
   restockAlerts: (props) => <RestockAlertsPanel request={props.request} />,
   orders: (props) => <OrdersPanel request={props.request} />,
   payments: (props) => <PaymentsPanel request={props.request} />,

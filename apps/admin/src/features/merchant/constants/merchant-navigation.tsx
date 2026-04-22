@@ -72,6 +72,8 @@ export const MERCHANT_NAV_ITEMS: MerchantNavItem[] = [
       { key: 'customers', label: 'Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡' },
       { key: 'customerReviews', label: 'ØªÙ‚ÙŠÙŠÙ…Ø§Øª Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡' },
       { key: 'customerQuestions', label: 'Ø£Ø³Ø¦Ù„Ø© Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª' },
+      { key: 'supportTickets', label: 'ãÑßÒ ÇáÏÚã ÇáÝäí' },
+      { key: 'notificationsCenter', label: 'ãÑßÒ ÇáÅÔÚÇÑÇÊ' },
     ],
   },
   {

@@ -111,6 +111,28 @@ export interface CustomerLoyaltyLedgerEntry {
   createdAt: string;
 }
 
+export interface CustomerSupportTicket {
+  id: string;
+  scope: 'b2b' | 'b2c';
+  subject: string;
+  description: string | null;
+  status: 'open' | 'waiting_customer' | 'waiting_agent' | 'resolved' | 'closed';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CustomerNotificationInboxItem {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  status: 'unread' | 'read';
+  readAt: string | null;
+  actionUrl: string | null;
+  createdAt: string;
+}
+
 // ==================== AUTH ====================
 
 export async function customerRegister(input: {
@@ -329,6 +351,62 @@ export async function listCustomerOrders(
 ): Promise<{ orders: CustomerOrder[]; total: number }> {
   const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
   return fetchJson(`/customers/orders?${params.toString()}`);
+}
+
+// ==================== SUPPORT ====================
+
+export async function createCustomerSupportTicket(input: {
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  subject: string;
+  description?: string;
+  message: string;
+}): Promise<CustomerSupportTicket> {
+  return fetchJson('/customers/support/tickets', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function listCustomerSupportTickets(): Promise<{
+  items: CustomerSupportTicket[];
+  total: number;
+  page: number;
+  limit: number;
+}> {
+  return fetchJson('/customers/support/tickets');
+}
+
+export async function addCustomerSupportTicketMessage(
+  ticketId: string,
+  message: string,
+): Promise<void> {
+  await fetchJson(`/customers/support/tickets/${encodeURIComponent(ticketId)}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  });
+}
+
+// ==================== NOTIFICATIONS ====================
+
+export async function listCustomerNotifications(): Promise<{
+  items: CustomerNotificationInboxItem[];
+  total: number;
+  page: number;
+  limit: number;
+}> {
+  return fetchJson('/customers/notifications/inbox');
+}
+
+export async function markCustomerNotificationRead(notificationId: string): Promise<void> {
+  await fetchJson(`/customers/notifications/${encodeURIComponent(notificationId)}/read`, {
+    method: 'PATCH',
+  });
+}
+
+export async function markAllCustomerNotificationsRead(): Promise<{ updated: number }> {
+  return fetchJson('/customers/notifications/read-all', {
+    method: 'PATCH',
+  });
 }
 
 // ==================== HELPERS ====================

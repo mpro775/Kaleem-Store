@@ -1534,3 +1534,131 @@ export interface BillingInvoicesPage {
   page: number;
   limit: number;
 }
+
+export type SupportTicketScope = 'b2b' | 'b2c';
+export type SupportTicketPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type SupportTicketStatus =
+  | 'open'
+  | 'waiting_customer'
+  | 'waiting_agent'
+  | 'resolved'
+  | 'closed';
+
+export interface SupportTicketSummary {
+  id: string;
+  storeId: string;
+  scope: SupportTicketScope;
+  source: string;
+  subject: string;
+  description: string | null;
+  status: SupportTicketStatus;
+  priority: SupportTicketPriority;
+  requester: {
+    type: string;
+    customerId: string | null;
+    storeUserId: string | null;
+    label: string | null;
+    name: string | null;
+  };
+  assignee: {
+    type: 'store_user' | 'platform_agent' | null;
+    storeUserId: string | null;
+    label: string | null;
+    name: string | null;
+  };
+  sla: {
+    firstResponseDueAt: string | null;
+    resolveDueAt: string | null;
+    firstResponseAt: string | null;
+  };
+  resolvedAt: string | null;
+  closedAt: string | null;
+  lastMessageAt: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SupportTicketMessage {
+  id: string;
+  ticketId: string;
+  storeId: string;
+  authorType: string;
+  authorCustomerId: string | null;
+  authorStoreUserId: string | null;
+  authorName: string | null;
+  authorLabel: string | null;
+  message: string;
+  isInternal: boolean;
+  attachments: unknown[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SupportTicketEvent {
+  id: string;
+  ticketId: string;
+  storeId: string;
+  eventType: string;
+  actorType: string;
+  actorCustomerId: string | null;
+  actorStoreUserId: string | null;
+  actorName: string | null;
+  actorLabel: string | null;
+  payload: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface SupportTicketsListResponse {
+  items: SupportTicketSummary[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface SupportTicketDetailResponse {
+  ticket: SupportTicketSummary;
+  messages: SupportTicketMessage[];
+  events: SupportTicketEvent[];
+}
+
+export type NotificationStatus = 'unread' | 'read';
+
+export interface NotificationInboxItem {
+  id: string;
+  storeId: string | null;
+  recipientType: 'store' | 'store_user' | 'customer' | 'platform';
+  recipientStoreUserId: string | null;
+  recipientCustomerId: string | null;
+  recipientLabel: string | null;
+  type: string;
+  title: string;
+  body: string;
+  status: NotificationStatus;
+  readAt: string | null;
+  actionUrl: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationsInboxResponse {
+  items: NotificationInboxItem[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface NotificationPreference {
+  id: string;
+  storeId: string | null;
+  recipientType: 'store' | 'store_user' | 'customer';
+  recipientStoreUserId: string | null;
+  recipientCustomerId: string | null;
+  eventType: string;
+  channel: 'inbox' | 'email';
+  isEnabled: boolean;
+  frequency: 'instant' | 'daily_digest' | 'mute';
+  createdAt: string;
+  updatedAt: string;
+}

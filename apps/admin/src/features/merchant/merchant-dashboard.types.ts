@@ -25,6 +25,8 @@ export type MerchantTabKey =
   | 'customers'
   | 'customerReviews'
   | 'customerQuestions'
+  | 'supportTickets'
+  | 'notificationsCenter'
   | 'abandonedCarts'
   | 'restockAlerts'
   | 'orders'
