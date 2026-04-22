@@ -1124,3 +1124,63 @@ platform-settings/
 
 هذه الوثيقة تمثل خطة PRD تنفيذية مباشرة لتحويل لوحة كليم الداخلية إلى منصة تشغيل وإدارة احترافية. وهي تستفيد من الأساس القوي الموجود حاليًا في المشروع، لكنها تنظّم العمل المطلوب على مستوى المنتج، الواجهات، الـ APIs، الصلاحيات، والبيانات، بحيث تصبح كليم قابلة للإدارة الفعلية كشركة SaaS تنمو بثبات.
 
+
+---
+
+## 21. تحديث التنفيذ - ما تم في هذه المهمة (MVP Foundation + Core Ops)
+
+تم تنفيذ العناصر التالية فعليًا داخل الكود:
+
+- إنشاء بنية Platform Admin Auth مستقلة:
+  - `POST /platform/auth/login`
+  - `POST /platform/auth/refresh`
+  - `POST /platform/auth/logout`
+  - `GET /platform/auth/me`
+- إضافة حراسات Platform مستقلة:
+  - `PlatformAccessTokenGuard`
+  - `PlatformPermissionsGuard`
+- نقل حماية مسارات `/platform/**` من `x-platform-admin-secret` إلى Bearer token + RBAC.
+- إنشاء foundation لقاعدة البيانات عبر migration جديد:
+  - `platform_admin_users`
+  - `platform_admin_roles`
+  - `platform_admin_permissions`
+  - `platform_admin_role_permissions`
+  - `platform_admin_user_roles`
+  - `platform_admin_sessions`
+- إضافة seed للصلاحيات والأدوار الأساسية في المنصة.
+- إضافة سكربت تأسيس أول Super Admin:
+  - `npm run platform:seed-admin`
+- تنفيذ واجهات تشغيل MVP في `/platform`:
+  - Dashboard: `summary`, `alerts`, `activity`, `growth`
+  - Stores: list + details + usage + activity + domains + subscription
+  - Plans: CRUD الحالي + `archive` + `duplicate`
+  - Subscriptions: القراءة والإجراءات الأساسية
+  - Domains: list + issues + details + recheck + force-sync
+- ربط الإجراءات الحساسة بسجلات التدقيق Audit بأكشنات `platform.*`.
+- تحديث واجهة `apps/admin` لتجربة Platform مستقلة:
+  - Login صفحة مستقلة
+  - Session storage مستقل
+  - API client مستقل مع refresh flow
+  - Shell مستقل + صفحات MVP الأساسية
+  - حماية الوصول لمسار `/platform` بجلسة المنصة.
+
+## 22. المتبقي للمهمة التالية (Next Iteration Scope)
+
+العناصر التالية لم تُغلق بالكامل بعد وتُنقل للمهمة القادمة:
+
+- Store 360 الكامل متعدد التبويبات (الصيغة التشغيلية النهائية).
+- Onboarding & Success pipeline الكامل + notes/worklist.
+- Health & Incidents Center المتكامل داخل Platform.
+- Team & Roles UI متكامل (إدارة admins/roles/permission matrix من الواجهة).
+- Global Settings UI + APIs الكاملة.
+- Platform Analytics المتقدمة (MRR/Churn/Cohorts/Funnel).
+- تحسينات UX تشغيلية إضافية:
+  - Bulk actions
+  - Export workflows
+  - Keyboard shortcuts
+- Hardening أمني متقدم:
+  - MFA
+  - سياسات IP/Device
+  - Step-up verification للإجراءات الحساسة.
+
+> ملاحظة: تم الانتهاء من MVP قابل للتشغيل الداخلي، بينما البنود أعلاه تمثل مرحلة التوسعة والتشديد التالية.

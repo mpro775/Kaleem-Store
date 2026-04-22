@@ -338,6 +338,104 @@ export class SaasService {
     return this.toPlanResponse(fresh);
   }
 
+  async archivePlan(planId: string, context: RequestContextData): Promise<PlanResponse> {
+    const existing = await this.saasRepository.findPlanById(planId);
+    if (!existing) {
+      throw new NotFoundException('Plan not found');
+    }
+
+    const archived = await this.saasRepository.setPlanActive(planId, false);
+    if (!archived) {
+      throw new NotFoundException('Plan not found');
+    }
+
+    await this.auditService.log({
+      action: 'platform.plan_archived',
+      storeId: null,
+      storeUserId: null,
+      targetType: 'plan',
+      targetId: archived.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: {
+        requestId: context.requestId,
+        code: archived.code,
+      },
+    });
+
+    return this.toPlanResponse(archived);
+  }
+
+  async duplicatePlan(planId: string, context: RequestContextData): Promise<PlanResponse> {
+    const existing = await this.saasRepository.findPlanById(planId);
+    if (!existing) {
+      throw new NotFoundException('Plan not found');
+    }
+
+    const limits = await this.saasRepository.listPlanLimits(planId);
+    const entitlements = await this.saasRepository.listPlanEntitlements(planId);
+    const baseCode = `${existing.code}-copy`;
+    let nextCode = baseCode;
+    let suffix = 1;
+    while (await this.saasRepository.findPlanByCode(nextCode)) {
+      suffix += 1;
+      nextCode = `${baseCode}-${suffix}`;
+    }
+
+    const duplicateInput: CreatePlanDto = {
+      code: nextCode,
+      name: `${existing.name} Copy`,
+      isActive: false,
+      monthlyPrice: this.parseAmount(existing.monthly_price),
+      annualPrice: this.parseAmount(existing.annual_price),
+      currencyCode: existing.currency_code,
+      billingCycleOptions:
+        existing.billing_cycle_options.filter(
+          (cycle): cycle is 'monthly' | 'annual' =>
+            cycle === 'monthly' || cycle === 'annual',
+        ).length > 0
+          ? existing.billing_cycle_options.filter(
+              (cycle): cycle is 'monthly' | 'annual' =>
+                cycle === 'monthly' || cycle === 'annual',
+            )
+          : ['monthly'],
+      trialDaysDefault: existing.trial_days_default,
+      limits: limits.map((limit) => ({
+        metricKey: limit.metric_key as SaasMetricKey,
+        metricLimit: limit.metric_limit,
+        resetPeriod: limit.reset_period,
+      })),
+      entitlements: entitlements.map((entry) => ({
+        featureKey: entry.feature_key,
+        isEnabled: entry.is_enabled,
+      })),
+    };
+
+    if (existing.description !== null) {
+      duplicateInput.description = existing.description;
+    }
+
+    const created = await this.createPlan(duplicateInput);
+
+    await this.auditService.log({
+      action: 'platform.plan_duplicated',
+      storeId: null,
+      storeUserId: null,
+      targetType: 'plan',
+      targetId: created.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: {
+        requestId: context.requestId,
+        sourcePlanId: planId,
+        sourcePlanCode: existing.code,
+        duplicatedPlanCode: created.code,
+      },
+    });
+
+    return created;
+  }
+
   async assignStorePlan(
     storeId: string,
     input: AssignStorePlanDto,
@@ -710,6 +808,50 @@ export class SaasService {
     }
   }
 
+  async getPlatformDashboardSummary() {
+    const summary = await this.saasRepository.getPlatformDashboardSummary();
+    return {
+      totalStores: Number(summary.total_stores),
+      activeStores: Number(summary.active_stores),
+      suspendedStores: Number(summary.suspended_stores),
+      totalSubscriptions: Number(summary.total_subscriptions),
+      activeSubscriptions: Number(summary.active_subscriptions),
+      trialingSubscriptions: Number(summary.trialing_subscriptions),
+      pastDueSubscriptions: Number(summary.past_due_subscriptions),
+      canceledSubscriptions: Number(summary.canceled_subscriptions),
+      totalDomains: Number(summary.total_domains),
+      domainIssues: Number(summary.domain_issues),
+    };
+  }
+
+  async getPlatformDashboardAlerts() {
+    const rows = await this.saasRepository.listPlatformDashboardAlerts(30);
+    return rows.map((row) => ({
+      type: row.type,
+      severity: row.severity,
+      referenceId: row.reference_id,
+      title: row.title,
+      createdAt: row.created_at,
+    }));
+  }
+
+  async getPlatformDashboardActivity() {
+    const rows = await this.saasRepository.listRecentPlatformAuditActivity(40);
+    return rows.map((row) => ({
+      id: row.id,
+      action: row.action,
+      targetType: row.target_type,
+      targetId: row.target_id,
+      metadata: row.metadata,
+      createdAt: row.created_at,
+      storeId: row.store_id,
+    }));
+  }
+
+  async getPlatformDashboardGrowth() {
+    return this.saasRepository.getPlatformGrowthSummary();
+  }
+
   async listPlatformStores(query: ListPlatformStoresQueryDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
@@ -737,6 +879,63 @@ export class SaasService {
       page,
       limit,
     };
+  }
+
+  async getPlatformStoreById(storeId: string) {
+    const row = await this.saasRepository.findPlatformStoreById(storeId);
+    if (!row) {
+      throw new NotFoundException('Store not found');
+    }
+
+    return {
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      createdAt: row.created_at,
+      isSuspended: row.is_suspended,
+      suspensionReason: row.suspension_reason,
+      planCode: row.plan_code,
+      subscriptionStatus: row.subscription_status,
+      totalDomains: row.total_domains,
+      activeDomains: row.active_domains,
+    };
+  }
+
+  async getPlatformStoreUsage(storeId: string) {
+    const subscription = await this.requireCurrentSubscriptionWithDefaults(storeId);
+    const limits = await this.saasRepository.listPlanLimits(subscription.plan_id);
+    const usage = await this.resolveUsageSnapshot(storeId, limits, new Date());
+    return {
+      storeId,
+      subscriptionStatus: subscription.status,
+      usage,
+    };
+  }
+
+  async getPlatformStoreActivity(storeId: string) {
+    const rows = await this.saasRepository.listStoreAuditActivity(storeId, 50);
+    return rows.map((row) => ({
+      id: row.id,
+      action: row.action,
+      targetType: row.target_type,
+      targetId: row.target_id,
+      metadata: row.metadata,
+      createdAt: row.created_at,
+      storeId: row.store_id,
+    }));
+  }
+
+  async getPlatformStoreDomains(storeId: string) {
+    const rows = await this.saasRepository.listPlatformDomainsByStore(storeId);
+    return rows.map((row) => this.toPlatformDomainResponse(row));
+  }
+
+  async getPlatformStoreSubscription(storeId: string) {
+    const subscription = await this.requireCurrentSubscriptionWithDefaults(storeId);
+    const limits = await this.saasRepository.listPlanLimits(subscription.plan_id);
+    const entitlements = await this.saasRepository.listPlanEntitlements(subscription.plan_id);
+    const usage = await this.resolveUsageSnapshot(storeId, limits, new Date());
+    return this.toSubscriptionResponse(subscription, limits, entitlements, usage);
   }
 
   async updateStoreSuspension(
@@ -803,15 +1002,87 @@ export class SaasService {
 
   async listPlatformDomains() {
     const rows = await this.saasRepository.listPlatformDomains();
-    return rows.map((row) => ({
-      id: row.id,
-      storeId: row.store_id,
-      storeName: row.store_name,
-      hostname: row.hostname,
-      status: row.status,
-      sslStatus: row.ssl_status,
-      updatedAt: row.updated_at,
-    }));
+    return rows.map((row) => this.toPlatformDomainResponse(row));
+  }
+
+  async listPlatformDomainIssues() {
+    const rows = await this.saasRepository.listPlatformDomainIssues(100);
+    return rows.map((row) => this.toPlatformDomainResponse(row));
+  }
+
+  async getPlatformDomainById(domainId: string) {
+    const domain = await this.saasRepository.findPlatformDomainById(domainId);
+    if (!domain) {
+      throw new NotFoundException('Domain not found');
+    }
+
+    return this.toPlatformDomainResponse(domain);
+  }
+
+  async recheckPlatformDomain(domainId: string, context: RequestContextData) {
+    const domain = await this.saasRepository.findPlatformDomainById(domainId);
+    if (!domain) {
+      throw new NotFoundException('Domain not found');
+    }
+
+    const touched = await this.saasRepository.touchPlatformDomainCheck(domainId);
+    if (!touched) {
+      throw new NotFoundException('Domain not found');
+    }
+
+    await this.auditService.log({
+      action: 'platform.domain_rechecked',
+      storeId: touched.store_id,
+      storeUserId: null,
+      targetType: 'store_domain',
+      targetId: touched.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: {
+        requestId: context.requestId,
+        hostname: touched.hostname,
+      },
+    });
+
+    const refreshed = await this.saasRepository.findPlatformDomainById(domainId);
+    if (!refreshed) {
+      throw new NotFoundException('Domain not found');
+    }
+
+    return this.toPlatformDomainResponse(refreshed);
+  }
+
+  async forceSyncPlatformDomain(domainId: string, context: RequestContextData) {
+    const domain = await this.saasRepository.findPlatformDomainById(domainId);
+    if (!domain) {
+      throw new NotFoundException('Domain not found');
+    }
+
+    const touched = await this.saasRepository.touchPlatformDomainCheck(domainId);
+    if (!touched) {
+      throw new NotFoundException('Domain not found');
+    }
+
+    await this.auditService.log({
+      action: 'platform.domain_force_synced',
+      storeId: domain.store_id,
+      storeUserId: null,
+      targetType: 'store_domain',
+      targetId: domain.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: {
+        requestId: context.requestId,
+        hostname: domain.hostname,
+      },
+    });
+
+    const refreshed = await this.saasRepository.findPlatformDomainById(domainId);
+    if (!refreshed) {
+      throw new NotFoundException('Domain not found');
+    }
+
+    return this.toPlatformDomainResponse(refreshed);
   }
 
   async listPlatformBillingEvents(limit = 50) {
@@ -1356,6 +1627,44 @@ export class SaasService {
         isEnabled: entitlement.is_enabled,
       })),
       usage,
+    };
+  }
+
+  private toPlatformDomainResponse(domain: {
+    id: string;
+    store_id: string;
+    store_name: string;
+    hostname: string;
+    status: string;
+    ssl_status: string;
+    ssl_provider?: string;
+    ssl_mode?: string;
+    ssl_last_checked_at?: Date | null;
+    ssl_error?: string | null;
+    cloudflare_zone_id?: string | null;
+    cloudflare_hostname_id?: string | null;
+    verification_token?: string;
+    verified_at?: Date | null;
+    activated_at?: Date | null;
+    updated_at: Date;
+  }) {
+    return {
+      id: domain.id,
+      storeId: domain.store_id,
+      storeName: domain.store_name,
+      hostname: domain.hostname,
+      status: domain.status,
+      sslStatus: domain.ssl_status,
+      sslProvider: domain.ssl_provider ?? null,
+      sslMode: domain.ssl_mode ?? null,
+      sslLastCheckedAt: domain.ssl_last_checked_at ?? null,
+      sslError: domain.ssl_error ?? null,
+      cloudflareZoneId: domain.cloudflare_zone_id ?? null,
+      cloudflareHostnameId: domain.cloudflare_hostname_id ?? null,
+      verificationToken: domain.verification_token ?? null,
+      verifiedAt: domain.verified_at ?? null,
+      activatedAt: domain.activated_at ?? null,
+      updatedAt: domain.updated_at,
     };
   }
 

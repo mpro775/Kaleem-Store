@@ -9,9 +9,10 @@ const { Test } = require('@nestjs/testing');
 const { AccessTokenGuard } = require('../dist/auth/guards/access-token.guard');
 const { AuditService } = require('../dist/audit/audit.service');
 const { BillingController } = require('../dist/saas/billing.controller');
+const { PlatformAccessTokenGuard } = require('../dist/platform/guards/platform-access-token.guard');
+const { PlatformPermissionsGuard } = require('../dist/platform/guards/platform-permissions.guard');
 const { PermissionsGuard } = require('../dist/rbac/guards/permissions.guard');
 const { PlatformAdminController } = require('../dist/saas/platform-admin.controller');
-const { PlatformAdminGuard } = require('../dist/saas/platform-admin.guard');
 const { SaasRepository } = require('../dist/saas/saas.repository');
 const { SaasService } = require('../dist/saas/saas.service');
 const { TenantGuard } = require('../dist/tenancy/guards/tenant.guard');
@@ -220,6 +221,73 @@ const saasRepositoryMock = {
   async listPlatformDomains() {
     return state.domains;
   },
+  async listPlatformDomainsByStore(storeId) {
+    return state.domains.filter((domain) => domain.store_id === storeId);
+  },
+  async findPlatformStoreById(storeId) {
+    return state.stores.get(storeId) ?? null;
+  },
+  async getPlatformDashboardSummary() {
+    return {
+      total_stores: `${state.stores.size}`,
+      active_stores: `${[...state.stores.values()].filter((row) => !row.is_suspended).length}`,
+      suspended_stores: `${[...state.stores.values()].filter((row) => row.is_suspended).length}`,
+      total_subscriptions: `${state.subscriptions.size}`,
+      active_subscriptions: `${[...state.subscriptions.values()].filter((row) => row.status === 'active').length}`,
+      trialing_subscriptions: `${[...state.subscriptions.values()].filter((row) => row.status === 'trialing').length}`,
+      past_due_subscriptions: `${[...state.subscriptions.values()].filter((row) => row.status === 'past_due').length}`,
+      canceled_subscriptions: `${[...state.subscriptions.values()].filter((row) => row.status === 'canceled').length}`,
+      total_domains: `${state.domains.length}`,
+      domain_issues: `${state.domains.filter((row) => row.ssl_status === 'error' || row.status === 'pending').length}`,
+    };
+  },
+  async getPlatformGrowthSummary() {
+    return {
+      newStores7d: 1,
+      newStores30d: 1,
+      trialingSubscriptions: 0,
+      paidSubscriptions: 1,
+    };
+  },
+  async listPlatformDashboardAlerts() {
+    return [];
+  },
+  async listRecentPlatformAuditActivity() {
+    return [];
+  },
+  async listStoreAuditActivity() {
+    return [];
+  },
+  async listPlatformDomainIssues() {
+    return state.domains.filter((domain) => domain.ssl_status === 'error' || domain.status === 'pending');
+  },
+  async findPlatformDomainById(domainId) {
+    return state.domains.find((domain) => domain.id === domainId) ?? null;
+  },
+  async touchPlatformDomainCheck(domainId) {
+    const domain = state.domains.find((row) => row.id === domainId);
+    if (!domain) {
+      return null;
+    }
+    domain.ssl_last_checked_at = new Date();
+    domain.updated_at = new Date();
+    return {
+      ...domain,
+      store_name: domain.store_name ?? '',
+    };
+  },
+  async setPlanActive(planId, isActive) {
+    const plan = state.plans.get(planId);
+    if (!plan) {
+      return null;
+    }
+    const updated = {
+      ...plan,
+      is_active: isActive,
+    };
+    state.plans.set(planId, updated);
+    return updated;
+  },
 };
 
 const auditServiceMock = {
@@ -254,7 +322,23 @@ describe('Sprint 6 SaaS platform e2e', () => {
       .useValue({ canActivate: () => true })
       .overrideGuard(PermissionsGuard)
       .useValue({ canActivate: () => true })
-      .overrideGuard(PlatformAdminGuard)
+      .overrideGuard(PlatformAccessTokenGuard)
+      .useValue({
+        canActivate(context) {
+          const request = context.switchToHttp().getRequest();
+          request.platformAdmin = {
+            id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            email: 'platform.admin@example.com',
+            fullName: 'Platform Admin',
+            status: 'active',
+            permissions: ['*'],
+            roleCodes: ['super_admin'],
+            sessionId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+          };
+          return true;
+        },
+      })
+      .overrideGuard(PlatformPermissionsGuard)
       .useValue({ canActivate: () => true })
       .compile();
 
@@ -513,6 +597,49 @@ describe('Sprint 6 SaaS platform e2e', () => {
     const domains = await requestJson('/platform/domains', { method: 'GET', headers: authHeaders() }, 200, baseUrl);
     assert.equal(domains.length, 1);
     assert.equal(domains[0].hostname, 'shop.example.com');
+  });
+
+  it('returns platform dashboard and store/domain detail slices', async () => {
+    const summary = await requestJson(
+      '/platform/dashboard/summary',
+      { method: 'GET', headers: authHeaders() },
+      200,
+      baseUrl,
+    );
+    assert.equal(summary.totalStores, 1);
+
+    const store = await requestJson(
+      `/platform/stores/${STORE_ID}`,
+      { method: 'GET', headers: authHeaders() },
+      200,
+      baseUrl,
+    );
+    assert.equal(store.id, STORE_ID);
+
+    const storeDomains = await requestJson(
+      `/platform/stores/${STORE_ID}/domains`,
+      { method: 'GET', headers: authHeaders() },
+      200,
+      baseUrl,
+    );
+    assert.equal(storeDomains.length, 1);
+
+    const domain = state.domains[0];
+    const domainDetails = await requestJson(
+      `/platform/domains/${domain.id}`,
+      { method: 'GET', headers: authHeaders() },
+      200,
+      baseUrl,
+    );
+    assert.equal(domainDetails.id, domain.id);
+
+    const rechecked = await requestJson(
+      `/platform/domains/${domain.id}/recheck`,
+      { method: 'POST', headers: authHeaders() },
+      200,
+      baseUrl,
+    );
+    assert.equal(rechecked.id, domain.id);
   });
 });
 

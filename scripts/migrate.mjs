@@ -15,6 +15,15 @@ const connectionString =
 
 const client = new pg.Client({ connectionString });
 
+function normalizeSql(sql) {
+  if (!sql) {
+    return sql;
+  }
+
+  // Some editors save UTF-8 BOM at file start; PostgreSQL may reject it as syntax noise.
+  return sql.replace(/^\uFEFF/, '');
+}
+
 async function ensureMigrationsTable() {
   await client.query(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -48,7 +57,9 @@ async function migrateUp() {
       continue;
     }
 
-    const upSql = await fs.readFile(path.join(MIGRATIONS_DIR, pair.upFile), 'utf8');
+    const upSql = normalizeSql(
+      await fs.readFile(path.join(MIGRATIONS_DIR, pair.upFile), 'utf8'),
+    );
     await client.query('BEGIN');
     try {
       await client.query(upSql);
@@ -74,7 +85,7 @@ async function migrateDown() {
 
   const last = rows[0];
   const downPath = path.join(MIGRATIONS_DIR, `${last.name}.down.sql`);
-  const downSql = await fs.readFile(downPath, 'utf8');
+  const downSql = normalizeSql(await fs.readFile(downPath, 'utf8'));
 
   await client.query('BEGIN');
   try {

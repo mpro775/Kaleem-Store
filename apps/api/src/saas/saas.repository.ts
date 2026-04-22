@@ -98,7 +98,39 @@ export interface PlatformDomainRecord {
   hostname: string;
   status: string;
   ssl_status: string;
+  ssl_provider?: string;
+  ssl_mode?: string;
+  ssl_last_checked_at?: Date | null;
+  ssl_error?: string | null;
+  cloudflare_zone_id?: string | null;
+  cloudflare_hostname_id?: string | null;
+  verification_token?: string;
+  verified_at?: Date | null;
+  activated_at?: Date | null;
   updated_at: Date;
+}
+
+export interface PlatformDashboardSummaryRecord {
+  total_stores: string;
+  active_stores: string;
+  suspended_stores: string;
+  total_subscriptions: string;
+  active_subscriptions: string;
+  trialing_subscriptions: string;
+  past_due_subscriptions: string;
+  canceled_subscriptions: string;
+  total_domains: string;
+  domain_issues: string;
+}
+
+export interface PlatformAuditActivityRecord {
+  id: string;
+  action: string;
+  target_type: string | null;
+  target_id: string | null;
+  metadata: Record<string, unknown>;
+  created_at: Date;
+  store_id: string | null;
 }
 
 export interface SubscriptionInvoiceRecord {
@@ -1129,6 +1161,206 @@ export class SaasRepository {
     return Number(result.rows[0]?.total ?? '0');
   }
 
+  async getPlatformDashboardSummary(): Promise<PlatformDashboardSummaryRecord> {
+    const result = await this.databaseService.db.query<PlatformDashboardSummaryRecord>(
+      `
+        SELECT
+          (SELECT COUNT(*)::text FROM stores) AS total_stores,
+          (SELECT COUNT(*)::text FROM stores WHERE is_suspended = FALSE) AS active_stores,
+          (SELECT COUNT(*)::text FROM stores WHERE is_suspended = TRUE) AS suspended_stores,
+          (SELECT COUNT(*)::text FROM store_subscriptions WHERE is_current = TRUE) AS total_subscriptions,
+          (SELECT COUNT(*)::text FROM store_subscriptions WHERE is_current = TRUE AND status = 'active') AS active_subscriptions,
+          (SELECT COUNT(*)::text FROM store_subscriptions WHERE is_current = TRUE AND status = 'trialing') AS trialing_subscriptions,
+          (SELECT COUNT(*)::text FROM store_subscriptions WHERE is_current = TRUE AND status = 'past_due') AS past_due_subscriptions,
+          (SELECT COUNT(*)::text FROM store_subscriptions WHERE is_current = TRUE AND status = 'canceled') AS canceled_subscriptions,
+          (SELECT COUNT(*)::text FROM store_domains) AS total_domains,
+          (
+            SELECT COUNT(*)::text
+            FROM store_domains
+            WHERE ssl_status = 'error'
+               OR status = 'pending'
+          ) AS domain_issues
+      `,
+    );
+
+    return result.rows[0] as PlatformDashboardSummaryRecord;
+  }
+
+  async getPlatformGrowthSummary(): Promise<{
+    newStores7d: number;
+    newStores30d: number;
+    trialingSubscriptions: number;
+    paidSubscriptions: number;
+  }> {
+    const result = await this.databaseService.db.query<{
+      new_stores_7d: string;
+      new_stores_30d: string;
+      trialing_subscriptions: string;
+      paid_subscriptions: string;
+    }>(
+      `
+        SELECT
+          (
+            SELECT COUNT(*)::text
+            FROM stores
+            WHERE created_at >= NOW() - INTERVAL '7 days'
+          ) AS new_stores_7d,
+          (
+            SELECT COUNT(*)::text
+            FROM stores
+            WHERE created_at >= NOW() - INTERVAL '30 days'
+          ) AS new_stores_30d,
+          (
+            SELECT COUNT(*)::text
+            FROM store_subscriptions
+            WHERE is_current = TRUE
+              AND status = 'trialing'
+          ) AS trialing_subscriptions,
+          (
+            SELECT COUNT(*)::text
+            FROM store_subscriptions
+            WHERE is_current = TRUE
+              AND status = 'active'
+          ) AS paid_subscriptions
+      `,
+    );
+
+    const row = result.rows[0];
+    return {
+      newStores7d: Number(row?.new_stores_7d ?? '0'),
+      newStores30d: Number(row?.new_stores_30d ?? '0'),
+      trialingSubscriptions: Number(row?.trialing_subscriptions ?? '0'),
+      paidSubscriptions: Number(row?.paid_subscriptions ?? '0'),
+    };
+  }
+
+  async listPlatformDashboardAlerts(limit: number): Promise<
+    Array<{
+      type: string;
+      severity: string;
+      reference_id: string;
+      title: string;
+      created_at: Date;
+    }>
+  > {
+    const result = await this.databaseService.db.query<{
+      type: string;
+      severity: string;
+      reference_id: string;
+      title: string;
+      created_at: Date;
+    }>(
+      `
+        SELECT *
+        FROM (
+          SELECT
+            'subscription'::text AS type,
+            CASE WHEN ss.status = 'past_due' THEN 'critical' ELSE 'warning' END AS severity,
+            ss.store_id::text AS reference_id,
+            ('Subscription ' || ss.status || ' for store ' || s.name) AS title,
+            ss.updated_at AS created_at
+          FROM store_subscriptions ss
+          INNER JOIN stores s ON s.id = ss.store_id
+          WHERE ss.is_current = TRUE
+            AND ss.status IN ('past_due', 'suspended')
+          UNION ALL
+          SELECT
+            'domain'::text AS type,
+            CASE WHEN d.ssl_status = 'error' THEN 'critical' ELSE 'warning' END AS severity,
+            d.id::text AS reference_id,
+            ('Domain issue: ' || d.hostname) AS title,
+            d.updated_at AS created_at
+          FROM store_domains d
+          WHERE d.ssl_status = 'error'
+             OR d.status = 'pending'
+        ) alerts
+        ORDER BY created_at DESC
+        LIMIT $1
+      `,
+      [limit],
+    );
+
+    return result.rows;
+  }
+
+  async listRecentPlatformAuditActivity(limit: number): Promise<PlatformAuditActivityRecord[]> {
+    const result = await this.databaseService.db.query<PlatformAuditActivityRecord>(
+      `
+        SELECT
+          id,
+          action,
+          target_type,
+          target_id,
+          metadata,
+          created_at,
+          store_id
+        FROM audit_logs
+        ORDER BY created_at DESC
+        LIMIT $1
+      `,
+      [limit],
+    );
+    return result.rows;
+  }
+
+  async findPlatformStoreById(storeId: string): Promise<PlatformStoreRecord | null> {
+    const result = await this.databaseService.db.query<PlatformStoreRecord>(
+      `
+        SELECT
+          s.id,
+          s.name,
+          s.slug,
+          s.is_suspended,
+          s.suspension_reason,
+          s.created_at,
+          p.code AS plan_code,
+          ss.status AS subscription_status,
+          COALESCE(dom.total_domains, 0)::int AS total_domains,
+          COALESCE(dom.active_domains, 0)::int AS active_domains
+        FROM stores s
+        LEFT JOIN store_subscriptions ss
+          ON ss.store_id = s.id
+         AND ss.is_current = TRUE
+        LEFT JOIN plans p
+          ON p.id = ss.plan_id
+        LEFT JOIN LATERAL (
+          SELECT
+            COUNT(*)::int AS total_domains,
+            COUNT(*) FILTER (WHERE status = 'active')::int AS active_domains
+          FROM store_domains d
+          WHERE d.store_id = s.id
+        ) dom ON TRUE
+        WHERE s.id = $1
+        LIMIT 1
+      `,
+      [storeId],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async listStoreAuditActivity(storeId: string, limit: number): Promise<PlatformAuditActivityRecord[]> {
+    const result = await this.databaseService.db.query<PlatformAuditActivityRecord>(
+      `
+        SELECT
+          id,
+          action,
+          target_type,
+          target_id,
+          metadata,
+          created_at,
+          store_id
+        FROM audit_logs
+        WHERE store_id = $1
+        ORDER BY created_at DESC
+        LIMIT $2
+      `,
+      [storeId, limit],
+    );
+
+    return result.rows;
+  }
+
   async listPlatformStores(input: {
     q: string | null;
     limit: number;
@@ -1281,6 +1513,129 @@ export class SaasRepository {
     return result.rows;
   }
 
+  async listPlatformDomainIssues(limit: number): Promise<PlatformDomainRecord[]> {
+    const result = await this.databaseService.db.query<PlatformDomainRecord>(
+      `
+        SELECT
+          d.id,
+          d.store_id,
+          s.name AS store_name,
+          d.hostname,
+          d.status,
+          d.ssl_status,
+          d.ssl_provider,
+          d.ssl_mode,
+          d.ssl_last_checked_at,
+          d.ssl_error,
+          d.cloudflare_zone_id,
+          d.cloudflare_hostname_id,
+          d.verification_token,
+          d.verified_at,
+          d.activated_at,
+          d.updated_at
+        FROM store_domains d
+        INNER JOIN stores s ON s.id = d.store_id
+        WHERE d.ssl_status = 'error'
+           OR d.status = 'pending'
+        ORDER BY d.updated_at DESC
+        LIMIT $1
+      `,
+      [limit],
+    );
+    return result.rows;
+  }
+
+  async findPlatformDomainById(domainId: string): Promise<PlatformDomainRecord | null> {
+    const result = await this.databaseService.db.query<PlatformDomainRecord>(
+      `
+        SELECT
+          d.id,
+          d.store_id,
+          s.name AS store_name,
+          d.hostname,
+          d.status,
+          d.ssl_status,
+          d.ssl_provider,
+          d.ssl_mode,
+          d.ssl_last_checked_at,
+          d.ssl_error,
+          d.cloudflare_zone_id,
+          d.cloudflare_hostname_id,
+          d.verification_token,
+          d.verified_at,
+          d.activated_at,
+          d.updated_at
+        FROM store_domains d
+        INNER JOIN stores s ON s.id = d.store_id
+        WHERE d.id = $1
+        LIMIT 1
+      `,
+      [domainId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async listPlatformDomainsByStore(storeId: string): Promise<PlatformDomainRecord[]> {
+    const result = await this.databaseService.db.query<PlatformDomainRecord>(
+      `
+        SELECT
+          d.id,
+          d.store_id,
+          s.name AS store_name,
+          d.hostname,
+          d.status,
+          d.ssl_status,
+          d.ssl_provider,
+          d.ssl_mode,
+          d.ssl_last_checked_at,
+          d.ssl_error,
+          d.cloudflare_zone_id,
+          d.cloudflare_hostname_id,
+          d.verification_token,
+          d.verified_at,
+          d.activated_at,
+          d.updated_at
+        FROM store_domains d
+        INNER JOIN stores s ON s.id = d.store_id
+        WHERE d.store_id = $1
+        ORDER BY d.updated_at DESC
+      `,
+      [storeId],
+    );
+    return result.rows;
+  }
+
+  async touchPlatformDomainCheck(domainId: string): Promise<PlatformDomainRecord | null> {
+    const result = await this.databaseService.db.query<PlatformDomainRecord>(
+      `
+        UPDATE store_domains
+        SET ssl_last_checked_at = NOW(),
+            updated_at = NOW()
+        WHERE id = $1
+        RETURNING
+          id,
+          store_id,
+          ''::text AS store_name,
+          hostname,
+          status,
+          ssl_status,
+          ssl_provider,
+          ssl_mode,
+          ssl_last_checked_at,
+          ssl_error,
+          cloudflare_zone_id,
+          cloudflare_hostname_id,
+          verification_token,
+          verified_at,
+          activated_at,
+          updated_at
+      `,
+      [domainId],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
   async countDomains(storeId: string): Promise<number> {
     const result = await this.databaseService.db.query<{ total: string }>(
       `
@@ -1356,5 +1711,31 @@ export class SaasRepository {
       [storeId, status],
     );
     return (result.rowCount ?? 0) > 0;
+  }
+
+  async setPlanActive(planId: string, isActive: boolean): Promise<PlanRecord | null> {
+    const result = await this.databaseService.db.query<PlanRecord>(
+      `
+        UPDATE plans
+        SET is_active = $2,
+            updated_at = NOW()
+        WHERE id = $1
+        RETURNING
+          id,
+          code,
+          name,
+          description,
+          is_active,
+          monthly_price,
+          annual_price,
+          currency_code,
+          billing_cycle_options,
+          trial_days_default,
+          metadata
+      `,
+      [planId, isActive],
+    );
+
+    return result.rows[0] ?? null;
   }
 }

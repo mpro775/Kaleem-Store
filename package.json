@@ -20,6 +20,7 @@
     "migrate:up": "node ./scripts/migrate.mjs up",
     "migrate:down": "node ./scripts/migrate.mjs down",
     "seed:run": "node ./scripts/seed.mjs",
+    "platform:seed-admin": "node ./scripts/platform-seed-admin.mjs",
     "storefront:ga:readiness": "node ./scripts/storefront-ga-readiness.mjs",
     "dev:infra": "docker compose --env-file infra/docker/.env -f infra/docker/docker-compose.yml up -d",
     "dev:infra:down": "docker compose --env-file infra/docker/.env -f infra/docker/docker-compose.yml down -v",

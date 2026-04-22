@@ -37,6 +37,7 @@ import { FiltersModule } from './filters/filters.module';
 import { LoyaltyModule } from './loyalty/loyalty.module';
 import { AffiliatesModule } from './affiliates/affiliates.module';
 import { SupportModule } from './support/support.module';
+import { PlatformModule } from './platform/platform.module';
 
 @Module({
   imports: [
@@ -84,6 +85,7 @@ import { SupportModule } from './support/support.module';
     LoyaltyModule,
     AffiliatesModule,
     SupportModule,
+    PlatformModule,
   ],
   providers: [
     {

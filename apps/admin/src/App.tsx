@@ -32,7 +32,7 @@ import { MerchantRegisterPage } from './features/auth/merchant-register-page';
 import { MarketingHome } from './features/marketing/marketing-home';
 import { MerchantDashboard } from './features/merchant/merchant-dashboard';
 import { MerchantOnboarding } from './features/merchant/merchant-onboarding';
-import { PlatformConsole } from './features/platform-console';
+import { PlatformApp } from './features/platform/platform-app';
 import { useMerchantSession } from './features/merchant/use-merchant-session';
 import type { MerchantSession } from './features/merchant/types';
 
@@ -216,7 +216,7 @@ export function App({ themeMode, onThemeModeChange }: AppProps) {
 
     if (currentRoute === 'platform') {
       return (
-        <PlatformConsole
+        <PlatformApp
           onBackHome={() => navigate('marketing')}
           onMerchantLogin={() => navigate('login')}
         />
@@ -228,7 +228,7 @@ export function App({ themeMode, onThemeModeChange }: AppProps) {
 
   const activeShellIndex = shellItems.findIndex((item) => item.route === route);
   const isStandalonePage =
-    route === 'platform' || route === 'marketing' || route === 'register' || route === 'login';
+    route === 'marketing' || route === 'register' || route === 'login';
 
   if (route === 'merchant') {
     if (showOnboarding) {
@@ -238,6 +238,10 @@ export function App({ themeMode, onThemeModeChange }: AppProps) {
         </Box>
       );
     }
+    return renderRouteContent(route, session);
+  }
+
+  if (route === 'platform') {
     return renderRouteContent(route, session);
   }
 
