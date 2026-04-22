@@ -1392,7 +1392,9 @@ export class AnalyticsRepository {
           AND o.created_at >= $2
           AND o.created_at < $3
         GROUP BY city
-        ORDER BY orders DESC, sales::numeric DESC
+        ORDER BY
+          COUNT(*) DESC,
+          COALESCE(SUM(o.total) FILTER (WHERE o.status NOT IN ('cancelled', 'returned')), 0) DESC
         LIMIT $4
       `,
       [input.storeId, input.startAt, input.endAt, input.limit],
@@ -1427,7 +1429,9 @@ export class AnalyticsRepository {
           AND o.created_at >= $2
           AND o.created_at < $3
         GROUP BY oi.product_id, p.title
-        ORDER BY quantity_sold DESC, gross_sales::numeric DESC
+        ORDER BY
+          COALESCE(SUM(oi.quantity), 0) DESC,
+          COALESCE(SUM(oi.line_total), 0) DESC
         LIMIT $4
       `,
       [input.storeId, input.startAt, input.endAt, input.limit],
@@ -1528,7 +1532,9 @@ export class AnalyticsRepository {
           AND o.created_at < $3
         WHERE c.store_id = $1
         GROUP BY c.id, c.full_name, c.phone
-        ORDER BY orders_count DESC, total_sales::numeric DESC
+        ORDER BY
+          COUNT(o.id) DESC,
+          COALESCE(SUM(o.total) FILTER (WHERE o.status NOT IN ('cancelled', 'returned')), 0) DESC
         LIMIT $4
       `,
       [input.storeId, input.startAt, input.endAt, input.limit],
