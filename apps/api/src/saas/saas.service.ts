@@ -5,9 +5,11 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import * as argon2 from 'argon2';
 import { AuditService } from '../audit/audit.service';
 import type { AuthUser } from '../auth/interfaces/auth-user.interface';
 import type { RequestContextData } from '../common/utils/request-context.util';
+import type { PlatformAdminUser } from '../platform/interfaces/platform-admin-user.interface';
 import {
   FEATURE_DISPLAY_NAMES,
   LIMIT_RESET_PERIODS,
@@ -21,13 +23,30 @@ import type { AssignStorePlanDto } from './dto/assign-store-plan.dto';
 import type { CancelSubscriptionDto } from './dto/cancel-subscription.dto';
 import type { ChangeSubscriptionPlanDto } from './dto/change-subscription-plan.dto';
 import type { CreatePlanDto } from './dto/create-plan.dto';
+import type { CreatePlatformAdminDto } from './dto/create-platform-admin.dto';
+import type { CreatePlatformAutomationRuleDto } from './dto/create-platform-automation-rule.dto';
+import type { CreatePlatformComplianceTaskDto } from './dto/create-platform-compliance-task.dto';
+import type { CreatePlatformIncidentDto } from './dto/create-platform-incident.dto';
+import type { CreatePlatformRiskViolationDto } from './dto/create-platform-risk-violation.dto';
+import type { CreatePlatformRoleDto } from './dto/create-platform-role.dto';
+import type { CreatePlatformSupportCaseDto } from './dto/create-platform-support-case.dto';
+import type { CreateStoreNoteDto } from './dto/create-store-note.dto';
 import type { ListPlatformStoresQueryDto } from './dto/list-platform-stores-query.dto';
 import type { ListPlatformSubscriptionsQueryDto } from './dto/list-platform-subscriptions-query.dto';
 import type { ListSubscriptionInvoicesQueryDto } from './dto/list-subscription-invoices-query.dto';
 import type { ProviderWebhookDto } from './dto/provider-webhook.dto';
 import type { SettleInvoiceDto } from './dto/settle-invoice.dto';
 import type { UpdatePlanDto } from './dto/update-plan.dto';
+import type { UpdatePlatformAdminDto } from './dto/update-platform-admin.dto';
+import type { UpdatePlatformAutomationRuleStatusDto } from './dto/update-platform-automation-rule-status.dto';
+import type { UpdatePlatformComplianceTaskStatusDto } from './dto/update-platform-compliance-task-status.dto';
+import type { UpdatePlatformIncidentStatusDto } from './dto/update-platform-incident-status.dto';
+import type { UpdatePlatformRiskViolationStatusDto } from './dto/update-platform-risk-violation-status.dto';
+import type { UpdatePlatformRoleDto } from './dto/update-platform-role.dto';
+import type { UpdatePlatformSettingsDto } from './dto/update-platform-settings.dto';
+import type { UpdatePlatformSupportCaseDto } from './dto/update-platform-support-case.dto';
 import type { UpdateStoreSuspensionDto } from './dto/update-store-suspension.dto';
+import type { TriggerPlatformAutomationRuleDto } from './dto/trigger-platform-automation-rule.dto';
 import {
   SaasRepository,
   type BillingEventRecord,
@@ -938,6 +957,35 @@ export class SaasService {
     return this.toSubscriptionResponse(subscription, limits, entitlements, usage);
   }
 
+  async getPlatformStore360(storeId: string) {
+    const store = await this.getPlatformStoreById(storeId);
+    const [usage, activity, domains, subscription, notes, supportCases, riskViolations] = await Promise.all([
+      this.getPlatformStoreUsage(storeId),
+      this.getPlatformStoreActivity(storeId),
+      this.getPlatformStoreDomains(storeId),
+      this.getPlatformStoreSubscription(storeId),
+      this.listPlatformStoreNotes(storeId),
+      this.listPlatformSupportCases(200),
+      this.listPlatformRiskViolations(200),
+    ]);
+    const scopedSupportCases = supportCases.filter((item) => item.storeId === storeId);
+    const scopedRiskViolations = riskViolations.filter((item) => item.storeId === storeId);
+
+    return {
+      store,
+      tabs: {
+        overview: store,
+        usage,
+        activity,
+        domains,
+        subscription,
+        notes,
+        supportCases: scopedSupportCases,
+        riskViolations: scopedRiskViolations,
+      },
+    };
+  }
+
   async updateStoreSuspension(
     storeId: string,
     input: UpdateStoreSuspensionDto,
@@ -1097,6 +1145,1142 @@ export class SaasService {
       processingError: row.processing_error,
       processedAt: row.processed_at,
       createdAt: row.created_at,
+    }));
+  }
+
+  async getPlatformAnalyticsMrrChurn() {
+    return this.saasRepository.getPlatformMrrChurnSummary();
+  }
+
+  async getPlatformAnalyticsCohorts() {
+    return this.saasRepository.getPlatformCohorts();
+  }
+
+  async getPlatformAnalyticsFunnel() {
+    return this.saasRepository.getPlatformFunnelSummary();
+  }
+
+  async getPlatformAnalyticsOverview() {
+    const [mrrChurn, cohorts, funnel] = await Promise.all([
+      this.getPlatformAnalyticsMrrChurn(),
+      this.getPlatformAnalyticsCohorts(),
+      this.getPlatformAnalyticsFunnel(),
+    ]);
+    return {
+      mrrChurn,
+      funnel,
+      cohorts,
+      generatedAt: new Date(),
+    };
+  }
+
+  async listPlatformAuditLogs(input: {
+    q?: string;
+    action?: string;
+    storeId?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const page = Number.isFinite(input.page) && (input.page ?? 0) > 0 ? (input.page as number) : 1;
+    const limit =
+      Number.isFinite(input.limit) && (input.limit ?? 0) > 0 && (input.limit ?? 0) <= 100
+        ? (input.limit as number)
+        : 20;
+    const result = await this.saasRepository.listPlatformAuditLogs({
+      q: input.q?.trim() || null,
+      action: input.action?.trim() || null,
+      storeId: input.storeId?.trim() || null,
+      limit,
+      offset: (page - 1) * limit,
+    });
+
+    return {
+      items: result.rows.map((row) => ({
+        id: row.id,
+        action: row.action,
+        targetType: row.target_type,
+        targetId: row.target_id,
+        metadata: row.metadata,
+        createdAt: row.created_at,
+        storeId: row.store_id,
+      })),
+      total: result.total,
+      page,
+      limit,
+    };
+  }
+
+  async getPlatformHealthSummary() {
+    let dbStatus: 'ok' | 'down' = 'ok';
+    let redisStatus: 'ok' | 'down' = 'ok';
+    try {
+      await this.saasRepository.pingPostgres();
+    } catch {
+      dbStatus = 'down';
+    }
+    try {
+      await this.saasRepository.pingRedis();
+    } catch {
+      redisStatus = 'down';
+    }
+
+    const queues = await this.saasRepository.listPlatformQueueOverview();
+    const incidents = await this.saasRepository.listPlatformIncidents(50);
+    const openIncidents = incidents.filter((incident) => incident.status !== 'resolved').length;
+    const failedJobs = queues.reduce((sum, queue) => sum + queue.failed_jobs, 0);
+
+    return {
+      api: { status: 'ok' as const },
+      db: { status: dbStatus },
+      redis: { status: redisStatus },
+      queues: {
+        totalBacklog: queues.reduce((sum, queue) => sum + queue.backlog_count, 0),
+        failedJobs,
+      },
+      incidents: {
+        open: openIncidents,
+        totalRecent: incidents.length,
+      },
+      status: dbStatus === 'ok' && redisStatus === 'ok' && openIncidents === 0 ? 'ok' : 'degraded',
+      checkedAt: new Date(),
+    };
+  }
+
+  async getPlatformHealthQueues() {
+    return this.saasRepository.listPlatformQueueOverview();
+  }
+
+  async listPlatformIncidents() {
+    const rows = await this.saasRepository.listPlatformIncidents(100);
+    return rows.map((row) => ({
+      id: row.id,
+      type: row.type,
+      severity: row.severity,
+      service: row.service,
+      title: row.title,
+      summary: row.summary,
+      status: row.status,
+      relatedStoreId: row.related_store_id,
+      createdByAdminId: row.created_by_admin_id,
+      createdByName: row.created_by_name,
+      createdAt: row.created_at,
+      resolvedAt: row.resolved_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  async createPlatformIncident(
+    input: CreatePlatformIncidentDto,
+    currentUser: PlatformAdminUser,
+    context: RequestContextData,
+  ) {
+    const incident = await this.saasRepository.createPlatformIncident({
+      type: input.type.trim().toLowerCase(),
+      severity: input.severity,
+      service: input.service.trim().toLowerCase(),
+      title: input.title.trim(),
+      summary: input.summary.trim(),
+      status: input.status ?? 'open',
+      relatedStoreId: input.relatedStoreId ?? null,
+      createdByAdminId: currentUser.id,
+    });
+
+    await this.auditService.log({
+      action: 'platform.incident_created',
+      storeId: incident.related_store_id,
+      storeUserId: null,
+      targetType: 'platform_incident',
+      targetId: incident.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: {
+        requestId: context.requestId,
+        severity: incident.severity,
+        service: incident.service,
+      },
+    });
+
+    return {
+      id: incident.id,
+      type: incident.type,
+      severity: incident.severity,
+      service: incident.service,
+      title: incident.title,
+      summary: incident.summary,
+      status: incident.status,
+      relatedStoreId: incident.related_store_id,
+      createdByAdminId: incident.created_by_admin_id,
+      createdByName: currentUser.fullName,
+      createdAt: incident.created_at,
+      resolvedAt: incident.resolved_at,
+      updatedAt: incident.updated_at,
+    };
+  }
+
+  async updatePlatformIncidentStatus(
+    incidentId: string,
+    input: UpdatePlatformIncidentStatusDto,
+    context: RequestContextData,
+  ) {
+    const incident = await this.saasRepository.updateIncidentStatus({
+      incidentId,
+      status: input.status,
+    });
+    if (!incident) {
+      throw new NotFoundException('Incident not found');
+    }
+
+    await this.auditService.log({
+      action: 'platform.incident_status_updated',
+      storeId: incident.related_store_id,
+      storeUserId: null,
+      targetType: 'platform_incident',
+      targetId: incident.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: {
+        requestId: context.requestId,
+        status: incident.status,
+      },
+    });
+
+    return {
+      id: incident.id,
+      status: incident.status,
+      resolvedAt: incident.resolved_at,
+      updatedAt: incident.updated_at,
+    };
+  }
+
+  async getPlatformOnboardingPipeline() {
+    const rows = await this.saasRepository.listOnboardingPipeline(200);
+    return rows.map((row) => {
+      const blockers: string[] = [];
+      if (row.onboarding_status !== 'completed') {
+        blockers.push('setup_incomplete');
+      }
+      if (!row.has_products) {
+        blockers.push('missing_products');
+      }
+      if (!row.has_domain) {
+        blockers.push('missing_domain');
+      }
+      if (!row.first_order_at) {
+        blockers.push('no_first_order');
+      }
+      return {
+        storeId: row.store_id,
+        storeName: row.store_name,
+        storeSlug: row.store_slug,
+        createdAt: row.created_at,
+        onboardingStatus: row.onboarding_status ?? 'not_started',
+        hasProducts: row.has_products,
+        hasDomain: row.has_domain,
+        firstOrderAt: row.first_order_at,
+        trialEndsAt: row.trial_ends_at,
+        subscriptionStatus: row.subscription_status ?? 'none',
+        blockers,
+      };
+    });
+  }
+
+  async getPlatformOnboardingStuckStores() {
+    const rows = await this.saasRepository.listOnboardingStuckStores(200);
+    return rows.map((row) => ({
+      storeId: row.store_id,
+      storeName: row.store_name,
+      storeSlug: row.store_slug,
+      createdAt: row.created_at,
+      onboardingStatus: row.onboarding_status ?? 'not_started',
+      hasProducts: row.has_products,
+      hasDomain: row.has_domain,
+      firstOrderAt: row.first_order_at,
+      trialEndsAt: row.trial_ends_at,
+      subscriptionStatus: row.subscription_status ?? 'none',
+      daysSinceSignup: row.days_since_signup,
+    }));
+  }
+
+  async listPlatformStoreNotes(storeId: string) {
+    const store = await this.saasRepository.findPlatformStoreById(storeId);
+    if (!store) {
+      throw new NotFoundException('Store not found');
+    }
+
+    const rows = await this.saasRepository.listStoreNotes(storeId, 100);
+    return rows.map((row) => ({
+      id: row.id,
+      storeId: row.store_id,
+      authorAdminId: row.author_admin_id,
+      authorName: row.author_name,
+      type: row.type,
+      body: row.body,
+      pinned: row.pinned,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  async createPlatformStoreNote(
+    storeId: string,
+    input: CreateStoreNoteDto,
+    currentUser: PlatformAdminUser,
+    context: RequestContextData,
+  ) {
+    const store = await this.saasRepository.findPlatformStoreById(storeId);
+    if (!store) {
+      throw new NotFoundException('Store not found');
+    }
+
+    const created = await this.saasRepository.createStoreNote({
+      storeId,
+      authorAdminId: currentUser.id,
+      type: input.type?.trim().toLowerCase() || 'general',
+      body: input.body.trim(),
+      pinned: input.pinned ?? false,
+    });
+
+    await this.auditService.log({
+      action: 'platform.store_note_created',
+      storeId,
+      storeUserId: null,
+      targetType: 'platform_store_note',
+      targetId: created.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: {
+        requestId: context.requestId,
+        type: created.type,
+        pinned: created.pinned,
+      },
+    });
+
+    return {
+      id: created.id,
+      storeId: created.store_id,
+      authorAdminId: created.author_admin_id,
+      authorName: currentUser.fullName,
+      type: created.type,
+      body: created.body,
+      pinned: created.pinned,
+      createdAt: created.created_at,
+      updatedAt: created.updated_at,
+    };
+  }
+
+  async listPlatformAdmins() {
+    const admins = await this.saasRepository.listPlatformAdmins();
+    return Promise.all(
+      admins.map(async (admin) => ({
+        id: admin.id,
+        fullName: admin.full_name,
+        email: admin.email,
+        status: admin.status,
+        lastLoginAt: admin.last_login_at,
+        createdAt: admin.created_at,
+        roleCodes: await this.saasRepository.listPlatformAdminRoleCodes(admin.id),
+      })),
+    );
+  }
+
+  async createPlatformAdmin(
+    input: CreatePlatformAdminDto,
+    currentUser: PlatformAdminUser,
+    context: RequestContextData,
+  ) {
+    const existing = await this.saasRepository.findPlatformAdminByEmail(input.email.trim().toLowerCase());
+    if (existing) {
+      throw new ConflictException('Platform admin email already exists');
+    }
+
+    const passwordHash = await argon2.hash(input.password);
+    const created = await this.saasRepository.createPlatformAdmin({
+      fullName: input.fullName.trim(),
+      email: input.email.trim().toLowerCase(),
+      passwordHash,
+      status: input.status ?? 'active',
+    });
+
+    if (input.roleIds && input.roleIds.length > 0) {
+      await this.saasRepository.replacePlatformAdminRoles(created.id, input.roleIds);
+    }
+
+    await this.auditService.log({
+      action: 'platform.admin_created',
+      storeId: null,
+      storeUserId: null,
+      targetType: 'platform_admin_user',
+      targetId: created.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: {
+        requestId: context.requestId,
+        createdByAdminId: currentUser.id,
+      },
+    });
+
+    return {
+      id: created.id,
+      fullName: created.full_name,
+      email: created.email,
+      status: created.status,
+      lastLoginAt: created.last_login_at,
+      createdAt: created.created_at,
+      roleCodes: await this.saasRepository.listPlatformAdminRoleCodes(created.id),
+    };
+  }
+
+  async updatePlatformAdmin(
+    adminId: string,
+    input: UpdatePlatformAdminDto,
+    currentUser: PlatformAdminUser,
+    context: RequestContextData,
+  ) {
+    const existing = await this.saasRepository.findPlatformAdminById(adminId);
+    if (!existing) {
+      throw new NotFoundException('Platform admin not found');
+    }
+
+    const adminUpdateInput: {
+      adminId: string;
+      fullName?: string;
+      status?: 'active' | 'disabled';
+      passwordHash?: string;
+    } = { adminId };
+    if (input.fullName !== undefined) {
+      adminUpdateInput.fullName = input.fullName.trim();
+    }
+    if (input.status !== undefined) {
+      adminUpdateInput.status = input.status;
+    }
+    if (input.password !== undefined) {
+      adminUpdateInput.passwordHash = await argon2.hash(input.password);
+    }
+
+    const updated = await this.saasRepository.updatePlatformAdmin(adminUpdateInput);
+    if (!updated) {
+      throw new NotFoundException('Platform admin not found');
+    }
+
+    if (input.roleIds) {
+      await this.saasRepository.replacePlatformAdminRoles(adminId, input.roleIds);
+    }
+
+    await this.auditService.log({
+      action: 'platform.admin_updated',
+      storeId: null,
+      storeUserId: null,
+      targetType: 'platform_admin_user',
+      targetId: updated.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: {
+        requestId: context.requestId,
+        updatedByAdminId: currentUser.id,
+      },
+    });
+
+    return {
+      id: updated.id,
+      fullName: updated.full_name,
+      email: updated.email,
+      status: updated.status,
+      lastLoginAt: updated.last_login_at,
+      createdAt: updated.created_at,
+      roleCodes: await this.saasRepository.listPlatformAdminRoleCodes(updated.id),
+    };
+  }
+
+  async listPlatformRoles() {
+    const roles = await this.saasRepository.listPlatformRoles();
+    const permissionKeys = await this.saasRepository.listPlatformPermissionKeys();
+    return Promise.all(
+      roles.map(async (role) => ({
+        id: role.id,
+        name: role.name,
+        code: role.code,
+        description: role.description,
+        permissions: await this.saasRepository.listPlatformRolePermissions(role.id),
+        availablePermissions: permissionKeys,
+      })),
+    );
+  }
+
+  async createPlatformRole(
+    input: CreatePlatformRoleDto,
+    currentUser: PlatformAdminUser,
+    context: RequestContextData,
+  ) {
+    const existing = await this.saasRepository.findPlatformRoleByCode(input.code.trim().toLowerCase());
+    if (existing) {
+      throw new ConflictException('Role code already exists');
+    }
+
+    const allPermissionKeys = new Set(await this.saasRepository.listPlatformPermissionKeys());
+    const requestedKeys = input.permissionKeys.map((key) => key.trim()).filter((key) => key.length > 0);
+    for (const key of requestedKeys) {
+      if (!allPermissionKeys.has(key)) {
+        throw new BadRequestException(`Unknown permission key ${key}`);
+      }
+    }
+
+    const role = await this.saasRepository.createPlatformRole({
+      name: input.name.trim(),
+      code: input.code.trim().toLowerCase(),
+      description: input.description?.trim() ?? null,
+    });
+    await this.saasRepository.replacePlatformRolePermissions(role.id, requestedKeys);
+
+    await this.auditService.log({
+      action: 'platform.role_created',
+      storeId: null,
+      storeUserId: null,
+      targetType: 'platform_admin_role',
+      targetId: role.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: {
+        requestId: context.requestId,
+        createdByAdminId: currentUser.id,
+      },
+    });
+
+    return {
+      id: role.id,
+      name: role.name,
+      code: role.code,
+      description: role.description,
+      permissions: await this.saasRepository.listPlatformRolePermissions(role.id),
+    };
+  }
+
+  async updatePlatformRole(
+    roleId: string,
+    input: UpdatePlatformRoleDto,
+    currentUser: PlatformAdminUser,
+    context: RequestContextData,
+  ) {
+    const existing = await this.saasRepository.findPlatformRoleById(roleId);
+    if (!existing) {
+      throw new NotFoundException('Role not found');
+    }
+
+    if (input.permissionKeys) {
+      const allPermissionKeys = new Set(await this.saasRepository.listPlatformPermissionKeys());
+      for (const key of input.permissionKeys) {
+        if (!allPermissionKeys.has(key.trim())) {
+          throw new BadRequestException(`Unknown permission key ${key}`);
+        }
+      }
+    }
+
+    const roleUpdateInput: { roleId: string; name?: string; description?: string | null } = { roleId };
+    if (input.name !== undefined) {
+      roleUpdateInput.name = input.name.trim();
+    }
+    if (input.description !== undefined) {
+      roleUpdateInput.description = input.description.trim();
+    }
+    const updated = await this.saasRepository.updatePlatformRole(roleUpdateInput);
+    if (!updated) {
+      throw new NotFoundException('Role not found');
+    }
+
+    if (input.permissionKeys) {
+      await this.saasRepository.replacePlatformRolePermissions(
+        roleId,
+        input.permissionKeys.map((key) => key.trim()),
+      );
+    }
+
+    await this.auditService.log({
+      action: 'platform.role_updated',
+      storeId: null,
+      storeUserId: null,
+      targetType: 'platform_admin_role',
+      targetId: updated.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: {
+        requestId: context.requestId,
+        updatedByAdminId: currentUser.id,
+      },
+    });
+
+    return {
+      id: updated.id,
+      name: updated.name,
+      code: updated.code,
+      description: updated.description,
+      permissions: await this.saasRepository.listPlatformRolePermissions(updated.id),
+    };
+  }
+
+  async getPlatformSettings() {
+    const rows = await this.saasRepository.listPlatformSettings();
+    return rows.map((row) => ({
+      id: row.id,
+      key: row.key,
+      value: row.value,
+      updatedBy: row.updated_by,
+      updatedByName: row.updated_by_name,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  async updatePlatformSettings(
+    input: UpdatePlatformSettingsDto,
+    currentUser: PlatformAdminUser,
+    context: RequestContextData,
+  ) {
+    const updated = [];
+    for (const entry of input.entries) {
+      const result = await this.saasRepository.upsertPlatformSetting({
+        key: entry.key.trim(),
+        value: entry.value,
+        updatedBy: currentUser.id,
+      });
+      updated.push({
+        id: result.id,
+        key: result.key,
+        value: result.value,
+        updatedBy: result.updated_by,
+        updatedByName: currentUser.fullName,
+        updatedAt: result.updated_at,
+      });
+    }
+
+    await this.auditService.log({
+      action: 'platform.settings_updated',
+      storeId: null,
+      storeUserId: null,
+      targetType: 'platform_settings',
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: {
+        requestId: context.requestId,
+        keys: input.entries.map((entry) => entry.key),
+      },
+    });
+
+    return updated;
+  }
+
+  async listPlatformAutomationRules() {
+    const rows = await this.saasRepository.listPlatformAutomationRules();
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      triggerType: row.trigger_type,
+      triggerConfig: row.trigger_config,
+      actionType: row.action_type,
+      actionConfig: row.action_config,
+      isActive: row.is_active,
+      lastRunAt: row.last_run_at,
+      createdByAdminId: row.created_by_admin_id,
+      updatedByAdminId: row.updated_by_admin_id,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  async createPlatformAutomationRule(
+    input: CreatePlatformAutomationRuleDto,
+    currentUser: PlatformAdminUser,
+    context: RequestContextData,
+  ) {
+    const created = await this.saasRepository.createPlatformAutomationRule({
+      name: input.name.trim(),
+      description: input.description?.trim() ?? null,
+      triggerType: input.triggerType,
+      triggerConfig: input.triggerConfig,
+      actionType: input.actionType.trim(),
+      actionConfig: input.actionConfig,
+      isActive: input.isActive ?? true,
+      createdByAdminId: currentUser.id,
+    });
+
+    await this.auditService.log({
+      action: 'platform.automation_rule_created',
+      storeId: null,
+      storeUserId: null,
+      targetType: 'platform_automation_rule',
+      targetId: created.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: {
+        requestId: context.requestId,
+        triggerType: created.trigger_type,
+        actionType: created.action_type,
+      },
+    });
+
+    return {
+      id: created.id,
+      name: created.name,
+      description: created.description,
+      triggerType: created.trigger_type,
+      triggerConfig: created.trigger_config,
+      actionType: created.action_type,
+      actionConfig: created.action_config,
+      isActive: created.is_active,
+      lastRunAt: created.last_run_at,
+      createdAt: created.created_at,
+      updatedAt: created.updated_at,
+    };
+  }
+
+  async updatePlatformAutomationRuleStatus(
+    ruleId: string,
+    input: UpdatePlatformAutomationRuleStatusDto,
+    currentUser: PlatformAdminUser,
+    context: RequestContextData,
+  ) {
+    const updated = await this.saasRepository.setPlatformAutomationRuleStatus({
+      ruleId,
+      isActive: input.isActive,
+      updatedByAdminId: currentUser.id,
+    });
+    if (!updated) {
+      throw new NotFoundException('Automation rule not found');
+    }
+
+    await this.auditService.log({
+      action: 'platform.automation_rule_status_updated',
+      storeId: null,
+      storeUserId: null,
+      targetType: 'platform_automation_rule',
+      targetId: updated.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: {
+        requestId: context.requestId,
+        isActive: updated.is_active,
+      },
+    });
+
+    return {
+      id: updated.id,
+      isActive: updated.is_active,
+      updatedAt: updated.updated_at,
+    };
+  }
+
+  async triggerPlatformAutomationRule(
+    ruleId: string,
+    input: TriggerPlatformAutomationRuleDto,
+    currentUser: PlatformAdminUser,
+    context: RequestContextData,
+  ) {
+    const run = await this.saasRepository.createPlatformAutomationRun({
+      ruleId,
+      triggeredByAdminId: currentUser.id,
+      storeId: input.storeId ?? null,
+      status: 'succeeded',
+      logs: 'Triggered manually from platform console',
+      metadata: input.metadata ?? {},
+    });
+
+    await this.auditService.log({
+      action: 'platform.automation_run_triggered',
+      storeId: input.storeId ?? null,
+      storeUserId: null,
+      targetType: 'platform_automation_run',
+      targetId: run.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: {
+        requestId: context.requestId,
+        ruleId,
+        status: run.status,
+      },
+    });
+
+    return {
+      id: run.id,
+      ruleId: run.rule_id,
+      status: run.status,
+      storeId: run.store_id,
+      startedAt: run.started_at,
+      finishedAt: run.finished_at,
+      metadata: run.metadata,
+      createdAt: run.created_at,
+    };
+  }
+
+  async listPlatformAutomationRuns(limit = 100) {
+    const rows = await this.saasRepository.listPlatformAutomationRuns(limit);
+    return rows.map((row) => ({
+      id: row.id,
+      ruleId: row.rule_id,
+      status: row.status,
+      triggeredByAdminId: row.triggered_by_admin_id,
+      storeId: row.store_id,
+      startedAt: row.started_at,
+      finishedAt: row.finished_at,
+      logs: row.logs,
+      metadata: row.metadata,
+      createdAt: row.created_at,
+    }));
+  }
+
+  async listPlatformSupportCases(limit = 100) {
+    const rows = await this.saasRepository.listPlatformSupportCases(limit);
+    return rows.map((row) => ({
+      id: row.id,
+      storeId: row.store_id,
+      subject: row.subject,
+      description: row.description,
+      priority: row.priority,
+      status: row.status,
+      queue: row.queue,
+      assigneeAdminId: row.assignee_admin_id,
+      assigneeName: row.assignee_name,
+      slaDueAt: row.sla_due_at,
+      impactScore: row.impact_score,
+      createdByAdminId: row.created_by_admin_id,
+      createdByName: row.created_by_name,
+      resolvedAt: row.resolved_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  async createPlatformSupportCase(
+    input: CreatePlatformSupportCaseDto,
+    currentUser: PlatformAdminUser,
+    context: RequestContextData,
+  ) {
+    const created = await this.saasRepository.createPlatformSupportCase({
+      storeId: input.storeId ?? null,
+      subject: input.subject.trim(),
+      description: input.description.trim(),
+      priority: input.priority,
+      status: 'open',
+      queue: input.queue?.trim() || 'general',
+      assigneeAdminId: input.assigneeAdminId ?? null,
+      impactScore: input.impactScore ?? 0,
+      createdByAdminId: currentUser.id,
+    });
+
+    await this.saasRepository.createPlatformSupportCaseEvent({
+      caseId: created.id,
+      eventType: 'case.created',
+      actorAdminId: currentUser.id,
+      payload: {
+        priority: created.priority,
+        queue: created.queue,
+      },
+    });
+
+    await this.auditService.log({
+      action: 'platform.support_case_created',
+      storeId: created.store_id,
+      storeUserId: null,
+      targetType: 'platform_support_case',
+      targetId: created.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: {
+        requestId: context.requestId,
+        priority: created.priority,
+        queue: created.queue,
+      },
+    });
+
+    return {
+      id: created.id,
+      storeId: created.store_id,
+      subject: created.subject,
+      description: created.description,
+      priority: created.priority,
+      status: created.status,
+      queue: created.queue,
+      assigneeAdminId: created.assignee_admin_id,
+      impactScore: created.impact_score,
+      createdAt: created.created_at,
+      updatedAt: created.updated_at,
+    };
+  }
+
+  async updatePlatformSupportCase(
+    caseId: string,
+    input: UpdatePlatformSupportCaseDto,
+    currentUser: PlatformAdminUser,
+    context: RequestContextData,
+  ) {
+    const repoInput: {
+      caseId: string;
+      status?: 'open' | 'in_progress' | 'escalated' | 'resolved' | 'closed';
+      assigneeAdminId?: string;
+      queue?: string;
+    } = { caseId };
+    if (input.status !== undefined) repoInput.status = input.status;
+    if (input.assigneeAdminId !== undefined) repoInput.assigneeAdminId = input.assigneeAdminId;
+    if (input.queue !== undefined) repoInput.queue = input.queue.trim();
+
+    const updated = await this.saasRepository.updatePlatformSupportCase(repoInput);
+    if (!updated) {
+      throw new NotFoundException('Support case not found');
+    }
+
+    await this.saasRepository.createPlatformSupportCaseEvent({
+      caseId,
+      eventType: 'case.updated',
+      actorAdminId: currentUser.id,
+      payload: {
+        status: input.status,
+        assigneeAdminId: input.assigneeAdminId,
+        queue: input.queue,
+      },
+    });
+
+    await this.auditService.log({
+      action: 'platform.support_case_updated',
+      storeId: updated.store_id,
+      storeUserId: null,
+      targetType: 'platform_support_case',
+      targetId: updated.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: {
+        requestId: context.requestId,
+        status: updated.status,
+        queue: updated.queue,
+      },
+    });
+
+    return {
+      id: updated.id,
+      status: updated.status,
+      queue: updated.queue,
+      assigneeAdminId: updated.assignee_admin_id,
+      resolvedAt: updated.resolved_at,
+      updatedAt: updated.updated_at,
+    };
+  }
+
+  async listPlatformRiskViolations(limit = 100) {
+    const rows = await this.saasRepository.listPlatformRiskViolations(limit);
+    return rows.map((row) => ({
+      id: row.id,
+      storeId: row.store_id,
+      category: row.category,
+      severity: row.severity,
+      score: row.score,
+      status: row.status,
+      summary: row.summary,
+      details: row.details,
+      detectedAt: row.detected_at,
+      resolvedAt: row.resolved_at,
+      ownerAdminId: row.owner_admin_id,
+      ownerName: row.owner_name,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  async createPlatformRiskViolation(
+    input: CreatePlatformRiskViolationDto,
+    currentUser: PlatformAdminUser,
+    context: RequestContextData,
+  ) {
+    const created = await this.saasRepository.createPlatformRiskViolation({
+      storeId: input.storeId ?? null,
+      category: input.category.trim().toLowerCase(),
+      severity: input.severity,
+      score: input.score,
+      status: 'open',
+      summary: input.summary.trim(),
+      details: input.details ?? {},
+      ownerAdminId: input.ownerAdminId ?? currentUser.id,
+    });
+
+    await this.auditService.log({
+      action: 'platform.risk_violation_created',
+      storeId: created.store_id,
+      storeUserId: null,
+      targetType: 'platform_risk_violation',
+      targetId: created.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: {
+        requestId: context.requestId,
+        severity: created.severity,
+        score: created.score,
+      },
+    });
+
+    return {
+      id: created.id,
+      storeId: created.store_id,
+      category: created.category,
+      severity: created.severity,
+      score: created.score,
+      status: created.status,
+      summary: created.summary,
+      details: created.details,
+      detectedAt: created.detected_at,
+      resolvedAt: created.resolved_at,
+      ownerAdminId: created.owner_admin_id,
+      createdAt: created.created_at,
+      updatedAt: created.updated_at,
+    };
+  }
+
+  async updatePlatformRiskViolationStatus(
+    violationId: string,
+    input: UpdatePlatformRiskViolationStatusDto,
+    context: RequestContextData,
+  ) {
+    const updated = await this.saasRepository.updatePlatformRiskViolationStatus({
+      violationId,
+      status: input.status,
+    });
+    if (!updated) {
+      throw new NotFoundException('Risk violation not found');
+    }
+
+    await this.auditService.log({
+      action: 'platform.risk_violation_status_updated',
+      storeId: updated.store_id,
+      storeUserId: null,
+      targetType: 'platform_risk_violation',
+      targetId: updated.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: {
+        requestId: context.requestId,
+        status: updated.status,
+      },
+    });
+
+    return {
+      id: updated.id,
+      status: updated.status,
+      resolvedAt: updated.resolved_at,
+      updatedAt: updated.updated_at,
+    };
+  }
+
+  async listPlatformComplianceTasks(limit = 100) {
+    const rows = await this.saasRepository.listPlatformComplianceTasks(limit);
+    return rows.map((row) => ({
+      id: row.id,
+      violationId: row.violation_id,
+      policyKey: row.policy_key,
+      title: row.title,
+      status: row.status,
+      dueAt: row.due_at,
+      assigneeAdminId: row.assignee_admin_id,
+      assigneeName: row.assignee_name,
+      checklist: row.checklist,
+      evidence: row.evidence,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  async createPlatformComplianceTask(
+    input: CreatePlatformComplianceTaskDto,
+    currentUser: PlatformAdminUser,
+    context: RequestContextData,
+  ) {
+    const created = await this.saasRepository.createPlatformComplianceTask({
+      violationId: input.violationId ?? null,
+      policyKey: input.policyKey.trim(),
+      title: input.title.trim(),
+      status: input.status,
+      assigneeAdminId: input.assigneeAdminId ?? currentUser.id,
+      checklist: input.checklist ?? [],
+      evidence: input.evidence ?? {},
+    });
+
+    await this.auditService.log({
+      action: 'platform.compliance_task_created',
+      storeId: null,
+      storeUserId: null,
+      targetType: 'platform_compliance_task',
+      targetId: created.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: {
+        requestId: context.requestId,
+        policyKey: created.policy_key,
+        status: created.status,
+      },
+    });
+
+    return {
+      id: created.id,
+      violationId: created.violation_id,
+      policyKey: created.policy_key,
+      title: created.title,
+      status: created.status,
+      dueAt: created.due_at,
+      assigneeAdminId: created.assignee_admin_id,
+      checklist: created.checklist,
+      evidence: created.evidence,
+      createdAt: created.created_at,
+      updatedAt: created.updated_at,
+    };
+  }
+
+  async updatePlatformComplianceTaskStatus(
+    taskId: string,
+    input: UpdatePlatformComplianceTaskStatusDto,
+    context: RequestContextData,
+  ) {
+    const updated = await this.saasRepository.updatePlatformComplianceTaskStatus({
+      taskId,
+      status: input.status,
+    });
+    if (!updated) {
+      throw new NotFoundException('Compliance task not found');
+    }
+
+    await this.auditService.log({
+      action: 'platform.compliance_task_status_updated',
+      storeId: null,
+      storeUserId: null,
+      targetType: 'platform_compliance_task',
+      targetId: updated.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: {
+        requestId: context.requestId,
+        status: updated.status,
+      },
+    });
+
+    return {
+      id: updated.id,
+      status: updated.status,
+      updatedAt: updated.updated_at,
+    };
+  }
+
+  async getPlatformFinanceOverview() {
+    return this.saasRepository.getPlatformFinanceOverview();
+  }
+
+  async listPlatformFinanceAging() {
+    return this.saasRepository.listPlatformFinanceAging();
+  }
+
+  async listPlatformFinanceCollections(limit = 100) {
+    const rows = await this.saasRepository.listPlatformFinanceCollections(limit);
+    return rows.map((row) => ({
+      invoiceId: row.invoice_id,
+      invoiceNumber: row.invoice_number,
+      storeId: row.store_id,
+      storeName: row.store_name,
+      status: row.status,
+      dueAt: row.due_at,
+      totalAmount: Number(row.total_amount),
+      currencyCode: row.currency_code,
+      updatedAt: row.updated_at,
     }));
   }
 

@@ -8,6 +8,11 @@ export interface PlatformAdminRecord {
   email: string;
   password_hash: string;
   status: 'active' | 'disabled';
+  mfa_enabled: boolean;
+  mfa_secret: string | null;
+  mfa_backup_codes: string[];
+  trusted_ips: string[];
+  trusted_user_agents: string[];
   last_login_at: Date | null;
 }
 
@@ -26,7 +31,18 @@ export class PlatformAuthRepository {
   async findAdminByEmail(email: string): Promise<PlatformAdminRecord | null> {
     const result = await this.databaseService.db.query<PlatformAdminRecord>(
       `
-        SELECT id, full_name, email, password_hash, status, last_login_at
+        SELECT
+          id,
+          full_name,
+          email,
+          password_hash,
+          status,
+          mfa_enabled,
+          mfa_secret,
+          COALESCE(mfa_backup_codes, '[]'::jsonb) AS mfa_backup_codes,
+          COALESCE(trusted_ips, '[]'::jsonb) AS trusted_ips,
+          COALESCE(trusted_user_agents, '[]'::jsonb) AS trusted_user_agents,
+          last_login_at
         FROM platform_admin_users
         WHERE LOWER(email) = LOWER($1)
         LIMIT 1
@@ -40,7 +56,18 @@ export class PlatformAuthRepository {
   async findAdminById(adminId: string): Promise<PlatformAdminRecord | null> {
     const result = await this.databaseService.db.query<PlatformAdminRecord>(
       `
-        SELECT id, full_name, email, password_hash, status, last_login_at
+        SELECT
+          id,
+          full_name,
+          email,
+          password_hash,
+          status,
+          mfa_enabled,
+          mfa_secret,
+          COALESCE(mfa_backup_codes, '[]'::jsonb) AS mfa_backup_codes,
+          COALESCE(trusted_ips, '[]'::jsonb) AS trusted_ips,
+          COALESCE(trusted_user_agents, '[]'::jsonb) AS trusted_user_agents,
+          last_login_at
         FROM platform_admin_users
         WHERE id = $1
         LIMIT 1
@@ -184,5 +211,37 @@ export class PlatformAuthRepository {
       `,
       [adminId],
     );
+  }
+
+  async updateAdminMfa(input: {
+    adminId: string;
+    mfaEnabled: boolean;
+    mfaSecret: string | null;
+    mfaBackupCodes: string[];
+  }): Promise<void> {
+    await this.databaseService.db.query(
+      `
+        UPDATE platform_admin_users
+        SET mfa_enabled = $2,
+            mfa_secret = $3,
+            mfa_backup_codes = $4::jsonb,
+            updated_at = NOW()
+        WHERE id = $1
+      `,
+      [input.adminId, input.mfaEnabled, input.mfaSecret, JSON.stringify(input.mfaBackupCodes)],
+    );
+  }
+
+  async getPlatformSettingValue(key: string): Promise<Record<string, unknown> | null> {
+    const result = await this.databaseService.db.query<{ value: Record<string, unknown> }>(
+      `
+        SELECT value
+        FROM platform_settings
+        WHERE key = $1
+        LIMIT 1
+      `,
+      [key],
+    );
+    return result.rows[0]?.value ?? null;
   }
 }

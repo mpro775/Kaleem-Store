@@ -14,6 +14,7 @@ export function PlatformLoginPage({ onLoggedIn, onBackHome, onMerchantLogin }: P
   const [apiBaseUrl, setApiBaseUrl] = useState(() => readStoredPlatformApiBaseUrl());
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [otpCode, setOtpCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -29,7 +30,7 @@ export function PlatformLoginPage({ onLoggedIn, onBackHome, onMerchantLogin }: P
           headers: {
             'content-type': 'application/json',
           },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ email, password, otpCode: otpCode.trim() || undefined }),
         },
       );
 
@@ -85,6 +86,13 @@ export function PlatformLoginPage({ onLoggedIn, onBackHome, onMerchantLogin }: P
             onChange={(event) => setPassword(event.target.value)}
             fullWidth
             type="password"
+          />
+          <TextField
+            label="رمز MFA (اختياري)"
+            value={otpCode}
+            onChange={(event) => setOtpCode(event.target.value)}
+            fullWidth
+            placeholder="123456"
           />
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
             <Button

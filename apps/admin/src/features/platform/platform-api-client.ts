@@ -47,6 +47,11 @@ async function executeRequest<T>(
   if (!headers.has('content-type') && init?.body) {
     headers.set('content-type', 'application/json');
   }
+  if (method !== 'GET' && method !== 'HEAD' && session.stepUpToken) {
+    if (!session.stepUpExpiresAt || new Date(session.stepUpExpiresAt).getTime() > Date.now()) {
+      headers.set('x-platform-step-up-token', session.stepUpToken);
+    }
+  }
 
   await attachCsrfHeader(session.apiBaseUrl, method, headers);
 

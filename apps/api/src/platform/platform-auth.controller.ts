@@ -13,7 +13,10 @@ import type { Request } from 'express';
 import { getRequestContext } from '../common/utils/request-context.util';
 import { CurrentPlatformUser } from './decorators/current-platform-user.decorator';
 import { PlatformLoginDto } from './dto/platform-login.dto';
+import { PlatformMfaDisableDto } from './dto/platform-mfa-disable.dto';
+import { PlatformMfaVerifyDto } from './dto/platform-mfa-verify.dto';
 import { PlatformRefreshTokenDto } from './dto/platform-refresh-token.dto';
+import { PlatformStepUpDto } from './dto/platform-step-up.dto';
 import { PlatformAccessTokenGuard } from './guards/platform-access-token.guard';
 import type { PlatformAuthResult } from './interfaces/platform-auth-result.interface';
 import type { PlatformAdminUser } from './interfaces/platform-admin-user.interface';
@@ -60,5 +63,49 @@ export class PlatformAuthController {
   @ApiOkResponse({ description: 'Get authenticated platform admin profile' })
   async me(@CurrentPlatformUser() currentUser: PlatformAdminUser): Promise<PlatformAdminUser> {
     return this.platformAuthService.me(currentUser);
+  }
+
+  @Post('mfa/setup')
+  @ApiBearerAuth()
+  @UseGuards(PlatformAccessTokenGuard)
+  @ApiOkResponse({ description: 'Start MFA setup and return TOTP secret + otpauth URL' })
+  async beginMfaSetup(@CurrentPlatformUser() currentUser: PlatformAdminUser) {
+    return this.platformAuthService.beginMfaSetup(currentUser);
+  }
+
+  @Post('mfa/verify')
+  @ApiBearerAuth()
+  @UseGuards(PlatformAccessTokenGuard)
+  @ApiOkResponse({ description: 'Verify TOTP code and enable MFA' })
+  async verifyMfa(
+    @CurrentPlatformUser() currentUser: PlatformAdminUser,
+    @Body() body: PlatformMfaVerifyDto,
+    @Req() request: Request,
+  ) {
+    return this.platformAuthService.verifyAndEnableMfa(currentUser, body, getRequestContext(request));
+  }
+
+  @Post('mfa/disable')
+  @ApiBearerAuth()
+  @UseGuards(PlatformAccessTokenGuard)
+  @ApiOkResponse({ description: 'Disable MFA after password + OTP/backup verification' })
+  async disableMfa(
+    @CurrentPlatformUser() currentUser: PlatformAdminUser,
+    @Body() body: PlatformMfaDisableDto,
+    @Req() request: Request,
+  ) {
+    return this.platformAuthService.disableMfa(currentUser, body, getRequestContext(request));
+  }
+
+  @Post('step-up')
+  @ApiBearerAuth()
+  @UseGuards(PlatformAccessTokenGuard)
+  @ApiOkResponse({ description: 'Issue short-lived step-up token for sensitive actions' })
+  async stepUp(
+    @CurrentPlatformUser() currentUser: PlatformAdminUser,
+    @Body() body: PlatformStepUpDto,
+    @Req() request: Request,
+  ) {
+    return this.platformAuthService.stepUp(currentUser, body, getRequestContext(request));
   }
 }

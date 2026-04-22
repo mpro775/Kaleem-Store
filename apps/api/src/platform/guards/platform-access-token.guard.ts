@@ -38,6 +38,7 @@ export class PlatformAccessTokenGuard implements CanActivate {
       email: payload.email,
       fullName: payload.fullName,
       status: 'active',
+      mfaEnabled: payload.mfaEnabled,
       permissions: payload.permissions,
       roleCodes: payload.roleCodes,
       sessionId: payload.sid,

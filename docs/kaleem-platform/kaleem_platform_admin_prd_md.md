@@ -1184,3 +1184,123 @@ platform-settings/
   - Step-up verification للإجراءات الحساسة.
 
 > ملاحظة: تم الانتهاء من MVP قابل للتشغيل الداخلي، بينما البنود أعلاه تمثل مرحلة التوسعة والتشديد التالية.
+
+## 23. تحديث التنفيذ - ما تم إغلاقه في هذه المهمة (Next Iteration Progress)
+
+تم تنفيذ العناصر التالية فعليًا:
+
+- **Health & Incidents Center**
+  - APIs جديدة:
+    - `GET /platform/health/summary`
+    - `GET /platform/health/queues`
+    - `GET /platform/health/incidents`
+    - `POST /platform/health/incidents`
+    - `PATCH /platform/health/incidents/:incidentId/status`
+  - إضافة بنية بيانات incidents عبر migration.
+
+- **Onboarding & Success**
+  - APIs جديدة:
+    - `GET /platform/onboarding/pipeline`
+    - `GET /platform/onboarding/stuck-stores`
+  - استخراج blockers التشغيلية (missing products/domain/first order + setup status).
+
+- **Store Notes (جزء من Store 360 + Success worklist)**
+  - APIs جديدة:
+    - `GET /platform/stores/:storeId/notes`
+    - `POST /platform/stores/:storeId/notes`
+  - إضافة جدول `platform_store_notes`.
+
+- **Team & Roles (UI + APIs)**
+  - APIs جديدة:
+    - `GET /platform/admins`
+    - `POST /platform/admins`
+    - `PATCH /platform/admins/:adminId`
+    - `GET /platform/roles`
+    - `POST /platform/roles`
+    - `PATCH /platform/roles/:roleId`
+  - دعم إدارة role permissions وadmin role assignment.
+
+- **Global Settings**
+  - APIs جديدة:
+    - `GET /platform/settings`
+    - `PATCH /platform/settings`
+  - إضافة جدول `platform_settings`.
+
+- **Audit Logs**
+  - API جديدة:
+    - `GET /platform/audit/logs`
+
+- **RBAC/Permissions**
+  - إضافة صلاحيات:
+    - `platform.health.read`
+    - `platform.notes.read`
+    - `platform.notes.write`
+    - `platform.notes.delete`
+  - تحديث seed + migration لمنح الصلاحيات للأدوار الحالية.
+
+- **Platform Admin Frontend**
+  - توسيع `PlatformShell` ليشمل الصفحات:
+    - Dashboard, Stores, Plans, Subscriptions, Domains, Onboarding, Health, Team & Roles, Settings, Audit Logs.
+  - إضافة إجراءات تشغيلية مباشرة من الواجهة:
+    - Add Store Note
+    - Create Incident
+    - Create Admin / Toggle Admin Status
+    - Create Role
+    - Edit Setting
+
+### ما يزال خارج نطاق الإغلاق الكامل في هذه الدفعة
+
+- Store 360 متعدد التبويبات بصيغته النهائية الكاملة (تم دعم notes كبداية عملية).
+- Platform Analytics المتقدمة (MRR/Churn/Cohorts/Funnel).
+- Hardening أمني متقدم (MFA / IP-Device policies / Step-up verification).
+- تحسينات UX المتقدمة (bulk actions / export workflows / keyboard shortcuts) بشكل شامل.
+
+## 24. تحديث التنفيذ - إغلاق الجولة التالية (Store 360 + Advanced Analytics + Security Hardening)
+
+تم إغلاق العناصر التالية فعليًا في هذه الجولة:
+
+- **Store 360 متعدد التبويبات**
+  - API موحدة:
+    - `GET /platform/stores/:storeId/store-360`
+  - تضمّن payload موحدًا لتبويبات:
+    - overview
+    - usage
+    - activity
+    - domains
+    - subscription
+    - notes
+  - إضافة صفحة `Store 360` في واجهة منصة الإدارة مع selector للمتجر.
+
+- **Advanced Platform Analytics**
+  - APIs جديدة:
+    - `GET /platform/analytics/overview`
+    - `GET /platform/analytics/mrr-churn`
+    - `GET /platform/analytics/cohorts`
+    - `GET /platform/analytics/funnel`
+  - إضافة صلاحية RBAC:
+    - `platform.analytics.read`
+  - توصيل صفحة `Analytics` داخل لوحة المنصة.
+
+- **Security Hardening**
+  - **MFA (TOTP)**
+    - توسعة نموذج admin بإعدادات MFA.
+    - APIs:
+      - `POST /platform/auth/mfa/setup`
+      - `POST /platform/auth/mfa/verify`
+      - `POST /platform/auth/mfa/disable`
+    - فرض MFA أثناء login عندما تكون مفعلة.
+  - **Step-up verification**
+    - API:
+      - `POST /platform/auth/step-up`
+    - إصدار token قصير العمر للإجراءات الحساسة.
+    - Guard + decorator لتطبيق step-up على عمليات الكتابة الحساسة.
+  - **IP / Device policies**
+    - فرض سياسات مستوى المستخدم (trusted IPs / trusted user agents) + سياسات global من settings.
+    - التحقق يتم داخل auth flows.
+
+- **واجهة Platform Admin**
+  - إضافة صفحة `Security` تتضمن:
+    - Enable/Disable MFA
+    - Renew Step-up
+  - إضافة حالة مرئية لـ Step-up في أعلى الواجهة.
+  - إرسال `x-platform-step-up-token` تلقائيًا على الطلبات غير GET عند توفر token سارية.

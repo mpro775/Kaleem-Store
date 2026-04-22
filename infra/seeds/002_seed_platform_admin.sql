@@ -11,7 +11,12 @@ VALUES
   ('f769236d-2e97-46dc-ac99-a71ec5597809', 'platform.subscriptions.write', 'Manage subscriptions'),
   ('3924dac8-e09e-4f44-b403-cd4777134510', 'platform.domains.read', 'Read domains'),
   ('43f785df-eb53-4750-b436-2e1ebca9d111', 'platform.domains.write', 'Manage domains'),
+  ('40a799bc-fde2-4f43-a7af-6082bbf2c401', 'platform.analytics.read', 'Read platform advanced analytics'),
   ('35226de5-46d9-4817-88e4-f68fcd0e8d12', 'platform.audit.read', 'Read platform audit logs'),
+  ('8248cbc9-4b98-45e0-88b2-cf29f15f15a1', 'platform.health.read', 'Read platform health and incidents'),
+  ('0fed5f79-2c6c-4c46-8574-ffef903ebea2', 'platform.notes.read', 'Read platform store notes'),
+  ('76f3a5c6-c8df-4e06-a037-c15c3cbc2f41', 'platform.notes.write', 'Manage platform store notes'),
+  ('9e7af734-1f3b-49ec-b968-1d9f6ee9d341', 'platform.notes.delete', 'Delete platform store notes'),
   ('d6fdb6e6-373f-4f65-8368-6402f92c6d13', 'platform.admins.read', 'Read platform admins'),
   ('1ef6cf13-7af9-48f4-857f-ff537737f614', 'platform.admins.write', 'Manage platform admins'),
   ('17d0d1e0-0b5a-4f90-82ca-98ee2dc2c215', 'platform.roles.read', 'Read platform roles'),
@@ -19,7 +24,18 @@ VALUES
   ('ebea3650-83df-4b3e-984a-db722925f617', 'platform.settings.read', 'Read platform settings'),
   ('e3de30a3-c0d6-4f20-ab65-fb86df24dd18', 'platform.settings.write', 'Manage platform settings'),
   ('8a5298b1-8896-4b0d-a9ea-f4cc39926619', 'platform.onboarding.read', 'Read onboarding pipeline'),
-  ('00df5009-7c3f-4e3d-ae2c-1e8c346d0d20', 'platform.onboarding.write', 'Manage onboarding pipeline')
+  ('00df5009-7c3f-4e3d-ae2c-1e8c346d0d20', 'platform.onboarding.write', 'Manage onboarding pipeline'),
+  ('b98a0de5-f799-41ad-b323-cdfbdb7f0001', 'platform.automation.read', 'Read automation rules and runs'),
+  ('b98a0de5-f799-41ad-b323-cdfbdb7f0002', 'platform.automation.write', 'Manage automation rules'),
+  ('b98a0de5-f799-41ad-b323-cdfbdb7f0003', 'platform.automation.run', 'Trigger automation runs'),
+  ('b98a0de5-f799-41ad-b323-cdfbdb7f0004', 'platform.support.read', 'Read support cases'),
+  ('b98a0de5-f799-41ad-b323-cdfbdb7f0005', 'platform.support.write', 'Manage support cases'),
+  ('b98a0de5-f799-41ad-b323-cdfbdb7f0006', 'platform.risk.read', 'Read risk violations'),
+  ('b98a0de5-f799-41ad-b323-cdfbdb7f0007', 'platform.risk.write', 'Manage risk violations'),
+  ('b98a0de5-f799-41ad-b323-cdfbdb7f0008', 'platform.compliance.read', 'Read compliance tasks'),
+  ('b98a0de5-f799-41ad-b323-cdfbdb7f0009', 'platform.compliance.write', 'Manage compliance tasks'),
+  ('b98a0de5-f799-41ad-b323-cdfbdb7f0010', 'platform.finance.read', 'Read finance operations insights'),
+  ('b98a0de5-f799-41ad-b323-cdfbdb7f0011', 'platform.finance.write', 'Manage finance operations actions')
 ON CONFLICT (key) DO NOTHING;
 
 INSERT INTO platform_admin_roles (id, name, code, description)
@@ -52,9 +68,24 @@ INNER JOIN platform_admin_permissions p
     'platform.subscriptions.write',
     'platform.domains.read',
     'platform.domains.write',
+    'platform.analytics.read',
+    'platform.health.read',
+    'platform.notes.read',
+    'platform.notes.write',
     'platform.audit.read',
     'platform.onboarding.read',
-    'platform.onboarding.write'
+    'platform.onboarding.write',
+    'platform.automation.read',
+    'platform.automation.write',
+    'platform.automation.run',
+    'platform.support.read',
+    'platform.support.write',
+    'platform.risk.read',
+    'platform.risk.write',
+    'platform.compliance.read',
+    'platform.compliance.write',
+    'platform.finance.read',
+    'platform.finance.write'
   )
 WHERE LOWER(r.code) = 'ops_manager'
 ON CONFLICT DO NOTHING;
@@ -70,8 +101,19 @@ INNER JOIN platform_admin_permissions p
     'platform.subscriptions.write',
     'platform.domains.read',
     'platform.domains.write',
+    'platform.analytics.read',
+    'platform.health.read',
+    'platform.notes.read',
+    'platform.notes.write',
     'platform.onboarding.read',
-    'platform.onboarding.write'
+    'platform.onboarding.write',
+    'platform.automation.read',
+    'platform.automation.run',
+    'platform.support.read',
+    'platform.support.write',
+    'platform.risk.read',
+    'platform.compliance.read',
+    'platform.finance.read'
   )
 WHERE LOWER(r.code) = 'support_agent'
 ON CONFLICT DO NOTHING;
@@ -84,9 +126,17 @@ INNER JOIN platform_admin_permissions p
     'platform.dashboard.read',
     'platform.plans.read',
     'platform.plans.write',
+    'platform.analytics.read',
     'platform.subscriptions.read',
     'platform.subscriptions.write',
-    'platform.audit.read'
+    'platform.health.read',
+    'platform.audit.read',
+    'platform.automation.read',
+    'platform.support.read',
+    'platform.risk.read',
+    'platform.compliance.read',
+    'platform.finance.read',
+    'platform.finance.write'
   )
 WHERE LOWER(r.code) = 'finance_admin'
 ON CONFLICT DO NOTHING;
@@ -100,8 +150,16 @@ INNER JOIN platform_admin_permissions p
     'platform.stores.read',
     'platform.subscriptions.read',
     'platform.domains.read',
+    'platform.analytics.read',
+    'platform.health.read',
+    'platform.notes.read',
     'platform.audit.read',
-    'platform.plans.read'
+    'platform.plans.read',
+    'platform.automation.read',
+    'platform.support.read',
+    'platform.risk.read',
+    'platform.compliance.read',
+    'platform.finance.read'
   )
 WHERE LOWER(r.code) = 'auditor'
 ON CONFLICT DO NOTHING;

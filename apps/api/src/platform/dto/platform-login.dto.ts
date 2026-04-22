@@ -1,4 +1,4 @@
-﻿import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString, Length, MaxLength, MinLength } from 'class-validator';
 
 export class PlatformLoginDto {
   @IsEmail()
@@ -9,4 +9,9 @@ export class PlatformLoginDto {
   @MinLength(8)
   @MaxLength(128)
   password!: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(6, 6)
+  otpCode?: string;
 }
