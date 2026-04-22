@@ -52,6 +52,7 @@ export class DomainsService {
     input: CreateDomainDto,
     context: RequestContextData,
   ): Promise<StoreDomainResponse> {
+    await this.saasService.assertFeatureEnabled(currentUser.storeId, 'custom_domains');
     await this.saasService.assertMetricCanGrow(currentUser.storeId, 'domains.total', 1);
 
     const verificationToken = this.generateVerificationToken();

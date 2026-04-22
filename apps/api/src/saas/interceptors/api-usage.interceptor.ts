@@ -1,4 +1,10 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
@@ -8,10 +14,24 @@ import { SaasService } from '../saas.service';
 export class ApiUsageInterceptor implements NestInterceptor {
   constructor(private readonly saasService: SaasService) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+  async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<unknown>> {
     const request = context.switchToHttp().getRequest<Request & { storeId?: string }>();
     const storeId = request.storeId;
     const shouldTrack = Boolean(storeId) && this.shouldTrackRequest(request);
+
+    if (shouldTrack && storeId) {
+      try {
+        await this.saasService.assertFeatureEnabled(storeId, 'api_access');
+        await this.saasService.assertMetricCanGrow(storeId, 'api_calls.monthly', 1);
+      } catch (error) {
+        if (error instanceof UnprocessableEntityException) {
+          throw new UnprocessableEntityException(
+            'API quota reached for your current plan. Please upgrade to continue.',
+          );
+        }
+        throw error;
+      }
+    }
 
     return next.handle().pipe(
       tap({

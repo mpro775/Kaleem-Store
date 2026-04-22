@@ -1452,3 +1452,85 @@ export interface LoyaltyLedgerEntry {
   createdByStoreUserId: string | null;
   createdAt: string;
 }
+
+export type SubscriptionBillingCycle = 'monthly' | 'annual' | 'manual';
+
+export interface PlanLimitView {
+  metricKey: string;
+  metricLimit: number | null;
+  resetPeriod: 'monthly' | 'lifetime';
+}
+
+export interface PlanEntitlementView {
+  featureKey: string;
+  isEnabled: boolean;
+}
+
+export interface BillingPlanView {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+  monthlyPrice: number | null;
+  annualPrice: number | null;
+  currencyCode: string;
+  billingCycleOptions: string[];
+  trialDaysDefault: number;
+  limits: PlanLimitView[];
+  entitlements: PlanEntitlementView[];
+}
+
+export interface StoreSubscriptionView {
+  id: string;
+  storeId: string;
+  status: string;
+  startsAt: string;
+  currentPeriodEnd: string | null;
+  trialEndsAt: string | null;
+  billingCycle: SubscriptionBillingCycle;
+  nextBillingAt: string | null;
+  cancelAtPeriodEnd: boolean;
+  canceledAt: string | null;
+  plan: {
+    id: string;
+    code: string;
+    name: string;
+    description: string | null;
+    isActive: boolean;
+    monthlyPrice: number | null;
+    annualPrice: number | null;
+    currencyCode: string;
+  };
+  limits: PlanLimitView[];
+  entitlements: PlanEntitlementView[];
+  usage: Array<{
+    metricKey: string;
+    used: number;
+    limit: number | null;
+    resetPeriod: 'monthly' | 'lifetime';
+  }>;
+}
+
+export interface SubscriptionInvoiceView {
+  id: string;
+  invoiceNumber: string;
+  billingCycle: 'monthly' | 'annual' | 'proration' | 'manual';
+  subtotalAmount: number;
+  taxAmount: number;
+  totalAmount: number;
+  currencyCode: string;
+  status: 'draft' | 'open' | 'paid' | 'failed' | 'void';
+  dueAt: string | null;
+  paidAt: string | null;
+  periodStart: string;
+  periodEnd: string;
+  createdAt: string;
+}
+
+export interface BillingInvoicesPage {
+  items: SubscriptionInvoiceView[];
+  total: number;
+  page: number;
+  limit: number;
+}

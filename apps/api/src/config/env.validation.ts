@@ -102,6 +102,7 @@ export const envValidationSchema = Joi.object({
     .default('https://api.resend.com'),
   RESEND_API_KEY: Joi.string().allow('').default(''),
   WEBHOOK_SECRET: Joi.string().min(16).default('kaleem-local-webhook-secret'),
+  BILLING_WEBHOOK_SECRET: Joi.string().min(16).default('kaleem-local-billing-webhook-secret'),
   JWT_CUSTOMER_ACCESS_SECRET: Joi.string()
     .min(24)
     .default('kaleem-local-customer-access-secret-change-me'),

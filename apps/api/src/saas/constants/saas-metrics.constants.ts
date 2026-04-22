@@ -13,6 +13,20 @@ export const LIMIT_RESET_PERIODS = ['lifetime', 'monthly'] as const;
 export type SaasMetricKey = (typeof SAAS_METRICS)[number];
 export type LimitResetPeriod = (typeof LIMIT_RESET_PERIODS)[number];
 
+export const SAAS_FEATURES = [
+  'custom_domains',
+  'advanced_promotions',
+  'priority_support',
+  'advanced_analytics',
+  'api_access',
+  'webhooks_access',
+  'staff_management',
+  'affiliate_program',
+  'loyalty_program',
+] as const;
+
+export type SaasFeatureKey = (typeof SAAS_FEATURES)[number];
+
 export const METRIC_DISPLAY_NAMES: Record<SaasMetricKey, string> = {
   'products.total': 'Products',
   'orders.monthly': 'Monthly Orders',
@@ -21,6 +35,18 @@ export const METRIC_DISPLAY_NAMES: Record<SaasMetricKey, string> = {
   'storage.used': 'Storage (MB)',
   'api_calls.monthly': 'Monthly API Calls',
   'webhooks.monthly': 'Monthly Webhooks',
+};
+
+export const FEATURE_DISPLAY_NAMES: Record<SaasFeatureKey, string> = {
+  custom_domains: 'Custom Domains',
+  advanced_promotions: 'Advanced Promotions',
+  priority_support: 'Priority Support',
+  advanced_analytics: 'Advanced Analytics',
+  api_access: 'API Access',
+  webhooks_access: 'Webhooks Access',
+  staff_management: 'Staff Management',
+  affiliate_program: 'Affiliate Program',
+  loyalty_program: 'Loyalty Program',
 };
 
 export const DEFAULT_PLAN_LIMITS: Record<
@@ -53,5 +79,41 @@ export const DEFAULT_PLAN_LIMITS: Record<
     'storage.used': { limit: 50000, resetPeriod: 'lifetime' },
     'api_calls.monthly': { limit: null, resetPeriod: 'monthly' },
     'webhooks.monthly': { limit: null, resetPeriod: 'monthly' },
+  },
+};
+
+export const DEFAULT_PLAN_ENTITLEMENTS: Record<string, Record<SaasFeatureKey, boolean>> = {
+  free: {
+    custom_domains: true,
+    advanced_promotions: false,
+    priority_support: false,
+    advanced_analytics: false,
+    api_access: true,
+    webhooks_access: true,
+    staff_management: true,
+    affiliate_program: false,
+    loyalty_program: false,
+  },
+  pro: {
+    custom_domains: true,
+    advanced_promotions: true,
+    priority_support: false,
+    advanced_analytics: true,
+    api_access: true,
+    webhooks_access: true,
+    staff_management: true,
+    affiliate_program: true,
+    loyalty_program: true,
+  },
+  business: {
+    custom_domains: true,
+    advanced_promotions: true,
+    priority_support: true,
+    advanced_analytics: true,
+    api_access: true,
+    webhooks_access: true,
+    staff_management: true,
+    affiliate_program: true,
+    loyalty_program: true,
   },
 };

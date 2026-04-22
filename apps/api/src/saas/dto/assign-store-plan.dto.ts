@@ -16,4 +16,8 @@ export class AssignStorePlanDto {
   @Min(1)
   @Max(60)
   trialDays?: number;
+
+  @IsOptional()
+  @IsIn(['monthly', 'annual', 'manual'])
+  billingCycle?: 'monthly' | 'annual' | 'manual';
 }

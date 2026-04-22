@@ -30,6 +30,7 @@ const ACTIVE_USER = {
 const state = {
   plans: new Map(),
   planLimits: new Map(),
+  planEntitlements: new Map(),
   subscriptions: new Map(),
   stores: new Map(),
   domains: [],
@@ -52,6 +53,12 @@ const saasRepositoryMock = {
       name: input.name,
       description: input.description,
       is_active: input.isActive,
+      monthly_price: input.monthlyPrice?.toString() ?? null,
+      annual_price: input.annualPrice?.toString() ?? null,
+      currency_code: input.currencyCode ?? 'USD',
+      billing_cycle_options: input.billingCycleOptions ?? ['monthly'],
+      trial_days_default: input.trialDaysDefault ?? 0,
+      metadata: input.metadata ?? {},
     };
     state.plans.set(row.id, row);
     return row;
@@ -67,6 +74,12 @@ const saasRepositoryMock = {
       name: input.name,
       description: input.description,
       is_active: input.isActive,
+      monthly_price: input.monthlyPrice?.toString() ?? null,
+      annual_price: input.annualPrice?.toString() ?? null,
+      currency_code: input.currencyCode ?? 'USD',
+      billing_cycle_options: input.billingCycleOptions ?? ['monthly'],
+      trial_days_default: input.trialDaysDefault ?? 0,
+      metadata: input.metadata ?? {},
     };
     state.plans.set(updated.id, updated);
     return updated;
@@ -86,6 +99,20 @@ const saasRepositoryMock = {
       })),
     );
   },
+  async listPlanEntitlements(planId) {
+    return state.planEntitlements.get(planId) ?? [];
+  },
+  async replacePlanEntitlements(_db, planId, entitlements) {
+    state.planEntitlements.set(
+      planId,
+      entitlements.map((entitlement) => ({
+        id: randomUUID(),
+        plan_id: planId,
+        feature_key: entitlement.featureKey,
+        is_enabled: entitlement.isEnabled,
+      })),
+    );
+  },
   async withTransaction(callback) {
     return callback({ query: async () => ({ rows: [], rowCount: 0 }) });
   },
@@ -102,6 +129,9 @@ const saasRepositoryMock = {
       plan_name: plan.name,
       plan_description: plan.description,
       plan_is_active: plan.is_active,
+      plan_monthly_price: plan.monthly_price ?? null,
+      plan_annual_price: plan.annual_price ?? null,
+      plan_currency_code: plan.currency_code ?? 'USD',
     };
   },
   async replaceCurrentSubscription(input) {
@@ -113,6 +143,12 @@ const saasRepositoryMock = {
       starts_at: input.startsAt,
       current_period_end: input.currentPeriodEnd,
       trial_ends_at: input.trialEndsAt,
+      billing_cycle: input.billingCycle ?? 'monthly',
+      next_billing_at: input.nextBillingAt ?? null,
+      cancel_at_period_end: input.cancelAtPeriodEnd ?? false,
+      canceled_at: input.canceledAt ?? null,
+      provider_customer_id: input.providerCustomerId ?? null,
+      provider_subscription_id: input.providerSubscriptionId ?? null,
     });
   },
   async recordUsageEvent() {
@@ -126,6 +162,18 @@ const saasRepositoryMock = {
   },
   async countOrdersForMonth() {
     return 7;
+  },
+  async countDomains() {
+    return 1;
+  },
+  async getStorageUsedBytes() {
+    return 1024 * 1024 * 500;
+  },
+  async countApiCallsForMonth() {
+    return 250;
+  },
+  async countWebhooksForMonth() {
+    return 12;
   },
   async listPlatformStores({ q }) {
     const rows = [...state.stores.values()].filter(
@@ -162,6 +210,9 @@ const saasRepositoryMock = {
         starts_at: sub.starts_at,
         current_period_end: sub.current_period_end,
         trial_ends_at: sub.trial_ends_at,
+        billing_cycle: sub.billing_cycle ?? 'monthly',
+        next_billing_at: sub.next_billing_at ?? null,
+        cancel_at_period_end: sub.cancel_at_period_end ?? false,
       });
     }
     return { rows, total: rows.length };
@@ -224,6 +275,7 @@ describe('Sprint 6 SaaS platform e2e', () => {
   beforeEach(() => {
     state.plans.clear();
     state.planLimits.clear();
+    state.planEntitlements.clear();
     state.subscriptions.clear();
     state.stores.clear();
     state.domains.length = 0;
@@ -234,6 +286,12 @@ describe('Sprint 6 SaaS platform e2e', () => {
       name: 'Free',
       description: 'Starter',
       is_active: true,
+      monthly_price: null,
+      annual_price: null,
+      currency_code: 'USD',
+      billing_cycle_options: ['monthly'],
+      trial_days_default: 0,
+      metadata: {},
     };
     state.plans.set(freePlan.id, freePlan);
     state.planLimits.set(freePlan.id, [
@@ -250,6 +308,68 @@ describe('Sprint 6 SaaS platform e2e', () => {
         metric_key: 'orders.monthly',
         metric_limit: 100,
         reset_period: 'monthly',
+      },
+    ]);
+    state.planEntitlements.set(freePlan.id, [
+      {
+        id: randomUUID(),
+        plan_id: freePlan.id,
+        feature_key: 'custom_domains',
+        is_enabled: true,
+      },
+      {
+        id: randomUUID(),
+        plan_id: freePlan.id,
+        feature_key: 'advanced_promotions',
+        is_enabled: false,
+      },
+      {
+        id: randomUUID(),
+        plan_id: freePlan.id,
+        feature_key: 'priority_support',
+        is_enabled: false,
+      },
+      {
+        id: randomUUID(),
+        plan_id: freePlan.id,
+        feature_key: 'advanced_analytics',
+        is_enabled: false,
+      },
+      {
+        id: randomUUID(),
+        plan_id: freePlan.id,
+        feature_key: 'api_access',
+        is_enabled: true,
+      },
+      {
+        id: randomUUID(),
+        plan_id: freePlan.id,
+        feature_key: 'webhooks_access',
+        is_enabled: false,
+      },
+      {
+        id: randomUUID(),
+        plan_id: freePlan.id,
+        feature_key: 'staff_management',
+        is_enabled: true,
+      },
+      {
+        id: randomUUID(),
+        plan_id: freePlan.id,
+        feature_key: 'affiliate_program',
+        is_enabled: false,
+      },
+      {
+        id: randomUUID(),
+        plan_id: freePlan.id,
+        feature_key: 'loyalty_program',
+        is_enabled: false,
+      },
+      {
+        id: randomUUID(),
+        plan_id: freePlan.id,
+        feature_key: 'affiliates',
+        is_enabled: false,
       },
     ]);
 
@@ -291,10 +411,30 @@ describe('Sprint 6 SaaS platform e2e', () => {
           code: 'starter-plus',
           name: 'Starter Plus',
           description: 'Starter plus limits',
+          monthlyPrice: 19,
+          annualPrice: 190,
+          currencyCode: 'USD',
+          billingCycleOptions: ['monthly', 'annual'],
+          trialDaysDefault: 7,
           limits: [
             { metricKey: 'products.total', metricLimit: 250, resetPeriod: 'lifetime' },
             { metricKey: 'orders.monthly', metricLimit: 400, resetPeriod: 'monthly' },
             { metricKey: 'staff.total', metricLimit: 2, resetPeriod: 'lifetime' },
+            { metricKey: 'domains.total', metricLimit: 1, resetPeriod: 'lifetime' },
+            { metricKey: 'storage.used', metricLimit: 5, resetPeriod: 'lifetime' },
+            { metricKey: 'api_calls.monthly', metricLimit: 5000, resetPeriod: 'monthly' },
+            { metricKey: 'webhooks.monthly', metricLimit: 200, resetPeriod: 'monthly' },
+          ],
+          entitlements: [
+            { featureKey: 'custom_domains', isEnabled: true },
+            { featureKey: 'advanced_promotions', isEnabled: true },
+            { featureKey: 'priority_support', isEnabled: false },
+            { featureKey: 'advanced_analytics', isEnabled: true },
+            { featureKey: 'api_access', isEnabled: true },
+            { featureKey: 'webhooks_access', isEnabled: true },
+            { featureKey: 'staff_management', isEnabled: true },
+            { featureKey: 'affiliate_program', isEnabled: false },
+            { featureKey: 'loyalty_program', isEnabled: true },
           ],
         }),
       },
@@ -303,7 +443,7 @@ describe('Sprint 6 SaaS platform e2e', () => {
     );
 
     assert.equal(createdPlan.code, 'starter-plus');
-    assert.equal(createdPlan.limits.length, 3);
+    assert.equal(createdPlan.limits.length, 7);
 
     const assigned = await requestJson(
       `/platform/stores/${STORE_ID}/subscription`,

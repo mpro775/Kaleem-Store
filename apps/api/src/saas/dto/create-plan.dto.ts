@@ -4,12 +4,16 @@ import {
   ArrayMinSize,
   IsArray,
   IsBoolean,
+  IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   Matches,
+  Min,
   MaxLength,
   ValidateNested,
 } from 'class-validator';
+import { UpsertPlanEntitlementDto } from './upsert-plan-entitlement.dto';
 import { UpsertPlanLimitDto } from './upsert-plan-limit.dto';
 
 export class CreatePlanDto {
@@ -31,10 +35,45 @@ export class CreatePlanDto {
   @IsBoolean()
   isActive?: boolean;
 
+  @IsOptional()
+  @IsString()
+  @Matches(/^[A-Z]{3}$/)
+  currencyCode?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  monthlyPrice?: number | null;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  annualPrice?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  trialDaysDefault?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(2)
+  @IsString({ each: true })
+  @Matches(/^(monthly|annual)$/, { each: true })
+  billingCycleOptions?: Array<'monthly' | 'annual'>;
+
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(20)
   @ValidateNested({ each: true })
   @Type(() => UpsertPlanLimitDto)
   limits!: UpsertPlanLimitDto[];
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(20)
+  @ValidateNested({ each: true })
+  @Type(() => UpsertPlanEntitlementDto)
+  entitlements!: UpsertPlanEntitlementDto[];
 }

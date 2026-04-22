@@ -14,6 +14,7 @@ import {
 import type { CreateAdvancedOfferDto } from './dto/create-advanced-offer.dto';
 import type { UpdateAdvancedOfferDto } from './dto/update-advanced-offer.dto';
 import { AdvancedOffersRepository, type AdvancedOfferRecord } from './advanced-offers.repository';
+import { SaasService } from '../saas/saas.service';
 
 export interface AdvancedOfferResponse {
   id: string;
@@ -40,6 +41,7 @@ export class AdvancedOffersService {
   constructor(
     private readonly advancedOffersRepository: AdvancedOffersRepository,
     private readonly auditService: AuditService,
+    private readonly saasService: SaasService,
   ) {}
 
   async create(
@@ -47,6 +49,7 @@ export class AdvancedOffersService {
     input: CreateAdvancedOfferDto,
     context: RequestContextData,
   ): Promise<AdvancedOfferResponse> {
+    await this.saasService.assertFeatureEnabled(currentUser.storeId, 'advanced_promotions');
     this.validateInput(input.offerType, input.config, input.startsAt, input.endsAt);
 
     const created = await this.advancedOffersRepository.create({
@@ -76,6 +79,7 @@ export class AdvancedOffersService {
     input: UpdateAdvancedOfferDto,
     context: RequestContextData,
   ): Promise<AdvancedOfferResponse> {
+    await this.saasService.assertFeatureEnabled(currentUser.storeId, 'advanced_promotions');
     const existing = await this.advancedOffersRepository.findById(currentUser.storeId, offerId);
     if (!existing) {
       throw new NotFoundException('Advanced offer not found');

@@ -187,6 +187,7 @@ export class WebhooksService {
     eventType: WebhookEventType,
     data: Record<string, unknown>,
   ): Promise<number> {
+    await this.saasService.assertFeatureEnabled(storeId, 'webhooks_access');
     this.assertEventTypes([eventType]);
     const endpoints = await this.webhooksRepository.listActiveEndpointsForEvent(storeId, eventType);
     if (endpoints.length > 0) {

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { DatabaseService } from '../database/database.service';
-import type { LimitResetPeriod } from './constants/saas-metrics.constants';
+import type { LimitResetPeriod, SaasFeatureKey } from './constants/saas-metrics.constants';
 
 interface Queryable {
   query: <T = unknown>(
@@ -16,6 +16,12 @@ export interface PlanRecord {
   name: string;
   description: string | null;
   is_active: boolean;
+  monthly_price: string | null;
+  annual_price: string | null;
+  currency_code: string;
+  billing_cycle_options: string[];
+  trial_days_default: number;
+  metadata: Record<string, unknown>;
 }
 
 export interface PlanLimitRecord {
@@ -26,6 +32,13 @@ export interface PlanLimitRecord {
   reset_period: LimitResetPeriod;
 }
 
+export interface PlanEntitlementRecord {
+  id: string;
+  plan_id: string;
+  feature_key: SaasFeatureKey;
+  is_enabled: boolean;
+}
+
 export interface CurrentSubscriptionRecord {
   id: string;
   store_id: string;
@@ -34,10 +47,19 @@ export interface CurrentSubscriptionRecord {
   starts_at: Date;
   current_period_end: Date | null;
   trial_ends_at: Date | null;
+  billing_cycle: 'monthly' | 'annual' | 'manual';
+  cancel_at_period_end: boolean;
+  canceled_at: Date | null;
+  next_billing_at: Date | null;
+  provider_customer_id: string | null;
+  provider_subscription_id: string | null;
   plan_code: string;
   plan_name: string;
   plan_description: string | null;
   plan_is_active: boolean;
+  plan_monthly_price: string | null;
+  plan_annual_price: string | null;
+  plan_currency_code: string;
 }
 
 export interface PlatformStoreRecord {
@@ -64,6 +86,9 @@ export interface PlatformSubscriptionRecord {
   starts_at: Date;
   current_period_end: Date | null;
   trial_ends_at: Date | null;
+  billing_cycle: 'monthly' | 'annual' | 'manual';
+  next_billing_at: Date | null;
+  cancel_at_period_end: boolean;
 }
 
 export interface PlatformDomainRecord {
@@ -76,17 +101,81 @@ export interface PlatformDomainRecord {
   updated_at: Date;
 }
 
+export interface SubscriptionInvoiceRecord {
+  id: string;
+  store_id: string;
+  subscription_id: string;
+  plan_id: string;
+  invoice_number: string;
+  billing_cycle: 'monthly' | 'annual' | 'proration' | 'manual';
+  period_start: Date;
+  period_end: Date;
+  subtotal_amount: string;
+  tax_amount: string;
+  total_amount: string;
+  currency_code: string;
+  status: 'draft' | 'open' | 'paid' | 'failed' | 'void';
+  due_at: Date | null;
+  paid_at: Date | null;
+  external_invoice_id: string | null;
+  metadata: Record<string, unknown>;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface SubscriptionPaymentRecord {
+  id: string;
+  invoice_id: string;
+  store_id: string;
+  provider: string;
+  payment_method: string | null;
+  status: 'pending' | 'succeeded' | 'failed' | 'refunded';
+  amount: string;
+  currency_code: string;
+  external_transaction_id: string | null;
+  failure_reason: string | null;
+  processed_at: Date | null;
+  metadata: Record<string, unknown>;
+  created_at: Date;
+}
+
+export interface BillingEventRecord {
+  id: string;
+  store_id: string | null;
+  source: 'provider_webhook' | 'internal_admin' | 'merchant_action' | 'system_scheduler';
+  event_type: string;
+  idempotency_key: string | null;
+  payload: Record<string, unknown>;
+  status: 'received' | 'processed' | 'failed' | 'ignored';
+  processing_error: string | null;
+  processed_at: Date | null;
+  created_at: Date;
+}
+
 @Injectable()
 export class SaasRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  async listPlans(): Promise<PlanRecord[]> {
+  async listPlans(options?: { onlyActive?: boolean }): Promise<PlanRecord[]> {
     const result = await this.databaseService.db.query<PlanRecord>(
       `
-        SELECT id, code, name, description, is_active
+        SELECT
+          id,
+          code,
+          name,
+          description,
+          is_active,
+          monthly_price,
+          annual_price,
+          currency_code,
+          billing_cycle_options,
+          trial_days_default,
+          metadata
         FROM plans
+        WHERE ($1::boolean = FALSE OR is_active = TRUE)
         ORDER BY created_at ASC
       `,
+      [Boolean(options?.onlyActive)],
     );
     return result.rows;
   }
@@ -94,7 +183,18 @@ export class SaasRepository {
   async findPlanByCode(code: string): Promise<PlanRecord | null> {
     const result = await this.databaseService.db.query<PlanRecord>(
       `
-        SELECT id, code, name, description, is_active
+        SELECT
+          id,
+          code,
+          name,
+          description,
+          is_active,
+          monthly_price,
+          annual_price,
+          currency_code,
+          billing_cycle_options,
+          trial_days_default,
+          metadata
         FROM plans
         WHERE LOWER(code) = LOWER($1)
         LIMIT 1
@@ -107,7 +207,18 @@ export class SaasRepository {
   async findPlanById(planId: string): Promise<PlanRecord | null> {
     const result = await this.databaseService.db.query<PlanRecord>(
       `
-        SELECT id, code, name, description, is_active
+        SELECT
+          id,
+          code,
+          name,
+          description,
+          is_active,
+          monthly_price,
+          annual_price,
+          currency_code,
+          billing_cycle_options,
+          trial_days_default,
+          metadata
         FROM plans
         WHERE id = $1
         LIMIT 1
@@ -123,17 +234,58 @@ export class SaasRepository {
       name: string;
       description: string | null;
       isActive: boolean;
+      monthlyPrice: number | null;
+      annualPrice: number | null;
+      currencyCode: string;
+      billingCycleOptions: string[];
+      trialDaysDefault: number;
+      metadata: Record<string, unknown>;
     },
     db?: Queryable,
   ): Promise<PlanRecord> {
     const queryable = db ?? this.databaseService.db;
     const result = await queryable.query<PlanRecord>(
       `
-        INSERT INTO plans (id, code, name, description, is_active)
-        VALUES ($1, $2, $3, $4, $5)
-        RETURNING id, code, name, description, is_active
+        INSERT INTO plans (
+          id,
+          code,
+          name,
+          description,
+          is_active,
+          monthly_price,
+          annual_price,
+          currency_code,
+          billing_cycle_options,
+          trial_days_default,
+          metadata
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::text[], $10, $11::jsonb)
+        RETURNING
+          id,
+          code,
+          name,
+          description,
+          is_active,
+          monthly_price,
+          annual_price,
+          currency_code,
+          billing_cycle_options,
+          trial_days_default,
+          metadata
       `,
-      [uuidv4(), input.code, input.name, input.description, input.isActive],
+      [
+        uuidv4(),
+        input.code,
+        input.name,
+        input.description,
+        input.isActive,
+        input.monthlyPrice,
+        input.annualPrice,
+        input.currencyCode,
+        input.billingCycleOptions,
+        input.trialDaysDefault,
+        JSON.stringify(input.metadata),
+      ],
     );
     return result.rows[0] as PlanRecord;
   }
@@ -144,6 +296,12 @@ export class SaasRepository {
       name: string;
       description: string | null;
       isActive: boolean;
+      monthlyPrice: number | null;
+      annualPrice: number | null;
+      currencyCode: string;
+      billingCycleOptions: string[];
+      trialDaysDefault: number;
+      metadata: Record<string, unknown>;
     },
     db?: Queryable,
   ): Promise<PlanRecord | null> {
@@ -154,11 +312,39 @@ export class SaasRepository {
         SET name = $2,
             description = $3,
             is_active = $4,
+            monthly_price = $5,
+            annual_price = $6,
+            currency_code = $7,
+            billing_cycle_options = $8::text[],
+            trial_days_default = $9,
+            metadata = $10::jsonb,
             updated_at = NOW()
         WHERE id = $1
-        RETURNING id, code, name, description, is_active
+        RETURNING
+          id,
+          code,
+          name,
+          description,
+          is_active,
+          monthly_price,
+          annual_price,
+          currency_code,
+          billing_cycle_options,
+          trial_days_default,
+          metadata
       `,
-      [input.planId, input.name, input.description, input.isActive],
+      [
+        input.planId,
+        input.name,
+        input.description,
+        input.isActive,
+        input.monthlyPrice,
+        input.annualPrice,
+        input.currencyCode,
+        input.billingCycleOptions,
+        input.trialDaysDefault,
+        JSON.stringify(input.metadata),
+      ],
     );
     return result.rows[0] ?? null;
   }
@@ -200,6 +386,43 @@ export class SaasRepository {
     }
   }
 
+  async listPlanEntitlements(planId: string): Promise<PlanEntitlementRecord[]> {
+    const result = await this.databaseService.db.query<PlanEntitlementRecord>(
+      `
+        SELECT id, plan_id, feature_key, is_enabled
+        FROM plan_entitlements
+        WHERE plan_id = $1
+        ORDER BY feature_key ASC
+      `,
+      [planId],
+    );
+    return result.rows;
+  }
+
+  async replacePlanEntitlements(
+    db: Queryable,
+    planId: string,
+    entitlements: Array<{ featureKey: SaasFeatureKey; isEnabled: boolean }>,
+  ): Promise<void> {
+    await db.query(
+      `
+        DELETE FROM plan_entitlements
+        WHERE plan_id = $1
+      `,
+      [planId],
+    );
+
+    for (const entitlement of entitlements) {
+      await db.query(
+        `
+          INSERT INTO plan_entitlements (id, plan_id, feature_key, is_enabled)
+          VALUES ($1, $2, $3, $4)
+        `,
+        [uuidv4(), planId, entitlement.featureKey, entitlement.isEnabled],
+      );
+    }
+  }
+
   async withTransaction<T>(callback: (db: Queryable) => Promise<T>): Promise<T> {
     const client = await this.databaseService.db.connect();
     try {
@@ -226,10 +449,19 @@ export class SaasRepository {
           ss.starts_at,
           ss.current_period_end,
           ss.trial_ends_at,
+          ss.billing_cycle,
+          ss.cancel_at_period_end,
+          ss.canceled_at,
+          ss.next_billing_at,
+          ss.provider_customer_id,
+          ss.provider_subscription_id,
           p.code AS plan_code,
           p.name AS plan_name,
           p.description AS plan_description,
-          p.is_active AS plan_is_active
+          p.is_active AS plan_is_active,
+          p.monthly_price AS plan_monthly_price,
+          p.annual_price AS plan_annual_price,
+          p.currency_code AS plan_currency_code
         FROM store_subscriptions ss
         INNER JOIN plans p
           ON p.id = ss.plan_id
@@ -249,6 +481,12 @@ export class SaasRepository {
     startsAt: Date;
     currentPeriodEnd: Date | null;
     trialEndsAt: Date | null;
+    billingCycle: 'monthly' | 'annual' | 'manual';
+    nextBillingAt: Date | null;
+    cancelAtPeriodEnd?: boolean;
+    canceledAt?: Date | null;
+    providerCustomerId?: string | null;
+    providerSubscriptionId?: string | null;
   }): Promise<void> {
     await this.withTransaction(async (db) => {
       await db.query(
@@ -272,8 +510,14 @@ export class SaasRepository {
             starts_at,
             current_period_end,
             trial_ends_at,
+            billing_cycle,
+            cancel_at_period_end,
+            canceled_at,
+            next_billing_at,
+            provider_customer_id,
+            provider_subscription_id,
             is_current
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE)
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, TRUE)
         `,
         [
           uuidv4(),
@@ -283,9 +527,139 @@ export class SaasRepository {
           input.startsAt,
           input.currentPeriodEnd,
           input.trialEndsAt,
+          input.billingCycle,
+          input.cancelAtPeriodEnd ?? false,
+          input.canceledAt ?? null,
+          input.nextBillingAt,
+          input.providerCustomerId ?? null,
+          input.providerSubscriptionId ?? null,
         ],
       );
     });
+  }
+
+  async updateCurrentSubscriptionBilling(input: {
+    storeId: string;
+    billingCycle?: 'monthly' | 'annual' | 'manual';
+    currentPeriodEnd?: Date | null;
+    nextBillingAt?: Date | null;
+    cancelAtPeriodEnd?: boolean;
+    canceledAt?: Date | null;
+    providerCustomerId?: string | null;
+    providerSubscriptionId?: string | null;
+  }): Promise<boolean> {
+    const assignments: string[] = ['updated_at = NOW()'];
+    const values: unknown[] = [input.storeId];
+
+    const append = (column: string, value: unknown) => {
+      values.push(value);
+      assignments.push(`${column} = $${values.length}`);
+    };
+
+    if (input.billingCycle !== undefined) {
+      append('billing_cycle', input.billingCycle);
+    }
+    if (input.currentPeriodEnd !== undefined) {
+      append('current_period_end', input.currentPeriodEnd);
+    }
+    if (input.nextBillingAt !== undefined) {
+      append('next_billing_at', input.nextBillingAt);
+    }
+    if (input.cancelAtPeriodEnd !== undefined) {
+      append('cancel_at_period_end', input.cancelAtPeriodEnd);
+    }
+    if (input.canceledAt !== undefined) {
+      append('canceled_at', input.canceledAt);
+    }
+    if (input.providerCustomerId !== undefined) {
+      append('provider_customer_id', input.providerCustomerId);
+    }
+    if (input.providerSubscriptionId !== undefined) {
+      append('provider_subscription_id', input.providerSubscriptionId);
+    }
+
+    const result = await this.databaseService.db.query(
+      `
+        UPDATE store_subscriptions
+        SET ${assignments.join(', ')}
+        WHERE store_id = $1
+          AND is_current = TRUE
+      `,
+      values,
+    );
+
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async findSubscriptionById(subscriptionId: string): Promise<CurrentSubscriptionRecord | null> {
+    const result = await this.databaseService.db.query<CurrentSubscriptionRecord>(
+      `
+        SELECT
+          ss.id,
+          ss.store_id,
+          ss.plan_id,
+          ss.status,
+          ss.starts_at,
+          ss.current_period_end,
+          ss.trial_ends_at,
+          ss.billing_cycle,
+          ss.cancel_at_period_end,
+          ss.canceled_at,
+          ss.next_billing_at,
+          ss.provider_customer_id,
+          ss.provider_subscription_id,
+          p.code AS plan_code,
+          p.name AS plan_name,
+          p.description AS plan_description,
+          p.is_active AS plan_is_active,
+          p.monthly_price AS plan_monthly_price,
+          p.annual_price AS plan_annual_price,
+          p.currency_code AS plan_currency_code
+        FROM store_subscriptions ss
+        INNER JOIN plans p ON p.id = ss.plan_id
+        WHERE ss.id = $1
+        LIMIT 1
+      `,
+      [subscriptionId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async findCurrentSubscriptionByProviderSubscriptionId(
+    providerSubscriptionId: string,
+  ): Promise<CurrentSubscriptionRecord | null> {
+    const result = await this.databaseService.db.query<CurrentSubscriptionRecord>(
+      `
+        SELECT
+          ss.id,
+          ss.store_id,
+          ss.plan_id,
+          ss.status,
+          ss.starts_at,
+          ss.current_period_end,
+          ss.trial_ends_at,
+          ss.billing_cycle,
+          ss.cancel_at_period_end,
+          ss.canceled_at,
+          ss.next_billing_at,
+          ss.provider_customer_id,
+          ss.provider_subscription_id,
+          p.code AS plan_code,
+          p.name AS plan_name,
+          p.description AS plan_description,
+          p.is_active AS plan_is_active,
+          p.monthly_price AS plan_monthly_price,
+          p.annual_price AS plan_annual_price,
+          p.currency_code AS plan_currency_code
+        FROM store_subscriptions ss
+        INNER JOIN plans p ON p.id = ss.plan_id
+        WHERE ss.provider_subscription_id = $1
+          AND ss.is_current = TRUE
+        LIMIT 1
+      `,
+      [providerSubscriptionId],
+    );
+    return result.rows[0] ?? null;
   }
 
   async recordUsageEvent(input: {
@@ -301,6 +675,416 @@ export class SaasRepository {
       `,
       [uuidv4(), input.storeId, input.metricKey, input.quantity, JSON.stringify(input.metadata)],
     );
+  }
+
+  async createInvoice(input: {
+    storeId: string;
+    subscriptionId: string;
+    planId: string;
+    invoiceNumber: string;
+    billingCycle: 'monthly' | 'annual' | 'proration' | 'manual';
+    periodStart: Date;
+    periodEnd: Date;
+    subtotalAmount: number;
+    taxAmount: number;
+    totalAmount: number;
+    currencyCode: string;
+    status: 'draft' | 'open' | 'paid' | 'failed' | 'void';
+    dueAt: Date | null;
+    paidAt?: Date | null;
+    externalInvoiceId?: string | null;
+    metadata?: Record<string, unknown>;
+  }): Promise<SubscriptionInvoiceRecord> {
+    const result = await this.databaseService.db.query<SubscriptionInvoiceRecord>(
+      `
+        INSERT INTO subscription_invoices (
+          id,
+          store_id,
+          subscription_id,
+          plan_id,
+          invoice_number,
+          billing_cycle,
+          period_start,
+          period_end,
+          subtotal_amount,
+          tax_amount,
+          total_amount,
+          currency_code,
+          status,
+          due_at,
+          paid_at,
+          external_invoice_id,
+          metadata
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8,
+          $9, $10, $11, $12, $13, $14, $15, $16, $17::jsonb
+        )
+        RETURNING
+          id,
+          store_id,
+          subscription_id,
+          plan_id,
+          invoice_number,
+          billing_cycle,
+          period_start,
+          period_end,
+          subtotal_amount,
+          tax_amount,
+          total_amount,
+          currency_code,
+          status,
+          due_at,
+          paid_at,
+          external_invoice_id,
+          metadata,
+          created_at,
+          updated_at
+      `,
+      [
+        uuidv4(),
+        input.storeId,
+        input.subscriptionId,
+        input.planId,
+        input.invoiceNumber,
+        input.billingCycle,
+        input.periodStart,
+        input.periodEnd,
+        input.subtotalAmount,
+        input.taxAmount,
+        input.totalAmount,
+        input.currencyCode,
+        input.status,
+        input.dueAt,
+        input.paidAt ?? null,
+        input.externalInvoiceId ?? null,
+        JSON.stringify(input.metadata ?? {}),
+      ],
+    );
+
+    return result.rows[0] as SubscriptionInvoiceRecord;
+  }
+
+  async findInvoiceById(invoiceId: string): Promise<SubscriptionInvoiceRecord | null> {
+    const result = await this.databaseService.db.query<SubscriptionInvoiceRecord>(
+      `
+        SELECT
+          id,
+          store_id,
+          subscription_id,
+          plan_id,
+          invoice_number,
+          billing_cycle,
+          period_start,
+          period_end,
+          subtotal_amount,
+          tax_amount,
+          total_amount,
+          currency_code,
+          status,
+          due_at,
+          paid_at,
+          external_invoice_id,
+          metadata,
+          created_at,
+          updated_at
+        FROM subscription_invoices
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [invoiceId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async findInvoiceByExternalInvoiceId(externalInvoiceId: string): Promise<SubscriptionInvoiceRecord | null> {
+    const result = await this.databaseService.db.query<SubscriptionInvoiceRecord>(
+      `
+        SELECT
+          id,
+          store_id,
+          subscription_id,
+          plan_id,
+          invoice_number,
+          billing_cycle,
+          period_start,
+          period_end,
+          subtotal_amount,
+          tax_amount,
+          total_amount,
+          currency_code,
+          status,
+          due_at,
+          paid_at,
+          external_invoice_id,
+          metadata,
+          created_at,
+          updated_at
+        FROM subscription_invoices
+        WHERE external_invoice_id = $1
+        LIMIT 1
+      `,
+      [externalInvoiceId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async updateInvoiceStatus(input: {
+    invoiceId: string;
+    status: 'draft' | 'open' | 'paid' | 'failed' | 'void';
+    paidAt?: Date | null;
+    externalInvoiceId?: string | null;
+    metadata?: Record<string, unknown>;
+  }): Promise<boolean> {
+    const result = await this.databaseService.db.query(
+      `
+        UPDATE subscription_invoices
+        SET status = $2,
+            paid_at = $3,
+            external_invoice_id = COALESCE($4, external_invoice_id),
+            metadata = CASE WHEN $5::jsonb = '{}'::jsonb THEN metadata ELSE $5::jsonb END,
+            updated_at = NOW()
+        WHERE id = $1
+      `,
+      [input.invoiceId, input.status, input.paidAt ?? null, input.externalInvoiceId ?? null, JSON.stringify(input.metadata ?? {})],
+    );
+
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async listInvoicesByStore(input: {
+    storeId: string;
+    status: string | null;
+    limit: number;
+    offset: number;
+  }): Promise<{ rows: SubscriptionInvoiceRecord[]; total: number }> {
+    const rowsResult = await this.databaseService.db.query<SubscriptionInvoiceRecord>(
+      `
+        SELECT
+          id,
+          store_id,
+          subscription_id,
+          plan_id,
+          invoice_number,
+          billing_cycle,
+          period_start,
+          period_end,
+          subtotal_amount,
+          tax_amount,
+          total_amount,
+          currency_code,
+          status,
+          due_at,
+          paid_at,
+          external_invoice_id,
+          metadata,
+          created_at,
+          updated_at
+        FROM subscription_invoices
+        WHERE store_id = $1
+          AND ($2::text IS NULL OR status = $2)
+        ORDER BY created_at DESC
+        LIMIT $3 OFFSET $4
+      `,
+      [input.storeId, input.status, input.limit, input.offset],
+    );
+
+    const countResult = await this.databaseService.db.query<{ total: string }>(
+      `
+        SELECT COUNT(*)::text AS total
+        FROM subscription_invoices
+        WHERE store_id = $1
+          AND ($2::text IS NULL OR status = $2)
+      `,
+      [input.storeId, input.status],
+    );
+
+    return {
+      rows: rowsResult.rows,
+      total: Number(countResult.rows[0]?.total ?? '0'),
+    };
+  }
+
+  async createPayment(input: {
+    invoiceId: string;
+    storeId: string;
+    provider: string;
+    paymentMethod: string | null;
+    status: 'pending' | 'succeeded' | 'failed' | 'refunded';
+    amount: number;
+    currencyCode: string;
+    externalTransactionId?: string | null;
+    failureReason?: string | null;
+    processedAt?: Date | null;
+    metadata?: Record<string, unknown>;
+  }): Promise<SubscriptionPaymentRecord> {
+    const result = await this.databaseService.db.query<SubscriptionPaymentRecord>(
+      `
+        INSERT INTO subscription_payments (
+          id,
+          invoice_id,
+          store_id,
+          provider,
+          payment_method,
+          status,
+          amount,
+          currency_code,
+          external_transaction_id,
+          failure_reason,
+          processed_at,
+          metadata
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb)
+        RETURNING
+          id,
+          invoice_id,
+          store_id,
+          provider,
+          payment_method,
+          status,
+          amount,
+          currency_code,
+          external_transaction_id,
+          failure_reason,
+          processed_at,
+          metadata,
+          created_at
+      `,
+      [
+        uuidv4(),
+        input.invoiceId,
+        input.storeId,
+        input.provider,
+        input.paymentMethod,
+        input.status,
+        input.amount,
+        input.currencyCode,
+        input.externalTransactionId ?? null,
+        input.failureReason ?? null,
+        input.processedAt ?? null,
+        JSON.stringify(input.metadata ?? {}),
+      ],
+    );
+
+    return result.rows[0] as SubscriptionPaymentRecord;
+  }
+
+  async findBillingEventBySourceAndIdempotency(
+    source: BillingEventRecord['source'],
+    idempotencyKey: string,
+  ): Promise<BillingEventRecord | null> {
+    const result = await this.databaseService.db.query<BillingEventRecord>(
+      `
+        SELECT
+          id,
+          store_id,
+          source,
+          event_type,
+          idempotency_key,
+          payload,
+          status,
+          processing_error,
+          processed_at,
+          created_at
+        FROM billing_events
+        WHERE source = $1
+          AND idempotency_key = $2
+        LIMIT 1
+      `,
+      [source, idempotencyKey],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async createBillingEvent(input: {
+    storeId: string | null;
+    source: BillingEventRecord['source'];
+    eventType: string;
+    idempotencyKey: string | null;
+    payload: Record<string, unknown>;
+    status: BillingEventRecord['status'];
+    processingError?: string | null;
+    processedAt?: Date | null;
+  }): Promise<BillingEventRecord> {
+    const result = await this.databaseService.db.query<BillingEventRecord>(
+      `
+        INSERT INTO billing_events (
+          id,
+          store_id,
+          source,
+          event_type,
+          idempotency_key,
+          payload,
+          status,
+          processing_error,
+          processed_at
+        ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9)
+        RETURNING
+          id,
+          store_id,
+          source,
+          event_type,
+          idempotency_key,
+          payload,
+          status,
+          processing_error,
+          processed_at,
+          created_at
+      `,
+      [
+        uuidv4(),
+        input.storeId,
+        input.source,
+        input.eventType,
+        input.idempotencyKey,
+        JSON.stringify(input.payload),
+        input.status,
+        input.processingError ?? null,
+        input.processedAt ?? null,
+      ],
+    );
+    return result.rows[0] as BillingEventRecord;
+  }
+
+  async updateBillingEventStatus(input: {
+    billingEventId: string;
+    status: BillingEventRecord['status'];
+    processingError?: string | null;
+    processedAt?: Date | null;
+  }): Promise<boolean> {
+    const result = await this.databaseService.db.query(
+      `
+        UPDATE billing_events
+        SET status = $2,
+            processing_error = $3,
+            processed_at = $4,
+            updated_at = NOW()
+        WHERE id = $1
+      `,
+      [input.billingEventId, input.status, input.processingError ?? null, input.processedAt ?? null],
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async listRecentBillingEvents(limit: number): Promise<BillingEventRecord[]> {
+    const result = await this.databaseService.db.query<BillingEventRecord>(
+      `
+        SELECT
+          id,
+          store_id,
+          source,
+          event_type,
+          idempotency_key,
+          payload,
+          status,
+          processing_error,
+          processed_at,
+          created_at
+        FROM billing_events
+        ORDER BY created_at DESC
+        LIMIT $1
+      `,
+      [limit],
+    );
+    return result.rows;
   }
 
   async countProducts(storeId: string): Promise<number> {
@@ -447,7 +1231,10 @@ export class SaasRepository {
           ss.status,
           ss.starts_at,
           ss.current_period_end,
-          ss.trial_ends_at
+          ss.trial_ends_at,
+          ss.billing_cycle,
+          ss.next_billing_at,
+          ss.cancel_at_period_end
         FROM store_subscriptions ss
         INNER JOIN stores s ON s.id = ss.store_id
         INNER JOIN plans p ON p.id = ss.plan_id

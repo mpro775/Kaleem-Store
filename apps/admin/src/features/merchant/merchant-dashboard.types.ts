@@ -38,7 +38,8 @@ export type MerchantTabKey =
   | 'themes'
   | 'domains'
   | 'staff'
-  | 'webhooks';
+  | 'webhooks'
+  | 'billing';
 
 export type MerchantRequester = <T>(
   path: string,

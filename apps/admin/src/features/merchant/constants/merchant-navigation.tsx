@@ -23,6 +23,7 @@ import StarsIcon from '@mui/icons-material/Stars';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import DescriptionIcon from '@mui/icons-material/Description';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import type { MerchantNavItem, MerchantTabKey } from '../merchant-dashboard.types';
 import { ADMIN_TOKENS } from '../../../theme/tokens';
 
@@ -125,6 +126,7 @@ export const MERCHANT_NAV_ITEMS: MerchantNavItem[] = [
     children: [
       { key: 'store', label: 'إعدادات المتجر', icon: <SettingsIcon /> },
       { key: 'payments', label: 'المدفوعات' },
+      { key: 'billing', label: 'الفوترة والاشتراك', icon: <ReceiptLongIcon /> },
       { key: 'shipping', label: 'الشحن' },
       { key: 'staff', label: 'فريق العمل' },
       { key: 'webhooks', label: 'الربط المتقدم (API)' },

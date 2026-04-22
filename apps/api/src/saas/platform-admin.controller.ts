@@ -26,6 +26,7 @@ import { AssignStorePlanDto } from './dto/assign-store-plan.dto';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { ListPlatformStoresQueryDto } from './dto/list-platform-stores-query.dto';
 import { ListPlatformSubscriptionsQueryDto } from './dto/list-platform-subscriptions-query.dto';
+import { SettleInvoiceDto } from './dto/settle-invoice.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
 import { UpdateStoreSuspensionDto } from './dto/update-store-suspension.dto';
 import { PlatformAdminGuard } from './platform-admin.guard';
@@ -145,5 +146,23 @@ export class PlatformAdminController {
     @Param('planCode') planCode: string,
   ) {
     return this.saasService.canDowngradePlan(storeId, planCode);
+  }
+
+  @Post('invoices/:invoiceId/settle')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ description: 'Settle an invoice manually (succeeded/failed)' })
+  async settleInvoice(
+    @Param('invoiceId', ParseUUIDPipe) invoiceId: string,
+    @Body() body: SettleInvoiceDto,
+    @Req() request: Request,
+  ) {
+    return this.saasService.settleInvoice(invoiceId, body, getRequestContext(request));
+  }
+
+  @Get('billing/events')
+  @ApiOkResponse({ description: 'List recent billing lifecycle events' })
+  async listBillingEvents(@Query('limit') limit?: string) {
+    const parsed = limit ? Number(limit) : 50;
+    return this.saasService.listPlatformBillingEvents(Number.isFinite(parsed) ? parsed : 50);
   }
 }
