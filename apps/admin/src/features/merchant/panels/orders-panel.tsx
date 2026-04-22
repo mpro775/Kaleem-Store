@@ -86,7 +86,7 @@ const paymentStatusOptions: PaymentStatus[] = [
   'refunded',
 ];
 
-const manualSteps = ['Products', 'Customer', 'Payment', 'Summary'];
+const manualSteps = ['المنتجات', 'العميل', 'الدفع', 'الملخص'];
 
 const initialStatusCounts: Record<OrderStatus, number> = {
   new: 0,
@@ -99,13 +99,13 @@ const initialStatusCounts: Record<OrderStatus, number> = {
 };
 
 const statusLabel: Record<OrderStatus, string> = {
-  new: 'New',
-  confirmed: 'Confirmed',
-  preparing: 'Preparing',
-  out_for_delivery: 'Out for delivery',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-  returned: 'Returned',
+  new: 'جديد',
+  confirmed: 'مؤكد',
+  preparing: 'قيد التجهيز',
+  out_for_delivery: 'في الطريق',
+  completed: 'مكتمل',
+  cancelled: 'ملغي',
+  returned: 'مسترجع',
 };
 
 const statusColor: Record<OrderStatus, 'default' | 'info' | 'primary' | 'warning' | 'secondary' | 'success' | 'error'> = {
@@ -257,7 +257,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
     }
   }
 
-  async function updateOrderStatusInline(orderId: string, nextStatus: OrderStatus): Promise<void> {
+  async function updateOrderStatusInline(orderId: string, nextالحالة: OrderStatus): Promise<void> {
     setInlineStatusLoadingId(orderId);
     try {
       await request(`/orders/${orderId}/status`, {
@@ -268,10 +268,10 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
       if (selectedOrder?.id === orderId) {
         await openOrderDetail(orderId);
       }
-      setMessage({ text: 'Order status updated', type: 'success' });
+      setMessage({ text: 'تم تحديث حالة الطلب', type: 'success' });
     } catch (error) {
       setMessage({
-        text: error instanceof Error ? error.message : 'Failed to update order status',
+        text: error instanceof Error ? error.message : 'فشل تحديث حالة الطلب',
         type: 'error',
       });
     } finally {
@@ -315,7 +315,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
       URL.revokeObjectURL(url);
     } catch (error) {
       setMessage({
-        text: error instanceof Error ? error.message : 'Failed to export orders',
+        text: error instanceof Error ? error.message : 'فشل تصدير الطلبات',
         type: 'error',
       });
     }
@@ -459,11 +459,11 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
 
   async function submitManualOrder(): Promise<void> {
     if (!manualCustomer?.id) {
-      setMessage({ text: 'Select customer first', type: 'error' });
+      setMessage({ text: 'اختر العميل أولاً', type: 'error' });
       return;
     }
     if (manualLines.length === 0) {
-      setMessage({ text: 'Add at least one product', type: 'error' });
+      setMessage({ text: 'أضف منتج واحد على الأقل', type: 'error' });
       return;
     }
 
@@ -471,7 +471,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
     try {
       const payload: Record<string, unknown> = {
         customerId: manualCustomer.id,
-        paymentMethod: manualPaymentMethod,
+        paymentالطريقة: manualPaymentMethod,
         lines: manualLines.map((line) => ({
           variantId: line.variantId,
           quantity: line.quantity,
@@ -515,10 +515,10 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
       }
 
       await loadOrders();
-      setMessage({ text: 'Manual order saved successfully', type: 'success' });
+      setMessage({ text: 'تم حفظ الطلب اليدوي بنجاح', type: 'success' });
     } catch (error) {
       setMessage({
-        text: error instanceof Error ? error.message : 'Failed to save manual order',
+        text: error instanceof Error ? error.message : 'فشل حفظ الطلب اليدوي',
         type: 'error',
       });
     } finally {
@@ -570,7 +570,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
     if (selectedOrder.customer.id) {
       const customer = {
         id: selectedOrder.customer.id,
-        fullName: selectedOrder.customer.name ?? 'Customer',
+        fullName: selectedOrder.customer.name ?? 'العميل',
         phone: selectedOrder.customer.phone ?? '',
       };
       setManualCustomer(customer);
@@ -611,7 +611,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
                     Order {selectedOrder.orderCode}
                   </Typography>
                   <Typography color="text.secondary">
-                    Created at {new Date(selectedOrder.createdAt).toLocaleString()}
+                    تاريخ الإنشاء {new Date(selectedOrder.createdAt).toLocaleString()}
                   </Typography>
                 </Box>
                 <Stack direction="row" spacing={1}>
@@ -633,11 +633,11 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell>Product</TableCell>
-                      <TableCell>SKU</TableCell>
-                      <TableCell align="center">Qty</TableCell>
-                      <TableCell align="right">Unit</TableCell>
-                      <TableCell align="right">Line total</TableCell>
+                      <TableCell>المنتج</TableCell>
+                      <TableCell>رمز التخزين (SKU)</TableCell>
+                      <TableCell align="center">الكمية</TableCell>
+                      <TableCell align="right">سعر الوحدة</TableCell>
+                      <TableCell align="right">المجموع</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -661,12 +661,12 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
               </Typography>
               {selectedOrder.payment ? (
                 <Stack spacing={0.75}>
-                  <Typography>Method: {selectedOrder.payment.method}</Typography>
-                  <Typography>Status: {selectedOrder.payment.status}</Typography>
-                  <Typography>Amount: {selectedOrder.payment.amount.toFixed(2)}</Typography>
+                  <Typography>الطريقة: {selectedOrder.payment.method}</Typography>
+                  <Typography>الحالة: {selectedOrder.payment.status}</Typography>
+                  <Typography>المبلغ: {selectedOrder.payment.amount.toFixed(2)}</Typography>
                 </Stack>
               ) : (
-                <Typography color="text.secondary">No payment data</Typography>
+                <Typography color="text.secondary">لا توجد بيانات دفع</Typography>
               )}
             </Paper>
           </Stack>
@@ -688,8 +688,8 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
         </Button>
 
         <PageHeader
-          title={mode === 'create-manual' ? 'Create Manual Order' : 'Edit Manual Order'}
-          description="Create or edit order using products, customer, payment method and final summary."
+          title={mode === 'create-manual' ? 'إنشاء طلب يدوي' : 'تعديل طلب يدوي'}
+          description="إنشاء أو تعديل الطلب باختيار المنتجات، العميل، طريقة الدفع، والملخص."
         />
 
         {message.text ? <Alert severity={message.type}>{message.text}</Alert> : null}
@@ -717,11 +717,11 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
                   <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow>
-                        <TableCell>Product</TableCell>
-                        <TableCell>SKU</TableCell>
-                        <TableCell align="right">Price</TableCell>
-                        <TableCell align="right">Available</TableCell>
-                        <TableCell align="left">Action</TableCell>
+                        <TableCell>المنتج</TableCell>
+                        <TableCell>رمز التخزين (SKU)</TableCell>
+                        <TableCell align="right">السعر</TableCell>
+                        <TableCell align="right">المتاح</TableCell>
+                        <TableCell align="left">الإجراء</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -734,7 +734,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
                       ) : manualProducts.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={5} align="center">
-                            <Typography color="text.secondary">No products found</Typography>
+                            <Typography color="text.secondary">لا توجد منتجات</Typography>
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -744,7 +744,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
                             <TableCell>{product.sku}</TableCell>
                             <TableCell align="right">{product.price.toFixed(2)}</TableCell>
                             <TableCell align="right">
-                              {product.stockUnlimited ? 'Unlimited' : product.availableQuantity}
+                              {product.stockUnlimited ? 'غير محدود' : product.availableQuantity}
                             </TableCell>
                             <TableCell>
                               <Button size="small" onClick={() => addManualProduct(product)}>
@@ -767,11 +767,11 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell>Product</TableCell>
-                        <TableCell>Qty</TableCell>
-                        <TableCell>Unit price</TableCell>
-                        <TableCell>Line discount</TableCell>
-                        <TableCell align="right">Total</TableCell>
+                        <TableCell>المنتج</TableCell>
+                        <TableCell>الكمية</TableCell>
+                        <TableCell>سعر الوحدة</TableCell>
+                        <TableCell>الخصم</TableCell>
+                        <TableCell align="right">الإجمالي</TableCell>
                         <TableCell />
                       </TableRow>
                     </TableHead>
@@ -779,7 +779,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
                       {manualLines.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} align="center">
-                            <Typography color="text.secondary">No lines added</Typography>
+                            <Typography color="text.secondary">لم يتم إضافة منتجات</Typography>
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -854,16 +854,16 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
                   <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow>
-                        <TableCell>Name</TableCell>
-                        <TableCell>Phone</TableCell>
-                        <TableCell align="left">Action</TableCell>
+                        <TableCell>الاسم</TableCell>
+                        <TableCell>الهاتف</TableCell>
+                        <TableCell align="left">الإجراء</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {manualCustomerResults.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={3} align="center">
-                            <Typography color="text.secondary">No customers found</Typography>
+                            <Typography color="text.secondary">لا يوجد عملاء</Typography>
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -887,7 +887,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
               {manualCustomer ? (
                 <Box>
                   <Typography variant="subtitle1" fontWeight={700}>
-                    Selected: {manualCustomer.fullName} ({manualCustomer.phone})
+                    تم الاختيار: {manualCustomer.fullName} ({manualCustomer.phone})
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                     Choose delivery address
@@ -905,7 +905,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
                           {address.area ? ` - ${address.area}` : ''}
                         </Typography>
                         {address.isDefault ? (
-                          <Chip size="small" label="Default" color="primary" sx={{ ml: 1 }} />
+                          <Chip size="small" label="الأساسي" color="primary" sx={{ ml: 1 }} />
                         ) : null}
                       </Box>
                     ))}
@@ -919,7 +919,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
             <Stack spacing={2} maxWidth={420}>
               <TextField
                 select
-                label="Payment method"
+                label="طريقة الدفع"
                 value={manualPaymentMethod}
                 onChange={(event) => setManualPaymentMethod(event.target.value as PaymentMethod)}
               >
@@ -951,9 +951,9 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
                   Order summary preview
                 </Typography>
                 <Stack spacing={0.75}>
-                  <Typography>Subtotal: {manualSubtotal.toFixed(2)}</Typography>
-                  <Typography>Line discounts: {manualLineDiscountTotal.toFixed(2)}</Typography>
-                  <Typography fontWeight={700}>Total before coupon/shipping: {manualPreviewTotal.toFixed(2)}</Typography>
+                  <Typography>المجموع الفرعي: {manualSubtotal.toFixed(2)}</Typography>
+                  <Typography>خصومات المنتجات: {manualLineDiscountTotal.toFixed(2)}</Typography>
+                  <Typography fontWeight={700}>الإجمالي قبل الخصم/الشحن: {manualPreviewTotal.toFixed(2)}</Typography>
                 </Stack>
               </Paper>
             </Stack>
@@ -976,7 +976,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
               </Button>
             ) : (
               <Button variant="contained" onClick={() => submitManualOrder().catch(() => undefined)} disabled={manualSaving}>
-                {manualSaving ? 'Saving...' : 'Confirm order'}
+                {manualSaving ? 'جاري الحفظ...' : 'تأكيد الطلب'}
               </Button>
             )}
           </Stack>
@@ -988,8 +988,8 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
   return (
     <AppPage>
       <PageHeader
-        title="Orders Management"
-        description="Manage orders, update status inline, filter and export by current filters."
+        title="إدارة الطلبات"
+        description="إدارة الطلبات، تحديث الحالة مباشرة، التصفية والتصدير."
         actions={
           <Stack direction="row" spacing={1}>
             <Button startIcon={<DownloadIcon />} variant="outlined" onClick={() => exportExcel().catch(() => undefined)}>
@@ -1015,19 +1015,19 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
 
       <FilterBar>
         <TextField
-          label="Search order/customer/phone"
+          label="البحث برقم الطلب/العميل/الهاتف"
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
           sx={{ minWidth: 260, flex: 1 }}
         />
         <TextField
           select
-          label="Payment method"
+          label="طريقة الدفع"
           value={paymentMethodFilter}
           onChange={(event) => setPaymentMethodFilter(event.target.value)}
           sx={{ minWidth: 180 }}
         >
-          <MenuItem value="">All</MenuItem>
+          <MenuItem value="">الكل</MenuItem>
           {paymentMethodOptions.map((method) => (
             <MenuItem key={method} value={method}>
               {method}
@@ -1036,12 +1036,12 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
         </TextField>
         <TextField
           select
-          label="Payment status"
+          label="حالة الدفع"
           value={paymentStatusFilter}
           onChange={(event) => setPaymentStatusFilter(event.target.value)}
           sx={{ minWidth: 180 }}
         >
-          <MenuItem value="">All</MenuItem>
+          <MenuItem value="">الكل</MenuItem>
           {paymentStatusOptions.map((status) => (
             <MenuItem key={status} value={status}>
               {status}
@@ -1050,7 +1050,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
         </TextField>
         <TextField
           type="date"
-          label="From"
+          label="من"
           value={dateFrom}
           onChange={(event) => setDateFrom(event.target.value)}
           InputLabelProps={{ shrink: true }}
@@ -1058,7 +1058,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
         />
         <TextField
           type="date"
-          label="To"
+          label="إلى"
           value={dateTo}
           onChange={(event) => setDateTo(event.target.value)}
           InputLabelProps={{ shrink: true }}
@@ -1074,14 +1074,14 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Order #</TableCell>
-                <TableCell>Customer</TableCell>
-                <TableCell>Payment method</TableCell>
-                <TableCell>Payment status</TableCell>
-                <TableCell align="right">Total</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Created at</TableCell>
-                <TableCell align="left">View</TableCell>
+                <TableCell>رقم الطلب</TableCell>
+                <TableCell>العميل</TableCell>
+                <TableCell>طريقة الدفع</TableCell>
+                <TableCell>حالة الدفع</TableCell>
+                <TableCell align="right">الإجمالي</TableCell>
+                <TableCell>الحالة</TableCell>
+                <TableCell>تاريخ الإنشاء</TableCell>
+                <TableCell align="left">عرض</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -1094,7 +1094,7 @@ export function OrdersPanel({ request }: OrdersPanelProps) {
               ) : ordersData.items.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
-                    <Typography color="text.secondary">No orders found</Typography>
+                    <Typography color="text.secondary">لم يتم العثور على طلبات</Typography>
                   </TableCell>
                 </TableRow>
               ) : (

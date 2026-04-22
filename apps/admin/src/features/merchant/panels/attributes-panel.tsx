@@ -91,7 +91,7 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
       setAttributes(attributesData ?? []);
       setCategories(categoriesData ?? []);
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ظ…ظٹظ„ ط§ظ„ط®طµط§ط¦طµ', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحميل الخصائص', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -121,11 +121,11 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
       });
       if (created) {
         setSelectedAttributeId(created.id);
-        setMessage({ text: 'طھظ… ط¥ظ†ط´ط§ط، ط§ظ„ط®ط§طµظٹط© ط¨ظ†ط¬ط§ط­. ظٹظ…ظƒظ†ظƒ ط§ظ„ط¢ظ† ط¥ط¶ط§ظپط© ظ‚ظٹظ… ظ„ظ‡ط§.', type: 'success' });
+        setMessage({ text: 'تم إنشاء الخاصية بنجاح. يمكنك الآن إضافة قيم لها.', type: 'success' });
         await loadBaseData();
       }
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط¥ظ†ط´ط§ط، ط§ظ„ط®ط§طµظٹط©', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر إنشاء الخاصية', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -141,16 +141,16 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
         body: JSON.stringify(buildAttributePayload(attributeForm)),
       });
       await loadBaseData();
-      setMessage({ text: 'طھظ… طھط­ط¯ظٹط« ط§ظ„ط®ط§طµظٹط© ط¨ظ†ط¬ط§ط­', type: 'success' });
+      setMessage({ text: 'تم تحديث الخاصية بنجاح', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ط¯ظٹط« ط§ظ„ط®ط§طµظٹط©', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحديث الخاصية', type: 'error' });
     } finally {
       setActionLoading(false);
     }
   }
 
   async function deleteAttribute(): Promise<void> {
-    if (!selectedAttributeId || !window.confirm('ظ‡ظ„ ط£ظ†طھ ظ…طھط£ظƒط¯ ظ…ظ† ط­ط°ظپ ظ‡ط°ظ‡ ط§ظ„ط®ط§طµظٹط© ظˆط¬ظ…ظٹط¹ ظ‚ظٹظ…ظ‡ط§طں')) return;
+    if (!selectedAttributeId || !window.confirm('هل أنت متأكد من حذف هذه الخاصية وجميع قيمها؟')) return;
     setActionLoading(true);
     setMessage({ text: '', type: 'info' });
     try {
@@ -162,10 +162,10 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
       setAttributeForm(attributeFormDefault);
       setValueForm(valueFormDefault);
       await loadBaseData();
-      setMessage({ text: 'طھظ… ط­ط°ظپ ط§ظ„ط®ط§طµظٹط© ط¨ظ†ط¬ط§ط­', type: 'success' });
+      setMessage({ text: 'تم حذف الخاصية بنجاح', type: 'success' });
       setViewMode('list');
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط­ط°ظپ ط§ظ„ط®ط§طµظٹط©', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر حذف الخاصية', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -173,7 +173,7 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
 
   async function createValue(): Promise<void> {
     if (!selectedAttributeId) {
-      setMessage({ text: 'ظٹط¬ط¨ ط­ظپط¸ ط§ظ„ط®ط§طµظٹط© ط§ظ„ط£ط³ط§ط³ظٹط© ط£ظˆظ„ط§ظ‹', type: 'error' });
+      setMessage({ text: 'يجب حفظ الخاصية الأساسية أولاً', type: 'error' });
       return;
     }
     setActionLoading(true);
@@ -186,9 +186,9 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
       setValueForm(valueFormDefault);
       setSelectedValueId('');
       await loadBaseData();
-      setMessage({ text: 'طھظ… ط¥ط¶ط§ظپط© ط§ظ„ظ‚ظٹظ…ط© ط¨ظ†ط¬ط§ط­', type: 'success' });
+      setMessage({ text: 'تم إضافة القيمة بنجاح', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط¥ظ†ط´ط§ط، ط§ظ„ظ‚ظٹظ…ط©', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر إنشاء القيمة', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -206,16 +206,16 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
       setValueForm(valueFormDefault);
       setSelectedValueId('');
       await loadBaseData();
-      setMessage({ text: 'طھظ… طھط­ط¯ظٹط« ط§ظ„ظ‚ظٹظ…ط© ط¨ظ†ط¬ط§ط­', type: 'success' });
+      setMessage({ text: 'تم تحديث القيمة بنجاح', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ط¯ظٹط« ط§ظ„ظ‚ظٹظ…ط©', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحديث القيمة', type: 'error' });
     } finally {
       setActionLoading(false);
     }
   }
 
   async function deleteValue(valueId: string): Promise<void> {
-    if (!selectedAttributeId || !window.confirm('ظ‡ظ„ طھط±ظٹط¯ ط§ظ„ط­ط°ظپطں')) return;
+    if (!selectedAttributeId || !window.confirm('هل تريد الحذف؟')) return;
     setActionLoading(true);
     setMessage({ text: '', type: 'info' });
     try {
@@ -225,9 +225,9 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
       setValueForm(valueFormDefault);
       setSelectedValueId('');
       await loadBaseData();
-      setMessage({ text: 'طھظ… ط­ط°ظپ ط§ظ„ظ‚ظٹظ…ط©', type: 'success' });
+      setMessage({ text: 'تم حذف القيمة', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط­ط°ظپ ط§ظ„ظ‚ظٹظ…ط©', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر حذف القيمة', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -249,7 +249,7 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
       );
       setSelectedCategoryAttributeIds(data?.attributeIds ?? []);
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ظ…ظٹظ„ ط®طµط§ط¦طµ ط§ظ„طھطµظ†ظٹظپ', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحميل خصائص التصنيف', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -264,9 +264,9 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
         method: 'PUT',
         body: JSON.stringify({ attributeIds: selectedCategoryAttributeIds }),
       });
-      setMessage({ text: 'طھظ… ط­ظپط¸ ط±ط¨ط· ط§ظ„ط®طµط§ط¦طµ ط¨ط§ظ„طھطµظ†ظٹظپ ط¨ظ†ط¬ط§ط­', type: 'success' });
+      setMessage({ text: 'تم حفظ ربط الخصائص بالتصنيف بنجاح', type: 'success' });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ط¯ظٹط« ط®طµط§ط¦طµ ط§ظ„طھطµظ†ظٹظپ', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'تعذر تحديث خصائص التصنيف', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -325,7 +325,7 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
             color="inherit"
             sx={{ fontWeight: 700 }}
           >
-            ط§ظ„ط¹ظˆط¯ط© ظ„ظ„ظ‚ط§ط¦ظ…ط©
+            العودة للقائمة
           </Button>
           {selectedAttributeId && (
             <Button 
@@ -334,7 +334,7 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
               onClick={() => deleteAttribute().catch(() => undefined)}
               disabled={actionLoading}
             >
-              ط­ط°ظپ ط§ظ„ط®ط§طµظٹط©
+              حذف الخاصية
             </Button>
           )}
         </Box>
@@ -349,18 +349,18 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
                 <StyleIcon color="primary" />
                 <Typography variant="h6" fontWeight={800}>
-                  {selectedAttributeId ? 'طھط¹ط¯ظٹظ„ ط§ظ„ط®ط§طµظٹط©' : 'ط®ط§طµظٹط© ط¬ط¯ظٹط¯ط©'}
+                  {selectedAttributeId ? 'تعديل الخاصية' : 'خاصية جديدة'}
                 </Typography>
               </Box>
               <Divider sx={{ mb: 4 }} />
               
               <Stack spacing={3}>
                 <TextField 
-                  label="ط§ظ„ط§ط³ظ… (ط¹ط±ط¨ظٹ)" 
+                  label="الاسم (عربي)" 
                   fullWidth 
                   value={attributeForm.nameAr} 
                   onChange={(event) => setAttributeForm((prev) => ({ ...prev, nameAr: event.target.value, name: event.target.value }))} 
-                  placeholder="ظ…ط«ط§ظ„: ط§ظ„ظ„ظˆظ†طŒ ط§ظ„ظ…ظ‚ط§ط³"
+                  placeholder="مثال: اللون، المقاس"
                   required
                   dir="rtl"
                 />
@@ -372,12 +372,12 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
                   dir="ltr"
                 />
                 <TextField 
-                  label="ط§ظ„ظ…ط³ط§ط± ط§ظ„ظ…ط®طھطµط± (Slug)" 
+                  label="المسار المختصر (Slug)" 
                   fullWidth 
                   value={attributeForm.slug} 
                   onChange={(event) => setAttributeForm((prev) => ({ ...prev, slug: event.target.value }))} 
                   dir="ltr"
-                  helperText="ظ…ط«ط§ظ„: color, size"
+                  helperText="مثال: color, size"
                 />
                 <TextField
                   select
@@ -431,7 +431,7 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
                   disabled={actionLoading}
                   disableElevation
                 >
-                  {actionLoading ? 'ط¬ط§ط±ظگ ط§ظ„ط­ظپط¸...' : selectedAttributeId ? 'ط­ظپط¸ ط§ظ„ط®ط§طµظٹط©' : 'ط¥ظ†ط´ط§ط، ط§ظ„ط®ط§طµظٹط©'}
+                  {actionLoading ? 'جارِ الحفظ...' : selectedAttributeId ? 'حفظ الخاصية' : 'إنشاء الخاصية'}
                 </Button>
               </Stack>
             </Paper>
@@ -440,19 +440,19 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
           <Box>
             <Paper elevation={0} sx={{ p: 3, borderRadius: 4, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', height: '100%', opacity: selectedAttributeId ? 1 : 0.5, pointerEvents: selectedAttributeId ? 'auto' : 'none' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-                <Typography variant="h6" fontWeight={800}>ط§ظ„ظ‚ظٹظ… (Options)</Typography>
+                <Typography variant="h6" fontWeight={800}>القيم (Options)</Typography>
               </Box>
               <Divider sx={{ mb: 4 }} />
               
               <Box sx={{ bgcolor: 'background.default', p: 2, borderRadius: 2, border: '1px solid', borderColor: 'divider', mb: 3 }}>
                 <Typography variant="subtitle2" fontWeight={700} mb={2}>
-                  {selectedValueId ? 'طھط¹ط¯ظٹظ„ ط§ظ„ظ‚ظٹظ…ط©' : 'ط¥ط¶ط§ظپط© ظ‚ظٹظ…ط© ط¬ط¯ظٹط¯ط©'}
+                  {selectedValueId ? 'تعديل القيمة' : 'إضافة قيمة جديدة'}
                 </Typography>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
-                  <TextField size="small" label="ط§ظ„ظ‚ظٹظ…ط© (ظ…ط«ط§ظ„: ط£ط­ظ…ط±)" fullWidth value={valueForm.value} onChange={(event) => setValueForm((prev) => ({ ...prev, value: event.target.value }))} />
-                  <TextField size="small" label="ط§ظ„ظ‚ظٹظ…ط© (ط¹ط±ط¨ظٹ)" fullWidth value={valueForm.valueAr} onChange={(event) => setValueForm((prev) => ({ ...prev, valueAr: event.target.value }))} dir="rtl" />
+                  <TextField size="small" label="القيمة (مثال: أحمر)" fullWidth value={valueForm.value} onChange={(event) => setValueForm((prev) => ({ ...prev, value: event.target.value }))} />
+                  <TextField size="small" label="القيمة (عربي)" fullWidth value={valueForm.valueAr} onChange={(event) => setValueForm((prev) => ({ ...prev, valueAr: event.target.value }))} dir="rtl" />
                   <TextField size="small" label="Value (English)" fullWidth value={valueForm.valueEn} onChange={(event) => setValueForm((prev) => ({ ...prev, valueEn: event.target.value }))} dir="ltr" />
-                  <TextField size="small" label="Slug (ظ…ط«ط§ظ„: red)" fullWidth value={valueForm.slug} onChange={(event) => setValueForm((prev) => ({ ...prev, slug: event.target.value }))} dir="ltr" />
+                  <TextField size="small" label="Slug (مثال: red)" fullWidth value={valueForm.slug} onChange={(event) => setValueForm((prev) => ({ ...prev, slug: event.target.value }))} dir="ltr" />
                   {attributeForm.type === 'color' ? (
                     <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 220 }}>
                       <TextField
@@ -491,15 +491,15 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
                     disabled={actionLoading || !valueForm.value}
                     sx={{ minWidth: 100 }}
                   >
-                    {selectedValueId ? 'طھط­ط¯ظٹط«' : 'ط¥ط¶ط§ظپط©'}
+                    {selectedValueId ? 'تحديث' : 'إضافة'}
                   </Button>
                   {selectedValueId && (
-                     <Button variant="text" color="inherit" onClick={() => { setSelectedValueId(''); setValueForm(valueFormDefault); }}>ط¥ظ„ط؛ط§ط،</Button>
+                     <Button variant="text" color="inherit" onClick={() => { setSelectedValueId(''); setValueForm(valueFormDefault); }}>إلغاء</Button>
                   )}
                 </Stack>
               </Box>
 
-              <Typography variant="subtitle2" fontWeight={700} mb={1}>ط§ظ„ظ‚ظٹظ… ط§ظ„ظ…ط¶ط§ظپط©:</Typography>
+              <Typography variant="subtitle2" fontWeight={700} mb={1}>القيم المضافة:</Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                 {(selectedAttribute?.values ?? []).map((value) => (
                   <Chip 
@@ -520,7 +520,7 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
                   />
                 ))}
                 {(selectedAttribute?.values ?? []).length === 0 && (
-                  <Typography variant="body2" color="text.secondary">ظ„ط§ طھظˆط¬ط¯ ظ‚ظٹظ…طŒ ظ‚ظ… ط¨ط¥ط¶ط§ظپط© ظˆط§ط­ط¯ط© ط£ط¹ظ„ط§ظ‡.</Typography>
+                  <Typography variant="body2" color="text.secondary">لا توجد قيم، قم بإضافة واحدة أعلاه.</Typography>
                 )}
               </Box>
             </Paper>
@@ -535,10 +535,10 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1, flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Typography variant="h4" fontWeight={800} gutterBottom>
-            ط§ظ„ط®طµط§ط¦طµ ظˆط§ظ„ظ…ظˆط§طµظپط§طھ
+            الخصائص والمواصفات
           </Typography>
           <Typography color="text.secondary">
-            ظ‚ظ… ط¨ط¥ظ†ط´ط§ط، ط§ظ„ط®طµط§ط¦طµ (ظƒط§ظ„ط£ظ„ظˆط§ظ† ظˆط§ظ„ظ…ظ‚ط§ط³ط§طھ) ظˆط§ط±ط¨ط·ظ‡ط§ ط¨ط§ظ„طھطµظ†ظٹظپط§طھ ظ„ط§ط³طھط®ط¯ط§ظ…ظ‡ط§ ظپظٹ ط§ظ„ظ…طھط؛ظٹط±ط§طھ.
+            قم بإنشاء الخصائص (كالألوان والمقاسات) واربطها بالتصنيفات لاستخدامها في المتغيرات.
           </Typography>
         </Box>
         <Stack direction="row" spacing={1.5}>
@@ -547,7 +547,7 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
             onClick={() => loadBaseData().catch(() => undefined)}
             disabled={loading}
           >
-            طھط­ط¯ظٹط«
+            تحديث
           </Button>
           <Button 
             variant="contained" 
@@ -557,7 +557,7 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
             size="large"
             sx={{ borderRadius: 2 }}
           >
-            ط®ط§طµظٹط© ط¬ط¯ظٹط¯ط©
+            خاصية جديدة
           </Button>
         </Stack>
       </Box>
@@ -572,25 +572,25 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
           <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden', height: '100%' }}>
             <Box sx={{ p: 2, bgcolor: 'background.default', borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
               <StyleIcon color="action" />
-              <Typography variant="subtitle1" fontWeight={800}>ط§ظ„ط®طµط§ط¦طµ ط§ظ„ط£ط³ط§ط³ظٹط©</Typography>
+              <Typography variant="subtitle1" fontWeight={800}>الخصائص الأساسية</Typography>
             </Box>
             <TableContainer>
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 700 }}>ط§ط³ظ… ط§ظ„ط®ط§طµظٹط©</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>اسم الخاصية</TableCell>
                     <TableCell sx={{ fontWeight: 700 }}>النوع</TableCell>
                     <TableCell sx={{ fontWeight: 700 }}>الحالة</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ظ…ط³ط§ط± ط§ظ„ظ…ط®طھطµط±</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>ط§ظ„ظ‚ظٹظ…</TableCell>
-                    <TableCell align="left" sx={{ fontWeight: 700 }}>ط§ظ„ط¥ط¬ط±ط§ط،ط§طھ</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>المسار المختصر</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>القيم</TableCell>
+                    <TableCell align="left" sx={{ fontWeight: 700 }}>الإجراءات</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {loading ? (
                     <TableRow><TableCell colSpan={6} align="center" sx={{ py: 3 }}><CircularProgress size={24} /></TableCell></TableRow>
                   ) : attributes.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} align="center" sx={{ py: 3 }}><Typography color="text.secondary">ظ„ط§ طھظˆط¬ط¯ ط®طµط§ط¦طµ.</Typography></TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} align="center" sx={{ py: 3 }}><Typography color="text.secondary">لا توجد خصائص.</Typography></TableCell></TableRow>
                   ) : (
                     attributes.map((attribute) => (
                       <TableRow key={attribute.id} hover>
@@ -615,11 +615,11 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
                           <Typography variant="caption" color="text.secondary" fontFamily="monospace">/{attribute.slug}</Typography>
                         </TableCell>
                         <TableCell>
-                          <Chip size="small" label={`${attribute.values?.length ?? 0} ظ‚ظٹظ…`} variant="outlined" />
+                          <Chip size="small" label={`${attribute.values?.length ?? 0} قيم`} variant="outlined" />
                         </TableCell>
                         <TableCell align="left">
                           <Button size="small" variant="outlined" startIcon={<EditNoteIcon />} onClick={() => selectAttribute(attribute)} sx={{ borderRadius: 1.5 }}>
-                            طھط¹ط¯ظٹظ„
+                            تعديل
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -636,21 +636,21 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
           <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider', height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <SettingsEthernetIcon color="primary" />
-              <Typography variant="h6" fontWeight={800}>ط±ط¨ط· ط§ظ„ط®طµط§ط¦طµ ط¨ط§ظ„طھطµظ†ظٹظپط§طھ</Typography>
+              <Typography variant="h6" fontWeight={800}>ربط الخصائص بالتصنيفات</Typography>
             </Box>
             <Typography variant="body2" color="text.secondary" mb={3}>
-              ط§ط®طھط± طھطµظ†ظٹظپط§ظ‹ ظˆط­ط¯ط¯ ط§ظ„ط®طµط§ط¦طµ ط§ظ„ظ…طھط§ط­ط© ظ„ظ„ظ…ظ†طھط¬ط§طھ ط¯ط§ط®ظ„ ظ‡ط°ط§ ط§ظ„طھطµظ†ظٹظپ.
+              اختر تصنيفاً وحدد الخصائص المتاحة للمنتجات داخل هذا التصنيف.
             </Typography>
 
             <TextField
               select
-              label="ط§ط®طھط± ط§ظ„طھطµظ†ظٹظپ"
+              label="اختر التصنيف"
               value={selectedCategoryId}
               onChange={(event) => loadCategoryAttributes(event.target.value).catch(() => undefined)}
               fullWidth
               sx={{ mb: 3 }}
             >
-              <MenuItem value="">ط§ط®طھط± طھطµظ†ظٹظپط§ظ‹</MenuItem>
+              <MenuItem value="">اختر تصنيفاً</MenuItem>
               {categories.map((category) => (
                 <MenuItem key={category.id} value={category.id}>{category.name}</MenuItem>
               ))}
@@ -675,10 +675,10 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
                     ))}
                   </Stack>
                 ) : (
-                  <Typography variant="body2" color="text.secondary">ظ„ط§ طھظˆط¬ط¯ ط®طµط§ط¦طµ ظ„ط±ط¨ط·ظ‡ط§.</Typography>
+                  <Typography variant="body2" color="text.secondary">لا توجد خصائص لربطها.</Typography>
                 )
               ) : (
-                <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>ظٹط±ط¬ظ‰ طھط­ط¯ظٹط¯ طھطµظ†ظٹظپ ط£ظˆظ„ط§ظ‹ ظ…ظ† ط§ظ„ظ‚ط§ط¦ظ…ط© ط£ط¹ظ„ط§ظ‡.</Typography>
+                <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>يرجى تحديد تصنيف أولاً من القائمة أعلاه.</Typography>
               )}
             </Box>
 
@@ -689,7 +689,7 @@ export function AttributesPanel({ request }: AttributesPanelProps) {
               fullWidth
               size="large"
             >
-              {actionLoading ? 'ط¬ط§ط±ظگ ط§ظ„ط­ظپط¸...' : 'ط­ظپط¸ ط§ظ„ط±ط¨ط·'}
+              {actionLoading ? 'جارِ الحفظ...' : 'حفظ الربط'}
             </Button>
           </Paper>
         </Box>

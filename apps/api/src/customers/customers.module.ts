@@ -17,9 +17,9 @@ import { LoyaltyModule } from '../loyalty/loyalty.module';
   imports: [forwardRef(() => StorefrontModule), LoyaltyModule],
   controllers: [
     CustomersController,
-    CustomersManagementController,
     CustomersEngagementController,
     CustomersEngagementManagementController,
+    CustomersManagementController,
   ],
   providers: [
     CustomersService,

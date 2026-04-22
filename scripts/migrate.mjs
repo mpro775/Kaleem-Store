@@ -56,6 +56,7 @@ async function migrateUp() {
       await client.query('COMMIT');
       console.log(`Applied migration: ${pair.name}`);
     } catch (error) {
+      console.error(`Failed to apply migration: ${pair.name}`);
       await client.query('ROLLBACK');
       throw error;
     }

@@ -25,11 +25,11 @@ interface AbandonedCartsPanelProps {
 }
 
 const STATUS_OPTIONS: Array<{ value: ManagedAbandonedCartStatus | 'all'; label: string }> = [
-  { value: 'all', label: 'ط§ظ„ظƒظ„' },
-  { value: 'ready', label: 'ط¬ط§ظ‡ط²ط© ظ„ظ„ط¥ط±ط³ط§ظ„' },
-  { value: 'sent', label: 'طھظ… ط§ظ„ط¥ط±ط³ط§ظ„' },
-  { value: 'recovered', label: 'طھظ… ط§ظ„ط§ط³طھط±ط¬ط§ط¹' },
-  { value: 'expired', label: 'ظ…ظ†طھظ‡ظٹط©' },
+  { value: 'all', label: 'الكل' },
+  { value: 'ready', label: 'جاهزة للإرسال' },
+  { value: 'sent', label: 'تم الإرسال' },
+  { value: 'recovered', label: 'تم الاسترجاع' },
+  { value: 'expired', label: 'منتهية' },
 ];
 
 export function AbandonedCartsPanel({ request }: AbandonedCartsPanelProps) {
@@ -79,7 +79,7 @@ export function AbandonedCartsPanel({ request }: AbandonedCartsPanelProps) {
     } catch (error) {
       setMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'طھط¹ط°ط± طھط­ظ…ظٹظ„ ط¨ظٹط§ظ†ط§طھ ط§ظ„ط³ظ„ط§طھ ط§ظ„ظ…طھط±ظˆظƒط©.',
+        text: error instanceof Error ? error.message : 'تعذر تحميل بيانات السلات المتروكة.',
       });
     } finally {
       setLoading(false);
@@ -93,12 +93,12 @@ export function AbandonedCartsPanel({ request }: AbandonedCartsPanelProps) {
       await request(`/customers/manage/abandoned-carts/${abandonedCartId}/send-recovery`, {
         method: 'POST',
       });
-      setMessage({ type: 'success', text: 'طھظ… ط¥ط±ط³ط§ظ„ ط±ط³ط§ظ„ط© ط§ط³طھط±ط¬ط§ط¹ ط§ظ„ط³ظ„ط© ط¨ظ†ط¬ط§ط­.' });
+      setMessage({ type: 'success', text: 'تم إرسال رسالة استرجاع السلة بنجاح.' });
       await loadData();
     } catch (error) {
       setMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'ظپط´ظ„ ط¥ط±ط³ط§ظ„ ط±ط³ط§ظ„ط© ط§ظ„ط§ط³طھط±ط¬ط§ط¹.',
+        text: error instanceof Error ? error.message : 'فشل إرسال رسالة الاسترجاع.',
       });
     } finally {
       setSendingId(null);
@@ -112,11 +112,11 @@ export function AbandonedCartsPanel({ request }: AbandonedCartsPanelProps) {
   return (
     <AppPage>
       <PageHeader
-        title="ط§ظ„ط³ظ„ط§طھ ط§ظ„ظ…طھط±ظˆظƒط©"
-        description="ظ…طھط§ط¨ط¹ط© ط§ظ„ط³ظ„ط§طھ ط§ظ„ظ…ظ‡ط¬ظˆط±ط© ظˆط¥ط±ط³ط§ظ„ طھط°ظƒظٹط±ط§طھ ط§ظ„ط§ط³طھط±ط¬ط§ط¹ ظˆطھطھط¨ط¹ ط§ظ„طھط­ظˆظٹظ„ط§طھ ط¨ط´ظƒظ„ ظ…ط¨ط§ط´ط±."
+        title="السلات المتروكة"
+        description="متابعة السلات المهجورة وإرسال تذكيرات الاسترجاع وتتبع التحويلات بشكل مباشر."
         actions={
           <Button variant="outlined" onClick={() => loadData().catch(() => undefined)} disabled={loading}>
-            طھط­ط¯ظٹط«
+            تحديث
           </Button>
         }
       />
@@ -131,22 +131,22 @@ export function AbandonedCartsPanel({ request }: AbandonedCartsPanelProps) {
         }}
       >
         <StatCard
-          title="ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„ط³ظ„ط§طھ"
+          title="إجمالي السلات"
           value={list.total.toLocaleString('ar-EG')}
           icon={<ShoppingCartCheckoutOutlinedIcon fontSize="small" />}
         />
         <StatCard
-          title="ط¬ط§ظ‡ط²ط© ظ„ظ„ط¥ط±ط³ط§ظ„"
+          title="جاهزة للإرسال"
           value={readyCount.toLocaleString('ar-EG')}
           icon={<ReplayOutlinedIcon fontSize="small" />}
         />
         <StatCard
-          title="ظ…ط±ط³ظ„ط©"
+          title="مرسلة"
           value={sentCount.toLocaleString('ar-EG')}
           icon={<MarkEmailReadOutlinedIcon fontSize="small" />}
         />
         <StatCard
-          title="ظ…ط³طھط±ط¬ط¹ط©"
+          title="مسترجعة"
           value={recoveredCount.toLocaleString('ar-EG')}
           icon={<ShoppingCartCheckoutOutlinedIcon fontSize="small" />}
         />
@@ -154,14 +154,14 @@ export function AbandonedCartsPanel({ request }: AbandonedCartsPanelProps) {
 
       <FilterBar>
         <TextField
-          placeholder="ط¨ط­ط« ط¨ط§ظ„ط¹ظ…ظٹظ„ ط£ظˆ ط§ظ„ط¨ط±ظٹط¯ ط£ظˆ ط§ظ„ظ‡ط§طھظپ"
+          placeholder="بحث بالعميل أو البريد أو الهاتف"
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
           sx={{ minWidth: 260, flex: 1 }}
         />
         <TextField
           select
-          label="ط§ظ„ط­ط§ظ„ط©"
+          label="الحالة"
           value={statusFilter}
           onChange={(event) => setStatusFilter(event.target.value as ManagedAbandonedCartStatus | 'all')}
           sx={{ minWidth: 190 }}
@@ -173,7 +173,7 @@ export function AbandonedCartsPanel({ request }: AbandonedCartsPanelProps) {
           ))}
         </TextField>
         <Button variant="contained" onClick={() => loadData().catch(() => undefined)}>
-          ط¨ط­ط«
+          بحث
         </Button>
       </FilterBar>
 
@@ -182,15 +182,15 @@ export function AbandonedCartsPanel({ request }: AbandonedCartsPanelProps) {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>ط§ظ„ط¹ظ…ظٹظ„</TableCell>
-                <TableCell>ط§ظ„طھظˆط§طµظ„</TableCell>
-                <TableCell>ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„ط³ظ„ط©</TableCell>
-                <TableCell>ط§ظ„ط¹ظ†ط§طµط±</TableCell>
-                <TableCell>ط§ظ„ط­ط§ظ„ط©</TableCell>
+                <TableCell>العميل</TableCell>
+                <TableCell>التواصل</TableCell>
+                <TableCell>إجمالي السلة</TableCell>
+                <TableCell>العناصر</TableCell>
+                <TableCell>الحالة</TableCell>
                 <TableCell>وقت الهجر</TableCell>
                 <TableCell>وقت الإرسال</TableCell>
                 <TableCell>وقت الاسترجاع</TableCell>
-                <TableCell>ط§ظ„ط¥ط¬ط±ط§ط،ط§طھ</TableCell>
+                <TableCell>الإجراءات</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -203,13 +203,13 @@ export function AbandonedCartsPanel({ request }: AbandonedCartsPanelProps) {
               ) : list.items.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
-                    <Typography color="text.secondary">ظ„ط§ طھظˆط¬ط¯ ط³ظ„ط§طھ ظ…طھط±ظˆظƒط© ظ…ط·ط§ط¨ظ‚ط© ظ„ظ„ط¨ط­ط«.</Typography>
+                    <Typography color="text.secondary">لا توجد سلات متروكة مطابقة للبحث.</Typography>
                   </TableCell>
                 </TableRow>
               ) : (
                 list.items.map((item) => (
                   <TableRow key={item.id} hover>
-                    <TableCell>{item.customerName || 'ط²ط§ط¦ط±'}</TableCell>
+                    <TableCell>{item.customerName || 'زائر'}</TableCell>
                     <TableCell>
                       {item.customerEmail || '-'}
                       <br />
@@ -230,7 +230,7 @@ export function AbandonedCartsPanel({ request }: AbandonedCartsPanelProps) {
                         disabled={sendingId === item.id || item.status === 'expired' || item.status === 'recovered'}
                         onClick={() => sendRecoveryEmail(item.id).catch(() => undefined)}
                       >
-                        ط¥ط±ط³ط§ظ„ طھط°ظƒظٹط±
+                        إرسال تذكير
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -246,13 +246,13 @@ export function AbandonedCartsPanel({ request }: AbandonedCartsPanelProps) {
 
 function statusLabel(status: ManagedAbandonedCartStatus): string {
   if (status === 'ready') {
-    return 'ط¬ط§ظ‡ط²ط© ظ„ظ„ط¥ط±ط³ط§ظ„';
+    return 'جاهزة للإرسال';
   }
   if (status === 'sent') {
-    return 'ظ…ط±ط³ظ„ط©';
+    return 'مرسلة';
   }
   if (status === 'recovered') {
-    return 'ظ…ط³طھط±ط¬ط¹ط©';
+    return 'مسترجعة';
   }
-  return 'ظ…ظ†طھظ‡ظٹط©';
+  return 'منتهية';
 }

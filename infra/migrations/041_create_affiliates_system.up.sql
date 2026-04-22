@@ -24,9 +24,11 @@ CREATE TABLE IF NOT EXISTS affiliate_links (
   target_path TEXT NOT NULL DEFAULT '/',
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (store_id, LOWER(code))
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_affiliate_links_store_code_unique
+  ON affiliate_links (store_id, LOWER(code));
 
 CREATE INDEX IF NOT EXISTS idx_affiliate_links_store_affiliate
   ON affiliate_links (store_id, affiliate_id);
